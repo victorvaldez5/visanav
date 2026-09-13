@@ -9,3 +9,6 @@ class UscisItem(scrapy.Item):
     parent_page = scrapy.Field(output_processor=TakeFirst())
     file_urls = scrapy.Field()
     files = scrapy.Field()
+    # sha256 of `content`, stamped by ContentHashPipeline so downstream ingest
+    # can tell which HTML pages actually changed between crawls.
+    content_hash = scrapy.Field(output_processor=TakeFirst())

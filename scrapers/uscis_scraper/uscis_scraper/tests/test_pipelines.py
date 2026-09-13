@@ -1,8 +1,9 @@
+import hashlib
 import os
 import pytest
 from scrapy import Request
 from scrapy.exceptions import NotConfigured, DropItem
-from ..pipelines import HTMLPagesPipeline, NamedFilesPipeline
+from ..pipelines import HTMLPagesPipeline, NamedFilesPipeline, ContentHashPipeline
 
 
 class DummyCrawler:
@@ -50,10 +51,10 @@ def test_named_files_pipeline_requests_and_path():
     assert r.url == "http://foo/bar/baz.pdf"
     assert r.meta["parent_page"] == item["parent_page"]
 
-    # test file_path naming
+    # test file_path naming: non-instruction PDFs bucket under pdf/forms/
     fake = Request("http://foo/x/y.pdf", meta={"parent_page": item["parent_page"]})
     out_path = pipe.file_path(fake)
-    assert out_path == os.path.join("pdf", "y.pdf")
+    assert out_path == os.path.join("pdf", "forms", "y.pdf")
 
 
 @pytest.fixture
@@ -117,10 +118,10 @@ def test_named_files_pipeline_no_urls():
 
 def test_named_files_pipeline_uncategorized_path():
     pipe = NamedFilesPipeline(store_uri="u")
-    # missing parent_page → 'uncategorized'
+    # a plain form PDF (no instruction pattern) buckets under pdf/forms/
     req = Request("http://x.com/a.pdf", meta={})
     path = pipe.file_path(req)
-    assert path == os.path.join("pdf", "a.pdf")
+    assert path == os.path.join("pdf", "forms", "a.pdf")
 
 
 def test_named_files_pipeline_multiple_requests():
@@ -142,9 +143,65 @@ def test_named_files_pipeline_nested_parent_path():
     parent = "https://site.com/a/b/c/d"
     req = Request("http://cdn.com/doc.pdf", meta={"parent_page": parent})
     out = pipe.file_path(req)
-    # expect each segment to become a folder under 'pdf/'
-    expected = os.path.join("pdf", "doc.pdf")
+    # non-instruction PDFs land under pdf/forms/ regardless of parent path
+    expected = os.path.join("pdf", "forms", "doc.pdf")
     assert out == expected
+
+
+def _content_hash_pipeline(tmp_path):
+    settings = {"LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
+    return ContentHashPipeline.from_crawler(DummyCrawler(settings))
+
+
+def test_content_hash_stamps_new_item(tmp_path):
+    pipe = _content_hash_pipeline(tmp_path)
+    pipe.open_spider(spider=None)
+    item = {"url": "https://x/a", "content_type": "text/html", "content": "<h1>A</h1>"}
+    out = pipe.process_item(item, spider=None)
+    assert out is item
+    assert item["content_hash"] == hashlib.sha256(b"<h1>A</h1>").hexdigest()
+
+
+def test_content_hash_drops_unchanged_across_runs(tmp_path):
+    item = {"url": "https://x/a", "content_type": "text/html", "content": "<h1>A</h1>"}
+
+    # First run: new item passes, manifest persisted on close.
+    run1 = _content_hash_pipeline(tmp_path)
+    run1.open_spider(spider=None)
+    run1.process_item(dict(item), spider=None)
+    run1.close_spider(spider=None)
+    assert (tmp_path / "manifest.json").exists()
+
+    # Second run: identical content is dropped before the storage sink.
+    run2 = _content_hash_pipeline(tmp_path)
+    run2.open_spider(spider=None)
+    with pytest.raises(DropItem):
+        run2.process_item(dict(item), spider=None)
+
+
+def test_content_hash_passes_changed_item(tmp_path):
+    run1 = _content_hash_pipeline(tmp_path)
+    run1.open_spider(spider=None)
+    run1.process_item(
+        {"url": "https://x/a", "content_type": "text/html", "content": "<h1>A</h1>"},
+        spider=None,
+    )
+    run1.close_spider(spider=None)
+
+    run2 = _content_hash_pipeline(tmp_path)
+    run2.open_spider(spider=None)
+    changed = {"url": "https://x/a", "content_type": "text/html", "content": "<h1>B</h1>"}
+    out = run2.process_item(changed, spider=None)
+    assert out is changed  # different content -> not dropped
+
+
+def test_content_hash_skips_pdf(tmp_path):
+    pipe = _content_hash_pipeline(tmp_path)
+    pipe.open_spider(spider=None)
+    pdf = {"url": "https://x/a.pdf", "content_type": "application/pdf"}
+    out = pipe.process_item(pdf, spider=None)
+    assert out is pdf
+    assert "content_hash" not in pdf
 
 
 @pytest.mark.parametrize(

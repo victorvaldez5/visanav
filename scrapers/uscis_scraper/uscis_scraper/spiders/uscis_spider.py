@@ -15,7 +15,9 @@ class UscisSpider(scrapy.Spider):
         # 'https://www.uscis.gov/green-card',
         # # 'https://www.uscis.gov/citizenship',
         # 'https://www.uscis.gov/laws',
-        # 'https://www.uscis.gov/policy-manual/',
+        # The Policy Manual TOC links every chapter directly (one hop to ~456
+        # chapter pages), so seed it rather than the volume index.
+        "https://www.uscis.gov/policy-manual/table-of-contents",
         "https://www.uscis.gov/laws-and-policy/legislation/immigration-and-nationality-act",
         # 'https://www.uscis.gov/tools',
         # add other entry points as needed
@@ -28,6 +30,9 @@ class UscisSpider(scrapy.Spider):
 
         if "legislation" in response.url:
             yield from self.parse_legislation_page(response)
+
+        if "/policy-manual" in response.url:
+            yield from self.parse_policy_manual(response)
 
     def parse_all_forms(self, response):
         # Target links like <a href="/ar-11" class="link link--form-title">
@@ -69,6 +74,30 @@ class UscisSpider(scrapy.Spider):
         loader.add_value("url", response.url)
         loader.add_value("content_type", "text/html")
         loader.add_value("content", response.css("#docViewer").get())
+        loader.add_value("files", [])
+        loader.add_value("parent_page", response.meta.get("parent_page"))
+        yield loader.load_item()
+
+    def parse_policy_manual(self, response, **kwargs):
+        # The Table of Contents links every chapter directly; follow each to
+        # parse_policy_chapter. Duplicate links across the page are collapsed by
+        # the default dupe filter.
+        chapter_links = response.css('a[href*="-chapter-"]::attr(href)').getall()
+        for href in chapter_links:
+            yield response.follow(
+                href,
+                callback=self.parse_policy_chapter,
+                meta={"parent_page": response.url},
+            )
+
+    def parse_policy_chapter(self, response, **kwargs):
+        # Chapter bodies use the same #page-content container as form pages.
+        # These are HTML-only; the per-volume "Download PDF" links are skipped
+        # as redundant with the chapter HTML.
+        loader = ItemLoader(item=UscisItem(), response=response)
+        loader.add_value("url", response.url)
+        loader.add_value("content_type", "text/html")
+        loader.add_value("content", response.css("#page-content").get())
         loader.add_value("files", [])
         loader.add_value("parent_page", response.meta.get("parent_page"))
         yield loader.load_item()

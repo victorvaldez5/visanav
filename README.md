@@ -8,7 +8,7 @@ Allowing for secure communication and document sharing with your attorneys.
 
 ## Features
 
-- Scheduled or on-demand scraping of USCIS data
+- Weekly scheduled (and on-demand) USCIS crawl — forms, the INA, and the Policy Manual — to Cloudflare R2
 - Lightweight, containerized services
 - Extendable Python codebase
 - Pinecone integration for vector database
@@ -109,6 +109,27 @@ to bring up the scraper run
 ```bash
   docker compose up uscis_scraper
 ```
+
+---
+
+## Scraper & raw data
+
+The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Act
+(via uscode.house.gov), and the USCIS Policy Manual (~940 documents, ~200 MB total).
+
+- **Storage sink** is controlled by `LOCAL_TEST` in `config/.env`:
+  - `LOCAL_TEST=true` (default) writes raw HTML/PDF/JSONL under `output/` for local runs.
+  - `LOCAL_TEST=false` uploads to **Cloudflare R2** (S3-compatible) under `raw/`
+    (`raw/html/`, `raw/pdf/`, `raw/items/`), using `R2_BUCKET` + the `AWS_*` credentials.
+- **Incremental**: a content-hash manifest (`raw/manifest.json`) lets re-runs skip
+  pages whose content is unchanged, so only changed documents are re-written and
+  forwarded downstream.
+- **Scheduling**: `.github/workflows/scrape.yml` runs the crawl weekly (and on manual
+  `workflow_dispatch`), writing to R2. It reads `R2_BUCKET`, `AWS_ENDPOINT_URL`,
+  `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` from **GitHub Secrets**.
+  (A Fly scheduled Machine is an alternative if you'd rather keep everything on Fly.)
+- **Tests**: `.github/workflows/scraper-ci.yml` runs the scraper's pytest suite on
+  every PR touching `scrapers/`.
 
 ---
 

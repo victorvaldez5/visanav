@@ -1,0 +1,30 @@
+name: scraper-ci
+
+# Runs the scraper's unit tests on every PR (and main/develop push) that
+# touches the scraper.
+
+on:
+  pull_request:
+    paths:
+      - "scrapers/**"
+  push:
+    branches: [main, develop]
+    paths:
+      - "scrapers/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install scraper dependencies
+        run: pip install -r scrapers/uscis_scraper/requirements.txt
+
+      - name: Run scraper tests
+        working-directory: scrapers/uscis_scraper
+        run: pytest

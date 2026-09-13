@@ -27,19 +27,31 @@ LOCAL_TEST = os.getenv("LOCAL_TEST", "True").lower() in ("1", "true", "yes")
 LOCAL_SIZE_LIMIT_MB = os.getenv("LOCAL_SIZE_LIMIT_MB", 10)
 LOCAL_FILES = os.getenv("LOCAL_FILES", "output")
 
+# Cloudflare R2 (S3-compatible) object store for production crawls. When
+# LOCAL_TEST is false, scraped HTML/PDF/JSONL is written here instead of the
+# local `output/` dir. These AWS_* names are the ones Scrapy's built-in S3 feed
+# export and FilesPipeline read, so defining them wires the PDF + JSONL sinks;
+# the custom HTMLPagesPipeline and ContentHashPipeline read the same values.
+R2_BUCKET = os.getenv("R2_BUCKET")
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION_NAME = os.getenv("AWS_REGION_NAME", "auto")
+# Force SSL for the S3 client. Scrapy's AWS_USE_SSL defaults to None, and with
+# use_ssl=None botocore's S3 region-redirector infinitely recurses against R2
+# (a HeadObject 404 is misread as a region redirect -> HeadBucket -> loop).
+# Setting it True makes S3FilesStore build a working client. See settings docs.
+AWS_USE_SSL = True
+
 
 ADDONS = {}
-# Feed export.
-# NOTE: the S3 upload sink was removed during the AWS teardown, so both modes
-# now write to the local files store. Before running production crawls at
-# scale, wire a non-AWS remote sink here (e.g. a Fly volume or an
-# S3-compatible object store) and point FEED_URI / FILES_STORE at it.
-# TODO(sink): configure a production storage backend to replace local output.
+# Feed export. Production writes to Cloudflare R2 (needs R2_BUCKET + AWS_* creds
+# above); local mode writes under LOCAL_FILES.
 if not LOCAL_TEST:
-    FEED_URI = f"{LOCAL_FILES}/items/%(name)s/%(time)s.jsonl"
+    FEED_URI = f"s3://{R2_BUCKET}/raw/items/%(name)s/%(time)s.jsonl"
     FEED_FORMAT = "jsonlines"
     FEED_EXPORT_ENCODING = "utf-8"
-    FILES_STORE = LOCAL_FILES
+    FILES_STORE = f"s3://{R2_BUCKET}/raw/"
     ROBOTSTXT_OBEY = True
     DOWNLOAD_DELAY = 5
     CONCURRENT_REQUESTS = 8
@@ -65,8 +77,9 @@ logger.warning(
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT = "uscis-scraper (+https://github.com/victorvaldez5)"
 
-# Logging
-DUPEFILTER_CLASS = "scrapy.dupefilters.BaseDupeFilter"
+# Use Scrapy's default RFPDupeFilter (URL-level dedup) rather than the no-op
+# BaseDupeFilter, so the same page linked from multiple places isn't re-fetched
+# within a run (the Policy Manual TOC links repeat across pages).
 
 # Logging
 LOG_LEVEL = "INFO"
@@ -84,6 +97,7 @@ DEFAULT_REQUEST_HEADERS = {
 # Item pipelines
 ITEM_PIPELINES = {
     "uscis_scraper.pipelines.CleanValidatePipeline": 91,
+    "uscis_scraper.pipelines.ContentHashPipeline": 95,
     "uscis_scraper.pipelines.HTMLPagesPipeline": 100,
     "uscis_scraper.pipelines.NamedFilesPipeline": 200,
 }
