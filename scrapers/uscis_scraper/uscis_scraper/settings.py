@@ -17,11 +17,6 @@ BOT_NAME = "uscis_scraper"
 SPIDER_MODULES = ["uscis_scraper.spiders"]
 NEWSPIDER_MODULE = "uscis_scraper.spiders"
 
-AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "uscis-scraper-dev")
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-
 # Local Test Settings
 LOCAL_TEST = os.getenv("LOCAL_TEST", "True").lower() in ("1", "true", "yes")
 LOCAL_SIZE_LIMIT_MB = os.getenv("LOCAL_SIZE_LIMIT_MB", 10)
@@ -29,12 +24,17 @@ LOCAL_FILES = os.getenv("LOCAL_FILES", "output")
 
 
 ADDONS = {}
-# Feed export
+# Feed export.
+# NOTE: the S3 upload sink was removed during the AWS teardown, so both modes
+# now write to the local files store. Before running production crawls at
+# scale, wire a non-AWS remote sink here (e.g. a Fly volume or an
+# S3-compatible object store) and point FEED_URI / FILES_STORE at it.
+# TODO(sink): configure a production storage backend to replace local output.
 if not LOCAL_TEST:
-    FEED_URI = f"s3://{AWS_S3_BUCKET}/raw/items/%(name)s/%(time)s.jsonl"
+    FEED_URI = f"{LOCAL_FILES}/items/%(name)s/%(time)s.jsonl"
     FEED_FORMAT = "jsonlines"
     FEED_EXPORT_ENCODING = "utf-8"
-    FILES_STORE = f"s3://{AWS_S3_BUCKET}/raw/"
+    FILES_STORE = LOCAL_FILES
     ROBOTSTXT_OBEY = True
     DOWNLOAD_DELAY = 5
     CONCURRENT_REQUESTS = 8

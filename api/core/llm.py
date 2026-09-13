@@ -15,15 +15,14 @@ pc = Pinecone(api_key=settings.PINECONE_API_KEY)
 DEFAULT_MODELS = {
     "anthropic": "claude-haiku-4-5",
     "openai": "gpt-5-nano",
-    "bedrock": "us.amazon.nova-micro-v1:0",
 }
 
 
 def build_model(provider: str, model_name: str):
     """Construct a pydantic-ai model for the given provider.
 
-    Only the selected provider's client is constructed, so unused providers
-    (e.g. Bedrock, which needs AWS creds) never break startup.
+    Only the selected provider's client is constructed, so the unused
+    provider never breaks startup.
     """
     provider = provider.lower()
     if provider == "anthropic":
@@ -41,20 +40,8 @@ def build_model(provider: str, model_name: str):
         return OpenAIChatModel(
             model_name, provider=OpenAIProvider(api_key=settings.OPEN_AI_API_KEY)
         )
-    if provider == "bedrock":
-        from pydantic_ai.models.bedrock import BedrockConverseModel
-        from pydantic_ai.providers.bedrock import BedrockProvider
-
-        return BedrockConverseModel(
-            model_name,
-            provider=BedrockProvider(
-                region_name=settings.AWS_REGION,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_KEY,
-            ),
-        )
     raise ImproperlyConfigured(
-        f"Unsupported LLM_PROVIDER: {provider!r} (expected anthropic, openai, or bedrock)"
+        f"Unsupported LLM_PROVIDER: {provider!r} (expected anthropic or openai)"
     )
 
 

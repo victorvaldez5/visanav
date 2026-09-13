@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-import boto3
 from readability import Document
 from scrapy import Request
 from scrapy.exceptions import NotConfigured, DropItem
@@ -26,36 +25,21 @@ class CleanValidatePipeline:
 
 
 class HTMLPagesPipeline:
-    """Upload each HTML page’s raw content to S3 (or save locally)."""
+    """Save each HTML page's raw content to the local files store.
+
+    The S3 upload sink was removed during the AWS teardown. To ship scraped
+    pages to a production store, add a remote sink here (e.g. a Fly volume or
+    an S3-compatible object store) instead of writing under ``local_dir``.
+    """
 
     @classmethod
     def from_crawler(cls, crawler):
-        bucket = crawler.settings.get("AWS_S3_BUCKET")
-        local_test = crawler.settings.get("LOCAL_TEST")
         local_dir = crawler.settings.get("LOCAL_FILES")
+        if not local_dir:
+            raise NotConfigured("Missing LOCAL_FILES in settings")
+        return cls(local_dir)
 
-        if bucket is None or local_test is None:
-            raise NotConfigured("Missing AWS_S3_BUCKET or LOCAL_TEST in settings")
-
-        # only initialize an S3 client if we’re actually pushing to S3
-        s3_client = None
-        if not local_test:
-            aws_key = crawler.settings.get("AWS_ACCESS_KEY_ID")
-            aws_secret = crawler.settings.get("AWS_SECRET_ACCESS_KEY")
-            aws_region = crawler.settings.get("AWS_REGION")
-            session = boto3.Session(
-                aws_access_key_id=aws_key,
-                aws_secret_access_key=aws_secret,
-                region_name=aws_region,
-            )
-            s3_client = session.client("s3")
-
-        return cls(bucket, s3_client, local_test, local_dir)
-
-    def __init__(self, bucket, s3_client, local_test, local_dir):
-        self.bucket = bucket
-        self.s3_client = s3_client
-        self.local_test = local_test
+    def __init__(self, local_dir):
         self.local_dir = local_dir
 
     def process_item(self, item, spider):
@@ -72,18 +56,11 @@ class HTMLPagesPipeline:
         if not path:
             path = "root"
 
-        if self.local_test:
-            # save under local_files/page.html
-            file_path = os.path.join(self.local_dir, "html", f"{path}.html")
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "wb") as f:
-                f.write(html_bytes)
-        else:
-            # upload to s3://<bucket>/html/<parent>/<path>.html
-            key = f"raw/html/{path}.html"
-            self.s3_client.put_object(
-                Bucket=self.bucket, Key=key, Body=html_bytes, ContentType="text/html"
-            )
+        # save under <local_dir>/html/<path>.html
+        file_path = os.path.join(self.local_dir, "html", f"{path}.html")
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "wb") as f:
+            f.write(html_bytes)
 
         return item
 

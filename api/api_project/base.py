@@ -144,12 +144,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 MAILTRAP_API_KEY = os.environ.get("MAILTRAP_API_KEY")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
-# AWS SETTINGS
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_KEY = os.environ.get("AWS_SECRET_KEY")
-AWS_S3_BUCKET = os.environ.get("AWS_S3_BUCKET")
-AWS_REGION = os.environ.get("AWS_REGION")
-
 # PINECONE SETTINGS
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_INDEX = os.environ.get("PINECONE_INDEX_HOST") or os.environ.get("INDEX_HOST")
@@ -160,7 +154,7 @@ OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 # ANTHROPIC / CLAUDE SETTINGS
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
-# LLM provider for the chat agent: "anthropic" | "openai" | "bedrock".
+# LLM provider for the chat agent: "anthropic" | "openai".
 # Defaults to Anthropic (Claude). The model name has a per-provider default in
 # core/llm.py and can be overridden with CHAT_MODEL.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").lower()

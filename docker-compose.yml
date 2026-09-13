@@ -18,41 +18,6 @@ services:
       - PYTHONUNBUFFERED=1
     command: [ "scrapy", "crawl", "uscis" ]
 
-  glue5_pyspark:
-    profiles: [ "etl" ]
-    hostname: glue5
-    build:
-      context: .
-      dockerfile: ./backend/glue_jobs/Dockerfile
-      target: development
-    # Or use build: ./ if you've created Dockerfile.glue5
-    # image: glue5_custom
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile.glue5
-    volumes:
-      - ~/.aws:/home/hadoop/.aws:ro
-      - ./backend/glue_jobs:/home/hadoop/workspace
-    environment:
-      - DISABLE_SSL=true
-      - EXTRA_PYTHON_PACKAGE_LOCATION=/home/hadoop/workspace/vendor.zip
-    ports:
-      - "4040:4040"
-      - "18080:18080"
-    tty: true
-    stdin_open: true
-    command:
-      [
-        "spark-submit",
-        "--conf",
-        "spark.driver.memory=4g",
-        "--conf",
-        "spark.executor.memory=4g",
-        "./clean_and_enrich_text.py",
-        "--JOB_NAME",
-        "clean_and_enrich",
-      ]
-
   frontend:
     hostname: frontend
     build:

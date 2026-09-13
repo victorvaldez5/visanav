@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Turn curated knowledge Markdown into vector-store records.
 
-This mirrors the chunking used by backend/glue_jobs/clean_and_enrich_text.py,
-but works on human-contributed Markdown instead of scraped HTML/PDF:
+It works on human-contributed Markdown (rather than scraped HTML/PDF):
 
     frontmatter + body  ->  cleaned text  ->  ~200-word chunks  ->  upsert
 
@@ -51,7 +50,7 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def clean_text(text: str) -> str:
-    """Same normalization as the glue job: de-hyphenate, collapse whitespace."""
+    """Normalize text: de-hyphenate, collapse whitespace."""
     text = re.sub(r"(\w+)-\s+(\w+)", r"\1\2", text)
     text = re.sub(r"\s+", " ", text).strip()
     return "".join(c for c in text if c.isprintable())

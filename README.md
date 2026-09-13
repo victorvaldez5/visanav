@@ -15,7 +15,6 @@ Allowing for secure communication and document sharing with your attorneys.
 - vue frontend chat interface
 - django backend api server
 - docker-compose for local development
-- AWS glue job for data ingestion
 - Pydnatic-ai for AI Agent based chatbot
 
 ---
@@ -86,12 +85,6 @@ to bring up the scraper run
 
 ```bash
   docker compose up uscis_scraper
-```
-
-to bring up the glue5 container run
-
-```bash
-  docker compose glue5_pyspark
 ```
 
 ---

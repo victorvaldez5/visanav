@@ -18,7 +18,6 @@ def test_html_pages_pipeline_not_configured():
 
 def test_html_pages_pipeline_local(tmp_path):
     settings = {
-        "AWS_S3_BUCKET": "test-bucket",
         "LOCAL_TEST": True,
         "LOCAL_FILES": str(tmp_path),
     }
@@ -36,32 +35,6 @@ def test_html_pages_pipeline_local(tmp_path):
     target = tmp_path / "html" / "path" / "page.html"
     assert target.exists()
     assert target.read_text(encoding="utf-8") == "<h1>Hello</h1>"
-
-
-def test_html_pages_pipeline_s3(monkeypatch):
-    calls = {}
-
-    class DummyClient:
-        def put_object(self, **kwargs):
-            calls.update(kwargs)
-
-    bucket = "buck"
-    client = DummyClient()
-    pipeline = HTMLPagesPipeline(bucket, client, local_test=False, local_dir=None)
-
-    item = {
-        "url": "https://host/example.html",
-        "content_type": "text/html",
-        "content": "XYZ",
-    }
-    out = pipeline.process_item(item, spider=None)
-    assert out is item
-
-    # code builds Key="html/<path>.html"
-    assert calls["Bucket"] == bucket
-    assert calls["Key"] == "html/example.html.html"
-    assert calls["Body"] == b"XYZ"
-    assert calls["ContentType"] == "text/html"
 
 
 def test_named_files_pipeline_requests_and_path():
@@ -93,7 +66,7 @@ def html_item():
 
 
 def test_html_pipeline_skips_non_html(tmp_path, html_item):
-    settings = {"AWS_S3_BUCKET": "b", "LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
+    settings = {"LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
     pipeline = HTMLPagesPipeline.from_crawler(DummyCrawler(settings))
 
     pdf_item = dict(html_item, content_type="application/pdf")
@@ -104,7 +77,7 @@ def test_html_pipeline_skips_non_html(tmp_path, html_item):
 
 
 def test_html_pipeline_root_fallback(tmp_path):
-    settings = {"AWS_S3_BUCKET": "b", "LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
+    settings = {"LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
     pipeline = HTMLPagesPipeline.from_crawler(DummyCrawler(settings))
 
     item = {
@@ -120,7 +93,7 @@ def test_html_pipeline_root_fallback(tmp_path):
 
 
 def test_html_pipeline_xhtml_local(tmp_path):
-    settings = {"AWS_S3_BUCKET": "b", "LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
+    settings = {"LOCAL_TEST": True, "LOCAL_FILES": str(tmp_path)}
     pipeline = HTMLPagesPipeline.from_crawler(DummyCrawler(settings))
 
     # simulate an .xhtml URL with query params & fragments
@@ -132,30 +105,6 @@ def test_html_pipeline_xhtml_local(tmp_path):
     expected = tmp_path / "html" / f"host/USC-prelim-title8-section1101.html"
     assert expected.exists()
     assert "XHTML" in expected.read_text()
-
-
-def test_html_pipeline_xhtml_s3(monkeypatch):
-    calls = {}
-
-    class DummyClient:
-        def put_object(self, **kw):
-            calls.update(kw)
-
-    # bypass from_crawler, instantiate directly for S3 mode
-    bucket = "BUCK"
-    pipeline = HTMLPagesPipeline(
-        bucket, DummyClient(), local_test=False, local_dir=None
-    )
-
-    url = "https://h/doc.xhtml?req=granuleid:USC-prelim-title8-section1101&num=0&edition=prelim"
-    item = {"url": url, "content_type": "text/html", "content": "C"}
-    pipeline.process_item(item, spider=None)
-
-    # key should be "html/h/foo.html"
-    assert calls["Bucket"] == bucket
-    assert calls["Key"] == "html/h/USC-prelim-title8-section1101.html"
-    assert calls["ContentType"] == "text/html"
-    assert calls["Body"] == b"C"
 
 
 def test_named_files_pipeline_no_urls():
