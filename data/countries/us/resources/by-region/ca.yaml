@@ -1,0 +1,26 @@
+# California organizations.
+
+- org_id: catholic-charities-la
+  name: Catholic Charities of Los Angeles
+  org_type: non-profit
+  country: US
+  pro_bono: true
+  fee_model: sliding-scale
+  services: [general-consultation, victims-of-crime, family-petitions]
+  description: >-
+    Assists with various forms of immigration relief, including for victims of
+    crime. Serves Los Angeles, Orange, Riverside, San Bernardino, Ventura, Kern,
+    and Santa Barbara counties. Reduced, nominal, or pro bono fees depending on
+    need and grant availability.
+  languages: [en, es]
+  contact:
+    websites: ["https://www.esperanza-la.org"]
+    phones: ["+1-213-251-3505", "+1-213-487-0986"]
+  address:
+    line1: 1530 James M Wood Boulevard
+    city: Los Angeles
+    region: CA
+    postal_code: "90015"
+    country: US
+  source_url: https://www.esperanza-la.org
+  last_verified: 2026-02-10

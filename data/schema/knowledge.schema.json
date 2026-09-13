@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victorvaldez/immigration-ai/data/schema/knowledge.schema.json",
+  "title": "Knowledge document frontmatter",
+  "description": "Validates the YAML frontmatter block at the top of every knowledge Markdown file under data/countries/<code>/knowledge/. The Markdown body below the frontmatter is the retrievable content; this schema governs only the metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "doc_id",
+    "country",
+    "authority",
+    "topic",
+    "title",
+    "lang",
+    "source_url",
+    "source_type",
+    "last_verified"
+  ],
+  "properties": {
+    "doc_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Stable, unique-within-country id. Used for re-ingestion and deduplication. Lowercase, digits, hyphens."
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2 country code. Must match the parent countries/<code>/ folder."
+    },
+    "authority": {
+      "type": "string",
+      "minLength": 2,
+      "description": "The issuing government body, e.g. USCIS, DOS, IRCC. Should match an authority declared in the country's meta.yaml."
+    },
+    "topic": {
+      "type": "string",
+      "enum": [
+        "green-card",
+        "visas",
+        "citizenship",
+        "asylum-refugee",
+        "work-authorization",
+        "family",
+        "forms",
+        "fees",
+        "appeals",
+        "enforcement",
+        "rights",
+        "glossary",
+        "other"
+      ],
+      "description": "Controlled topic. See data/schema/vocabularies.md."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200
+    },
+    "forms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Official form numbers referenced by this document, e.g. [I-130, I-485]."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+      "description": "Optional free-form keywords to aid retrieval."
+    },
+    "lang": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "ISO 639-1 language code of the document body."
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Direct link to the source this document is based on."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["official", "secondary"],
+      "description": "'official' MUST cite a domain listed in the country's meta.yaml official_domains (enforced by validate.py). 'secondary' is a reputable non-government source."
+    },
+    "last_verified": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date (YYYY-MM-DD) a human last checked this against the source."
+    }
+  }
+}

@@ -1,0 +1,29 @@
+name: validate-data
+
+# Gates the *format* of contributed data on every PR that touches data/.
+# Human maintainers still review the substance.
+
+on:
+  pull_request:
+    paths:
+      - "data/**"
+  push:
+    branches: [main, develop]
+    paths:
+      - "data/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install data tooling
+        run: pip install -r data/scripts/requirements.txt
+
+      - name: Validate all country data
+        run: python data/scripts/validate.py

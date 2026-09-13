@@ -1,0 +1,56 @@
+[project]
+name = "api"
+version = "0.1.0"
+description = "an api server"
+authors = [{ name = "Victor Valdez", email = "vv.digitalfuturesllc@gmail.com" }]
+requires-python = ">=3.9,<4.0"
+
+[build-system]
+requires = ["poetry-core>=2.1.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api_project", "core", "conversation"]
+exclude = ["staticfiles"]
+
+[dependency-groups]
+dev = ["ruff>=0.12.8"]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+redis = "^6.4.0"
+django-redis = "^6.0.0"
+pinecone = "^7.3.0"
+boto3 = ">=1.40.7"
+django = ">=5.2.5"
+django-cors-headers = ">=4.7.0"
+djangorestframework = ">=3.16.1"
+djangorestframework-simplejwt = ">=5.5.1"
+gunicorn = ">=23.0.0"
+psycopg2-binary = ">=2.9.10"
+python-dotenv = ">=1.1.1"
+python-jose = ">=3.5.0"
+whitenoise = ">=6.9.0"
+uvicorn = { extras = ["standard"], version = "^0.35.0" }
+pydantic-ai = { extras = ["slim"], version = "^0.7.2" }
+mailtrap = "^2.1.0"
+pydantic-ai-slim = {extras = ["openai"], version = "^0.7.4"}
+celery = {extras = ["sqs"], version = "^5.5.3"}
+django-phonenumber-field = {extras = ["phonenumberslite"], version = "^8.1.0"}
+pycountry = "^24.6.1"
+django-countries = "^7.6.1"
+django-filter = "^25.1"
+beautifulsoup4 = "^4.13.5"
+pdfplumber = "^0.11.7"
+pytest = "^8.4.2"
+# Pinned <1.37: opentelemetry-api 1.37 removed the `_events` module that
+# pydantic-ai 0.7.x imports, which breaks the app on a fresh dependency resolve.
+opentelemetry-api = ">=1.30,<1.37"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
+

@@ -1,0 +1,26 @@
+# A resource file is a YAML list of organizations. Copy an entry and fill it in.
+# Only org_id, name, org_type, country, source_url, last_verified are required;
+# everything else is optional but valuable. See data/schema/resource.schema.json.
+
+- org_id: example-legal-aid           # unique within this country; lowercase-hyphen
+  name: Example Legal Aid Society
+  org_type: non-profit                # see vocabularies.md
+  country: XX                         # UPPERCASE alpha-2; must match the folder
+  pro_bono: true
+  fee_model: free                     # free | sliding-scale | low-cost | paid | unknown
+  services: [general-consultation]    # see vocabularies.md
+  description: One or two sentences on who they help and how.
+  languages: [en]
+  contact:
+    websites: ["https://example.org"]
+    emails: ["help@example.org"]
+    phones: ["+1-555-555-0100"]       # E.164-style preferred
+  address:
+    line1: 123 Main St
+    city: Somewhere
+    region: XX                        # state / province / subdivision
+    postal_code: "00000"
+    country: XX                       # UPPERCASE alpha-2
+  accreditation: ""                   # e.g. "DOJ-recognized" (optional)
+  source_url: https://example.gov/roster
+  last_verified: 2026-01-01

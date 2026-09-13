@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victorvaldez/immigration-ai/data/schema/resource.schema.json",
+  "title": "Resource file",
+  "description": "A resource file is a YAML list of organization entries. Each entry describes a place a person can get immigration help. Files live under data/countries/<code>/resources/.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/organization" },
+  "$defs": {
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["org_id", "name", "org_type", "country", "source_url", "last_verified"],
+      "properties": {
+        "org_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Stable, unique-within-country id. Lowercase, digits, hyphens."
+        },
+        "name": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "org_type": {
+          "type": "string",
+          "enum": [
+            "self-owned",
+            "public-company",
+            "private-company",
+            "partnership",
+            "educational",
+            "referral-service",
+            "community-organization",
+            "non-profit"
+          ],
+          "description": "Mirrors the Organization.OrganizationType choices in the app. See vocabularies.md."
+        },
+        "pro_bono": {
+          "type": "boolean",
+          "description": "True if the org offers free legal help to those who qualify."
+        },
+        "fee_model": {
+          "type": "string",
+          "enum": ["free", "sliding-scale", "low-cost", "paid", "unknown"]
+        },
+        "services": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "description": "Areas of help, e.g. [removal-defense, asylum, family-petitions]."
+        },
+        "description": { "type": "string", "maxLength": 2000 },
+        "languages": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z]{2}$" },
+          "description": "ISO 639-1 codes of languages the org serves clients in."
+        },
+        "contact": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "websites": { "type": "array", "items": { "type": "string", "format": "uri" } },
+            "emails": { "type": "array", "items": { "type": "string", "format": "email" } },
+            "phones": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "E.164-style preferred, e.g. +1-520-868-0191."
+            }
+          }
+        },
+        "address": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["country"],
+          "properties": {
+            "line1": { "type": "string" },
+            "line2": { "type": "string" },
+            "city": { "type": "string" },
+            "region": {
+              "type": "string",
+              "description": "State / province / subdivision, e.g. CA, ON, Bavaria."
+            },
+            "postal_code": { "type": "string" },
+            "country": { "type": "string", "pattern": "^[A-Z]{2}$" }
+          }
+        },
+        "accreditation": {
+          "type": "string",
+          "description": "Recognition/accreditation status, e.g. 'DOJ-recognized'. A strong trust signal; cite it in source_url when possible."
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2. Must match the parent countries/<code>/ folder."
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Where this listing was sourced/verified from (ideally an official roster or the org's own site)."
+        },
+        "last_verified": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    }
+  }
+}

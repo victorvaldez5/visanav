@@ -1,0 +1,6 @@
+beautifulsoup4
+pypdf
+pypdf[crypto]
+nltk
+pinecone
+python-dotenv

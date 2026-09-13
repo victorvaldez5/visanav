@@ -1,0 +1,114 @@
+services:
+  uscis_scraper:
+    profiles: [ "scraper" ]
+    build:
+      context: .
+      dockerfile: ./scrapers/uscis_scraper/Dockerfile
+      target: ${BUILD_TARGET:-development}
+    #    image: ${ECR_REPOSITORY}:${TAG:-latest}
+    hostname: uscis_scraper
+    volumes:
+      - ./scrapers/uscis_scraper:/app
+    env_file:
+      - .env
+    working_dir: "/app"
+    ports:
+      - "9000:9000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: [ "scrapy", "crawl", "uscis" ]
+
+  glue5_pyspark:
+    profiles: [ "etl" ]
+    hostname: glue5
+    build:
+      context: .
+      dockerfile: ./backend/glue_jobs/Dockerfile
+      target: development
+    # Or use build: ./ if you've created Dockerfile.glue5
+    # image: glue5_custom
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.glue5
+    volumes:
+      - ~/.aws:/home/hadoop/.aws:ro
+      - ./backend/glue_jobs:/home/hadoop/workspace
+    environment:
+      - DISABLE_SSL=true
+      - EXTRA_PYTHON_PACKAGE_LOCATION=/home/hadoop/workspace/vendor.zip
+    ports:
+      - "4040:4040"
+      - "18080:18080"
+    tty: true
+    stdin_open: true
+    command:
+      [
+        "spark-submit",
+        "--conf",
+        "spark.driver.memory=4g",
+        "--conf",
+        "spark.executor.memory=4g",
+        "./clean_and_enrich_text.py",
+        "--JOB_NAME",
+        "clean_and_enrich",
+      ]
+
+  frontend:
+    hostname: frontend
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    env_file:
+      - .env
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - api
+
+  api:
+    hostname: api
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+      target: development
+
+    # Run under ASGI (uvicorn) so Server-Sent Events streaming works in dev.
+    # `runserver` is WSGI and buffers streaming responses.
+    command: bash -lc "python -m uvicorn api_project.asgi:application --host 0.0.0.0 --port 8000 --reload"
+    env_file:
+      - .env
+    volumes:
+      - ./api:/app
+    environment:
+      - PYTHONBUFFERED=1
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    hostname: db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-raul}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pswd}
+      POSTGRES_DB: ${POSTGRES_DB:-proejctraul}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

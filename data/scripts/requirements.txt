@@ -1,0 +1,11 @@
+# Dependencies for the data tooling.
+# Kept separate from the app's dependencies so contributors who only touch
+# data can install a tiny footprint.
+#
+# Validation (validate.py) — this is all CI needs:
+pyyaml>=6.0
+jsonschema>=4.20
+#
+# Ingestion (ingest.py) additionally needs the Pinecone client. Install it only
+# when you actually run ingestion:
+#     pip install "pinecone>=5.0"

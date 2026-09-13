@@ -1,0 +1,18 @@
+# Copy this whole _template/ folder to countries/<code>/ to add a country.
+# Rename the folder to the ISO 3166-1 alpha-2 code (lowercase), e.g. `ca`, `de`.
+# Then set `country` below to the uppercase code and fill in the real authorities.
+
+country: XX                     # ISO 3166-1 alpha-2, UPPERCASE (must match folder name)
+country_name: Country Name
+languages: [en]                 # ISO 639-1 codes commonly used for this country's guidance
+
+# The government bodies that issue immigration rules here. The `official_domains`
+# are ENFORCED: any knowledge doc marked `source_type: official` must cite a URL
+# on one of these domains, or validation fails.
+authorities:
+  - name: Example Immigration Authority
+    abbr: EIA
+    official_domains: [example.gov]
+
+# GitHub usernames who review PRs for this country (the humans who gate truth).
+maintainers: []

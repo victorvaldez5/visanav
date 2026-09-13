@@ -1,0 +1,19 @@
+country: US
+country_name: United States
+languages: [en, es]
+
+authorities:
+  - name: U.S. Citizenship and Immigration Services
+    abbr: USCIS
+    official_domains: [uscis.gov]
+  - name: U.S. Department of State
+    abbr: DOS
+    official_domains: [travel.state.gov, state.gov]
+  - name: Executive Office for Immigration Review
+    abbr: EOIR
+    official_domains: [justice.gov]
+  - name: U.S. Customs and Border Protection
+    abbr: CBP
+    official_domains: [cbp.gov]
+
+maintainers: ["@victorvaldez"]

@@ -1,0 +1,68 @@
+.env
+/__pycache__/
+/scrapers/uscis_scraper/form_pages/*
+/scrapers/uscis_scraper/pdfs/*
+*.tfstate            # local state files
+*.tfstate.backup     # state backups
+crash.log            # crash logs
+override.tf          # local overrides
+override.tf.json     # local overrides
+.tfvars             # variable definitions (may contain secrets)
+*.tfvars.json        # variable definitions
+.terraform.lock.hcl
+.terraform/
+*/*.tfvars
+*.tfvars
+terraform.tfvars
+*/terraform.tfvars
+*.tfstate
+*.tfstate.*
+__pycache__
+*.pyc
+scrapers/uscis_scraper/uscis_scraper/output/html
+scrapers/uscis_scraper/uscis_scraper/output/pdf
+scrapers/uscis_scraper/uscis_scraper/output/items
+/staticfiles/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/*
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+/.zed
+
+# Project outputs
+pyrightconfig.json
+/output/raw/html/*
+/output/raw/items/*
+/output/raw/pdf/*
+vendor.zip
+/infra/envs/staging/terraform.tfvars
+/infra/envs/staging/*.tfvars.*
+
+api/staticfiles
+
+# Terraform plan files (binary; embed resolved secret VALUES in plaintext)
+*.tfplan
+tfplan
+plan.txt
+*.plan

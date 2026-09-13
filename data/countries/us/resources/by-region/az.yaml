@@ -1,0 +1,26 @@
+# Arizona organizations.
+
+- org_id: florence-project
+  name: Florence Immigrant and Refugee Rights Project
+  org_type: non-profit
+  country: US
+  pro_bono: true
+  fee_model: free
+  services: [removal-defense, unaccompanied-minors, detention]
+  description: >-
+    Removal defense and orientation materials. Provides free legal and social
+    services to detained adults and unaccompanied children. Appointments only;
+    no walk-ins.
+  languages: [en, es]
+  contact:
+    websites: ["https://www.firrp.org"]
+    emails: ["firrp@firrp.org"]
+    phones: ["+1-520-868-0191", "+1-602-307-1008"]
+  address:
+    line1: P.O. Box 32670
+    city: Phoenix
+    region: AZ
+    postal_code: "85064"
+    country: US
+  source_url: https://www.firrp.org
+  last_verified: 2026-02-10

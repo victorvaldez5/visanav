@@ -1,0 +1,27 @@
+# National-scope organizations. Region-specific orgs live under by-region/.
+# Migrated from the app's network/fixtures/probono_clean.json as the first
+# worked example of the resource schema.
+
+- org_id: aba-immigration-detention-hotline
+  name: ABA Commission on Immigration Detention Information Hotline
+  org_type: referral-service
+  country: US
+  pro_bono: true
+  fee_model: free
+  services: [detention, removal-defense]
+  description: >-
+    Pro se case assistance for detained respondents. Respondents detained at
+    ICE, BOP, or Department of Defense facilities can contact the hotline.
+  languages: [en]
+  contact:
+    websites: ["https://www.americanbar.org/groups/public_interest/immigration/"]
+    emails: ["immcenter@americanbar.org"]
+    phones: ["+1-202-662-1000", "+1-855-641-6081"]
+  address:
+    line1: 1050 Connecticut Avenue NW, Unit 400
+    city: Washington
+    region: DC
+    postal_code: "20036"
+    country: US
+  source_url: https://www.americanbar.org/groups/public_interest/immigration/
+  last_verified: 2026-02-10
