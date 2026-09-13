@@ -43,8 +43,8 @@ Allowing for secure communication and document sharing with your attorneys.
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/victorvaldez5/immigration-ai-bot.git
-   cd immigration-ai-bot
+   git clone https://github.com/victorvaldez5/visanav.git
+   cd visanav
    ```
 
 2. Create & activate a Python virtual environment
