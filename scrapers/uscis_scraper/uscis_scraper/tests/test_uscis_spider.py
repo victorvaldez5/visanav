@@ -45,10 +45,12 @@ def test_parse_forms_page_yields_html_item_and_pdf_requests(spider):
     html = """
     <html>
       <body>
-        <article class="media">
-          <a href="https://example.com/doc1.pdf">PDF1</a>
-          <a href="/internal/page.html">HTML</a>
-        </article>
+        <div id="page-content">
+          <article class="media">
+            <a href="https://example.com/doc1.pdf">PDF1</a>
+            <a href="/internal/page.html">HTML</a>
+          </article>
+        </div>
       </body>
     </html>
     """
@@ -104,7 +106,10 @@ def test_parse_legislation_page_generates_uscode_followers(spider):
 
 
 def test_parse_uscode_page_yields_html_item(spider):
-    body = "<html><head><title>USC</title></head><body>Content</body></html>"
+    body = (
+        "<html><head><title>USC</title></head>"
+        '<body><div id="docViewer">Content</div></body></html>'
+    )
     parent = "legislation-parent"
     resp = make_html_response("https://example.com/uscode1", body)
     resp.request = Request(resp.url, meta={"parent_page": parent})
@@ -118,6 +123,59 @@ def test_parse_uscode_page_yields_html_item(spider):
     assert "Content" in item["content"]
     assert item.get("files") is None
     assert item["parent_page"] == parent
+
+
+def test_parse_policy_manual_follows_chapter_links(spider):
+    html = """
+    <html>
+      <body>
+        <a href="/policy-manual/volume-1-part-a-chapter-1">Ch1</a>
+        <a href="/policy-manual/volume-2-part-b-chapter-3">Ch3</a>
+        <a href="/policy-manual/updates">Updates</a>
+        <a href="/policy-manual/volume-1">Volume 1</a>
+      </body>
+    </html>
+    """
+    resp = make_html_response(
+        "https://www.uscis.gov/policy-manual/table-of-contents", html
+    )
+    results = list(spider.parse_policy_manual(resp))
+
+    # Only the two chapter links are followed (not updates/volume index).
+    assert len(results) == 2
+    expected = [
+        "/policy-manual/volume-1-part-a-chapter-1",
+        "/policy-manual/volume-2-part-b-chapter-3",
+    ]
+    for req, path in zip(results, expected):
+        assert isinstance(req, Request)
+        assert req.callback == spider.parse_policy_chapter
+        assert req.url.endswith(path)
+        assert req.meta["parent_page"] == resp.url
+
+
+def test_parse_policy_chapter_yields_html_item(spider):
+    html = (
+        '<html><body><div id="page-content"><p>Chapter body</p></div>'
+        "<nav>menu</nav></body></html>"
+    )
+    parent = "https://www.uscis.gov/policy-manual/table-of-contents"
+    resp = make_html_response(
+        "https://www.uscis.gov/policy-manual/volume-1-part-a-chapter-1", html
+    )
+    resp.request = Request(resp.url, meta={"parent_page": parent})
+    items = list(spider.parse_policy_chapter(resp))
+
+    assert len(items) == 1
+    item = items[0]
+    assert isinstance(item, UscisItem)
+    assert item["url"] == resp.url
+    assert item["content_type"] == "text/html"
+    assert "Chapter body" in item["content"]
+    assert 'id="page-content"' in item["content"]
+    assert item["parent_page"] == parent
+    # empty files list collapses to unset, matching parse_uscode_page
+    assert item.get("files") is None
 
 
 def test_parse_pdf_yields_pdf_item(spider):
