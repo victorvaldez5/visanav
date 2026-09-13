@@ -8,9 +8,14 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 import os
 import logging
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
+# Environment lives in the repo-root config/ directory (see config/.env.example).
+# settings.py is at scrapers/uscis_scraper/uscis_scraper/, so the repo root is
+# three levels up.
+load_dotenv(Path(__file__).resolve().parents[3] / "config" / ".env")
 logger = logging.getLogger(__name__)
 BOT_NAME = "uscis_scraper"
 

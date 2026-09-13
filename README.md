@@ -23,9 +23,10 @@ Allowing for secure communication and document sharing with your attorneys.
 
 1. [Prerequisites](#prerequisites)
 2. [Getting Started](#getting-started)
-3. [Development Workflow](#development-workflow)
-4. [Running with Docker Compose](#running-with-docker-compose)
-5. [Cleaning Up](#cleaning-up)
+3. [Configuration](#configuration)
+4. [Development Workflow](#development-workflow)
+5. [Running with Docker Compose](#running-with-docker-compose)
+6. [Cleaning Up](#cleaning-up)
 
 ---
 
@@ -68,6 +69,28 @@ Allowing for secure communication and document sharing with your attorneys.
 ```bash
 npm install -D
 ```
+
+---
+
+## Configuration
+
+All environment variables live in one place: **`config/.env`**.
+
+```bash
+cp config/.env.example config/.env   # then fill in the secrets marked "CHANGE ME"
+```
+
+`config/.env.example` is committed and documents every variable (Django, Postgres,
+LLM keys, Pinecone, email, scraper). `config/.env` is gitignored and is read by:
+
+- `docker-compose.yml` — all services, via `env_file`
+- the Django API — `api/api_project/base.py`
+- the Scrapy scraper — `scrapers/uscis_scraper/uscis_scraper/settings.py`
+- the data ingestion script — `data/scripts/ingest.py` (for `--upsert`)
+
+> The `${VAR}` substitutions inside `docker-compose.yml` all have built-in
+> defaults, so `docker compose up` works out of the box. To feed your env file
+> into those substitutions too, run `docker compose --env-file config/.env up`.
 
 ---
 

@@ -10,7 +10,7 @@ services:
     volumes:
       - ./scrapers/uscis_scraper:/app
     env_file:
-      - .env
+      - config/.env
     working_dir: "/app"
     ports:
       - "9000:9000"
@@ -24,7 +24,7 @@ services:
       context: .
       dockerfile: ./frontend/Dockerfile
     env_file:
-      - .env
+      - config/.env
 
     volumes:
       - ./frontend:/app
@@ -47,7 +47,7 @@ services:
     # `runserver` is WSGI and buffers streaming responses.
     command: bash -lc "python -m uvicorn api_project.asgi:application --host 0.0.0.0 --port 8000 --reload"
     env_file:
-      - .env
+      - config/.env
     volumes:
       - ./api:/app
     environment:
@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
     hostname: db
     env_file:
-      - .env
+      - config/.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-raul}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pswd}

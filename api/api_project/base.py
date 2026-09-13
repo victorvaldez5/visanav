@@ -5,7 +5,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv()
+# Environment lives in the repo-root config/ directory (see config/.env.example).
+load_dotenv(BASE_DIR.parent / "config" / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
 DEBUG = True
 ALLOWED_HOSTS = ["*"]

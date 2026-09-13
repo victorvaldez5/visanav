@@ -37,6 +37,15 @@ except ImportError:  # pragma: no cover
 DATA_DIR = Path(__file__).resolve().parent.parent
 COUNTRIES_DIR = DATA_DIR / "countries"
 
+# Optionally load config/.env (only --upsert needs PINECONE_* below). Kept
+# optional so validation stays dependency-light; falls back to the shell env.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(DATA_DIR.parent / "config" / ".env")
+except ImportError:
+    pass
+
 MAX_WORDS = 200
 META_FIELDS = ("doc_id", "country", "authority", "topic", "title", "lang",
                "source_url", "source_type", "last_verified", "forms")

@@ -1,4 +1,6 @@
+# Local environment files — the committed template is config/.env.example
 .env
+config/.env
 /__pycache__/
 /scrapers/uscis_scraper/form_pages/*
 /scrapers/uscis_scraper/pdfs/*
