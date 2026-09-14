@@ -42,6 +42,3 @@ class AddressViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AddressSerializer
     queryset = Address.objects.all()
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        pass
