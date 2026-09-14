@@ -1,0 +1,15 @@
+{
+  // Committing this config makes `wrangler deploy` deterministic: it deploys the
+  // already-built ./dist as a static-assets Worker instead of running the
+  // interactive "Configuring project for Vite" setup, which re-ran `npm run build`
+  // a second time on every deploy. The Cloudflare build command (`npm run build`)
+  // produces ./dist; this step only uploads it.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "visanav",
+  "compatibility_date": "2026-09-14",
+  "assets": {
+    "directory": "./dist",
+    // Serve index.html for unknown paths so Vue Router (history mode) works.
+    "not_found_handling": "single-page-application"
+  }
+}

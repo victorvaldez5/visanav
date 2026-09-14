@@ -6,8 +6,11 @@ import tailwindcss from '@tailwindcss/vite'
 import eslint from 'vite-plugin-eslint'
 
 // https://vite.dev/config/
-export default defineConfig({
-    plugins: [vue(), tailwindcss(), eslint()],
+export default defineConfig(({command}) => ({
+    // Run ESLint only during dev (`vite`/`command === 'serve'`). Linting during
+    // production builds (`vite build`, e.g. on Cloudflare) just adds time and
+    // noise to CI logs — use `npm run lint` (or lint:fix) for that instead.
+    plugins: [vue(), tailwindcss(), ...(command === 'serve' ? [eslint()] : [])],
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
@@ -31,4 +34,4 @@ export default defineConfig({
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
         }
     },
-})
+}))
