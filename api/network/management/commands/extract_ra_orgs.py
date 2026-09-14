@@ -44,16 +44,18 @@ def parse_cell(cell_text: str) -> Dict:
         if i >= len(lines):
             break
 
-        name_line = lines[i].strip();
+        name_line = lines[i].strip()
         i += 1
         i = _next_nonempty(lines, i)
-        if i >= len(lines): break
-        street_line = lines[i].strip();
+        if i >= len(lines):
+            break
+        street_line = lines[i].strip()
         i += 1
 
         i = _next_nonempty(lines, i)
-        if i >= len(lines): break
-        csz_line = lines[i].strip();
+        if i >= len(lines):
+            break
+        csz_line = lines[i].strip()
         i += 1
 
         csz = parse_city_state_zip(csz_line)
@@ -71,8 +73,9 @@ def parse_cell(cell_text: str) -> Dict:
         city, state, postal_code = csz
 
         i = _next_nonempty(lines, i)
-        if i >= len(lines): break
-        phone_line = lines[i].strip();
+        if i >= len(lines):
+            break
+        phone_line = lines[i].strip()
         i += 1
 
         if not PHONE_RE.search(phone_line) and i < len(lines):
@@ -116,10 +119,9 @@ def extract_cells_from_pdf(path):
                             if cell and cell.strip():
                                 cells.append(cell.strip())
             else:
-                # Fallback: page text (you’ll likely need heuristics per your layout)
-                page_text = page.extract_text() or ""
-                # TODO: split page_text into cell strings (e.g., by known leading tokens or large gaps)
-                # cells.extend(split_into_cells(page_text))
+                # Fallback: page text. TODO: split page.extract_text() into cell
+                # strings per this PDF's layout, then cells.extend(...).
+                pass
     return cells
 
 

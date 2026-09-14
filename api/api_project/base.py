@@ -7,9 +7,13 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Environment lives in the repo-root config/ directory (see config/.env.example).
 load_dotenv(BASE_DIR.parent / "config" / ".env")
+# Secure-by-default: base is locked down and dev.py opens things up. This way a
+# misconfigured DJANGO_SETTINGS_MODULE (or a new settings module that forgets to
+# override) never accidentally ships DEBUG/open hosts/open CORS. prod.py hardens
+# further and requires a real secret key.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+DEBUG = False
+ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -92,10 +96,12 @@ CACHES = {
 CACHE_MIDDLEWARE_SECONDS = 60  # start small;
 
 # Soft per-client rate limit on the chat endpoint (requests/minute) to cap
-# OpenAI spend. 0 disables it. Pair with a hard monthly budget in OpenAI.
-CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("CHAT_RATE_LIMIT_PER_MINUTE", "10"))
+# LLM spend. 0 disables it. Pair with a hard monthly budget at the LLM provider.
+# `... or "<default>"` so a var present-but-blank (e.g. a freshly copied
+# .env.example) falls back to the default instead of crashing int("") at boot.
+CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("CHAT_RATE_LIMIT_PER_MINUTE") or "10")
 # Hard cap on a single chat message so one request can't burn a huge prompt.
-CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS", "4000"))
+CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS") or "4000")
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -139,7 +145,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False  # dev.py opens this; prod.py keeps it locked
 
 # MAILTRAP SETTINGS
 MAILTRAP_API_KEY = os.environ.get("MAILTRAP_API_KEY")
@@ -147,7 +153,14 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 # PINECONE SETTINGS
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
-PINECONE_INDEX = os.environ.get("PINECONE_INDEX_HOST") or os.environ.get("INDEX_HOST")
+# The Pinecone serverless index HOST (not the index name). Read from
+# PINECONE_INDEX_HOST (preferred) or the legacy INDEX_HOST. NOTE: the plain
+# PINECONE_INDEX env var (index *name*) is intentionally not used by the app.
+PINECONE_INDEX_HOST = os.environ.get("PINECONE_INDEX_HOST") or os.environ.get("INDEX_HOST")
+# Namespace the chat agent searches. This MUST match a namespace that has been
+# populated (data/scripts/ingest.py upserts curated knowledge per country, e.g.
+# "us"); a mismatch means retrieval silently returns nothing.
+PINECONE_NAMESPACE = os.environ.get("PINECONE_NAMESPACE", "us")
 
 # OPEN_AI_SETTINGS
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")

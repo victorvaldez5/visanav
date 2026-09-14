@@ -27,7 +27,7 @@ from pydantic_core import to_jsonable_python
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
-from core.llm import Deps, pc, response_agent
+from core.llm import Deps, get_agent, get_pinecone
 from .models import Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -102,11 +102,11 @@ def _persist_messages(conversation_id, new_messages):
 
 @sync_to_async
 def _check_rate_limit(identity: str, limit: int, window: int = 60) -> bool:
-    """Soft fixed-window limiter to cap OpenAI spend from any one client.
+    """Soft fixed-window limiter to cap LLM spend from any one client.
 
     Backed by the default cache (LocMemCache in the single-box deployment), so
     the limit is per-process rather than global; it is a cost safety net, not a
-    hard quota. Pair it with a hard monthly budget cap in the OpenAI dashboard.
+    hard quota. Pair it with a hard monthly budget cap at the LLM provider.
     """
     if limit <= 0:
         return True
@@ -185,10 +185,13 @@ async def chat_stream(request):
     history = await _load_history(conversation_id)
 
     async def event_stream():
-        deps = Deps(pinecone=pc)
+        # Scope retrieval to a populated Pinecone namespace. Curated knowledge is
+        # ingested per country (ingest.py), so default to PINECONE_NAMESPACE; this
+        # is where the user's own country could be threaded through in future.
+        deps = Deps(pinecone=get_pinecone(), namespace=settings.PINECONE_NAMESPACE)
         started_text = False
         try:
-            async with response_agent.iter(
+            async with get_agent().iter(
                 user_message, message_history=history, deps=deps
             ) as run:
                 async for node in run:

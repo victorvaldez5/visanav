@@ -15,7 +15,9 @@ include = ["api_project", "core", "conversation"]
 exclude = ["staticfiles"]
 
 [dependency-groups]
-dev = ["ruff>=0.12.8"]
+# Pin ruff to a minor line so CI lint is deterministic — a newer minor can add
+# rules and turn CI red on unchanged code. Bump deliberately, not incidentally.
+dev = ["ruff>=0.12.8,<0.13", "pytest-django>=4.9"]
 
 [tool.poetry]
 package-mode = false
@@ -52,4 +54,25 @@ opentelemetry-api = ">=1.30,<1.37"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
+
+[tool.ruff]
+# Match the deploy/CI runtime (Docker + Railway build on 3.13) so version-gated
+# lints (e.g. modern f-string syntax) don't fire on code that runs fine.
+target-version = "py313"
+# Generated/data-only migrations aren't hand-maintained code; don't lint them.
+extend-exclude = ["**/migrations/**"]
+
+[tool.ruff.lint.per-file-ignores]
+# Django settings compose with `from .base import *`; the star import (F403) and
+# the names it pulls in (F405) are the idiom here, not a mistake.
+"api_project/dev.py" = ["F403"]
+"api_project/prod.py" = ["F403", "F405"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "api_project.dev"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+# Build the test schema straight from the models. The data migrations
+# pre-populate reference tables (all countries/subdivisions via pycountry, plus
+# org fixtures), which unit tests shouldn't fight; this also keeps the run fast.
+addopts = "--no-migrations"
 

@@ -1,0 +1,66 @@
+name: api-ci
+
+# Lints and tests the Django API on every PR (and main/develop push) that
+# touches it. Tests run against a real Postgres, with the schema built from the
+# models (pytest --no-migrations, configured in api/pyproject.toml).
+
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: raul
+          POSTGRES_PASSWORD: pswd
+          POSTGRES_DB: visanav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U raul"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: api_project.dev
+      DJANGO_SECRET_KEY: ci-secret-key
+      POSTGRES_DB: visanav_test
+      POSTGRES_USER: raul
+      POSTGRES_PASSWORD: pswd
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        working-directory: api
+        run: poetry install --no-root --with dev
+
+      - name: Lint (ruff)
+        working-directory: api
+        run: poetry run ruff check .
+
+      - name: Run tests
+        working-directory: api
+        run: poetry run pytest
