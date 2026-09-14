@@ -12,7 +12,7 @@ common immigration scams.
 - Weekly scheduled (and on-demand) USCIS crawl — forms, the INA, and the Policy Manual — to Cloudflare R2
 - Lightweight, containerized services
 - Extendable Python codebase
-- Pinecone integration for vector database
+- pgvector + Voyage embeddings for the RAG vector store
 - vue frontend chat interface
 - django backend api server
 - docker-compose for local development
@@ -82,12 +82,12 @@ cp config/.env.example config/.env   # then fill in the secrets marked "CHANGE M
 ```
 
 `config/.env.example` is committed and documents every variable (Django, Postgres,
-LLM keys, Pinecone, email, scraper). `config/.env` is gitignored and is read by:
+LLM keys, Voyage embeddings, email, scraper). `config/.env` is gitignored and is read by:
 
 - `docker-compose.yml` — all services, via `env_file`
 - the Django API — `api/api_project/base.py`
 - the Scrapy scraper — `scrapers/uscis_scraper/uscis_scraper/settings.py`
-- the data ingestion script — `data/scripts/ingest.py` (for `--upsert`)
+(The corpus ingest command, `api/manage.py ingest`, reads env via Django settings.)
 
 > The `${VAR}` substitutions inside `docker-compose.yml` all have built-in
 > defaults, so `docker compose up` works out of the box. To feed your env file
@@ -197,9 +197,8 @@ railway variables --service visanav-api \
   --set 'POSTGRES_PORT=${{Postgres.PGPORT}}' \
   --set 'POSTGRES_SSLMODE=prefer' \
   --set 'ANTHROPIC_API_KEY=<key>' \
-  --set 'PINECONE_API_KEY=<key>' \
-  --set 'PINECONE_INDEX_HOST=<serverless-host>' \
-  --set 'PINECONE_NAMESPACE=us'
+  --set 'VOYAGE_API_KEY=<key>' \
+  --set 'CONVERSATION_ENCRYPTION_KEYS=<fernet-key>'
 ```
 
 > **Gotcha:** `prod.py` reuses `CSRF_TRUSTED_ORIGINS` as `CORS_ALLOWED_ORIGINS`,

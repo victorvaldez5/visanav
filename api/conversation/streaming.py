@@ -27,7 +27,7 @@ from pydantic_core import to_jsonable_python
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
-from core.llm import Deps, get_agent, get_pinecone
+from core.llm import Deps, get_agent
 from .models import Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -204,10 +204,10 @@ async def chat_stream(request):
     history = await _load_history(conversation_id)
 
     async def event_stream():
-        # Scope retrieval to a populated Pinecone namespace. Curated knowledge is
-        # ingested per country (ingest.py), so default to PINECONE_NAMESPACE; this
-        # is where the user's own country could be threaded through in future.
-        deps = Deps(pinecone=get_pinecone(), namespace=settings.PINECONE_NAMESPACE)
+        # Scope retrieval to a populated country corpus. Curated knowledge is
+        # ingested per country, so default to KNOWLEDGE_COUNTRY; this is where the
+        # user's own country could be threaded through in future.
+        deps = Deps(country=settings.KNOWLEDGE_COUNTRY)
         started_text = False
         try:
             async with get_agent().iter(

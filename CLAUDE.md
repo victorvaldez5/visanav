@@ -59,13 +59,19 @@ scrapy crawl uscis   # LOCAL_TEST=true → writes ./output/ ; LOCAL_TEST=false �
 pytest               # scraper unit tests
 ```
 
-### Data corpus (from repo root)
+### Data corpus
 ```bash
+# Validation + chunk preview (dependency-light, no keys/DB — this is all CI needs):
 pip install -r data/scripts/requirements.txt
 python data/scripts/validate.py [cc]     # format gate (CI runs this on data/ PRs)
-python data/scripts/ingest.py us         # DRY RUN: preview the chunks that would be upserted
-python data/scripts/ingest.py us --upsert  # actually write to Pinecone (needs PINECONE_* env)
+python data/scripts/ingest.py us         # preview the chunks (dry run only)
+
+# Authoritative ingestion (embed via Voyage + write to pgvector) lives in the API:
+cd api && python manage.py ingest us            # DRY RUN: chunk + preview, no keys/DB
+cd api && python manage.py ingest us --upsert    # embed + upsert (needs VOYAGE_API_KEY + DB)
 ```
+`manage.py ingest --upsert` transactionally replaces a country's chunks; run it from a
+full checkout (local/CI), not the slim prod web image (which omits `data/`).
 
 ### Deploy
 - **API → Railway**: `railway up --service visanav-api` builds the `production` stage of
@@ -80,10 +86,11 @@ python data/scripts/ingest.py us --upsert  # actually write to Pinecone (needs P
 
 ### Configuration: one env file, loaded by relative path
 There is a single `config/.env` at the repo root. Each service reaches it by walking up from
-its own file location: `api/api_project/base.py`, the scraper's `settings.py`, and
-`data/scripts/ingest.py` all `load_dotenv(<relative path to>/config/.env)`. **Moving those
-files changes the relative depth and silently breaks env loading.** `config/.env.example`
-documents every variable and is the source of truth for what each service reads.
+its own file location: `api/api_project/base.py` and the scraper's `settings.py` both
+`load_dotenv(<relative path to>/config/.env)`. **Moving those files changes the relative depth
+and silently breaks env loading.** `config/.env.example` documents every variable and is the
+source of truth for what each service reads. (The `manage.py ingest` command reads env via
+Django settings; the standalone `data/scripts/ingest.py` is now dry-run-only and needs no env.)
 
 ### Django settings are split by environment
 `api_project/base.py` holds shared settings; `dev.py` and `prod.py` import from it and override.
@@ -97,40 +104,45 @@ or the `POSTGRES_*` vars are missing, and **reuses `CSRF_TRUSTED_ORIGINS` as `CO
    async, and does its own JWT auth** (allowing anonymous users) and its own soft rate-limiting
    (LocMemCache, per-process — a cost cap, not a hard quota).
 2. It drives the **pydantic-ai agent** built in `core/llm.py` (`get_agent()`, persona "Javi"),
-   which has two tools: `semantic_search` queries **Pinecone** (namespace from `Deps`,
-   `settings.PINECONE_NAMESPACE`, default `us` — it **must** match a namespace `ingest.py`
-   populated, or retrieval silently returns nothing; the index *host* is `PINECONE_INDEX_HOST`),
-   and `resource_lookup` queries the `network.Organization` directory directly over the ORM
-   (US-only for now) to surface free/low-cost nonprofit and pro-bono help.
+   which has two tools: `semantic_search` embeds the query via **Voyage** (`core/embeddings.py`)
+   and ranks the **pgvector** `KnowledgeChunk` table by cosine distance, scoped to a country from
+   `Deps` (`settings.KNOWLEDGE_COUNTRY`, default `us` — it **must** match a country `ingest`
+   populated, or retrieval returns nothing); and `resource_lookup` queries the `network.Organization`
+   directory directly over the ORM (US-only for now) to surface free/low-cost nonprofit and pro-bono help.
 3. Tokens stream back to the browser as **Server-Sent Events** (`status` / `delta` / `done` / `error`
    frames). This replaced an earlier Celery + Redis "enqueue and poll" design — **there is no Celery,
    no Redis, no Channels**; the cache is Django's in-process `LocMemCache`.
 4. Conversation history is stored in Postgres as raw pydantic-ai message dicts in `Message.parts`
    (a `JSONField`) and rehydrated with `ModelMessagesTypeAdapter` on the next turn.
 
-`core/llm.py` builds the model client and the Pinecone client **lazily** (`get_model()` /
-`get_pinecone()`, both `@lru_cache`d, plus `get_agent()`), so importing `core.llm` needs no API
-keys — management commands, migrations and tests import it fine, and a bad key surfaces on the
-first chat request rather than crashing boot. `LLM_PROVIDER` (`anthropic` | `openai`) selects which
-model is built; only the chosen provider's client is constructed.
+`core/llm.py` builds the model client **lazily** (`get_model()` + `get_agent()`, `@lru_cache`d),
+and `core/embeddings.py` builds the Voyage client the same way (`get_voyage_client()`), so
+importing them needs no API keys — management commands, migrations and tests import them fine, and
+a bad key surfaces on the first embed/chat request rather than crashing boot. `LLM_PROVIDER`
+(`anthropic` | `openai`) selects which chat model is built; only the chosen provider's client is
+constructed. Embeddings are a **separate** concern from the chat provider (Anthropic has no
+embeddings API): `EMBEDDING_MODEL` (default `voyage-3`, 1024-dim) is always Voyage.
 
 ### The data → vector store pipeline (two independent producers)
-The Pinecone corpus is fed by two separate paths that do **not** currently connect to each other:
+The pgvector corpus (`knowledge.KnowledgeChunk`) is fed by two separate paths that do **not**
+currently connect to each other:
 - **Curated knowledge** (`data/`): human-written Markdown+YAML under `data/countries/<cc>/`.
-  `ingest.py` splits frontmatter, chunks the body (~200 words), and upserts into a **per-country
-  namespace** with the frontmatter as metadata. `validate.py` gates format in CI (e.g. anything
-  `source_type: official` must cite a domain declared in that country's `meta.yaml`).
+  The `manage.py ingest` command (chunking in `knowledge/ingest_utils.py`) splits frontmatter,
+  chunks the body (~200 words), embeds via Voyage, and upserts rows scoped by **country** with the
+  frontmatter as columns. `validate.py` gates format in CI (e.g. anything `source_type: official`
+  must cite a domain declared in that country's `meta.yaml`).
 - **Raw scrape** (`scrapers/`): the `uscis` spider crawls USCIS forms, the INA, and the Policy
   Manual, writing raw HTML/PDF/JSONL to R2 under `raw/`. It is **incremental** via a content-hash
   manifest (`raw/manifest.json`): `ContentHashPipeline` drops unchanged pages before they hit the
-  storage sinks. This is raw archival — it is not yet wired into Pinecone.
+  storage sinks. This is raw archival — it is not yet wired into the vector store.
 
 ### Django apps
 - `accounts` — custom `User` (AbstractUser, `AUTH_USER_MODEL = accounts.User`) + `Profile`; JWT auth (SimpleJWT: 10-min access, 7-day refresh), registration, email verification.
 - `conversation` — `Conversation` / `Message` / `Feedback` models, the `ConversationViewSet`, and the SSE `chat_stream`. Conversations are keyed publicly by **UUID, not integer id**, so anonymous chats can't be enumerated.
 - `locations` — `Country` / `Subdivision` / `Address` / `Language` reference data.
 - `network` — the public-resources directory: a flat `Organization` (contact details are inline Postgres `ArrayField`s — no contact/address/language side-tables — matching `data/schema/resource.schema.json`) plus a read-only `Representative` (individual attorneys / DOJ-accredited reps). Seeded via management commands (`load_resources <cc>`, `extract_ra_orgs`, `extract_probono`, `extract_ra_reps`), not migrations; the DOJ roster fixtures are (re)parsed from the source EOIR PDFs in `data/raw/` by `build_ra_fixtures` (`download_ra_rosters`, or `build_ra_fixtures --download`, refreshes those PDFs from justice.gov first).
-- `core` — shared infra: `llm.py` (the agent), `pagination.py`, `utils.py`, `mail.py`.
+- `knowledge` — the pgvector RAG corpus: `KnowledgeChunk` (embedded chunks, per-country), `ingest_utils.py` (chunking), and the `ingest` management command.
+- `core` — shared infra: `llm.py` (the agent), `embeddings.py` (Voyage), `pagination.py`, `utils.py`, `mail.py`.
 
 URL roots (`api_project/urls.py`): `api/` (conversation), `api/auth/`, `api/locations/`,
 `api/network/`, and the Django admin at **`/nimda/`** (not `/admin/`).
@@ -151,3 +163,12 @@ auto-refreshes JWTs on 401 with a queued-request retry; the SSE chat stream uses
   because 1.37 removed a module pydantic-ai 0.7.x imports.
 - **Default chat models** (`core/llm.py`): `claude-haiku-4-5` (anthropic) / `gpt-5-nano` (openai),
   overridable with `CHAT_MODEL`.
+- **pgvector needs a pgvector-capable Postgres**: `docker-compose` and CI use `pgvector/pgvector:pg15`
+  (not `postgres:*-alpine`). The `knowledge` initial migration runs `CREATE EXTENSION vector` (so
+  Railway `entrypoint.sh migrate` sets it up), but tests run `--no-migrations` (schema from models),
+  so `api/conftest.py` seeds the `vector` extension into `template1` before the test DB is created.
+- **Embeddings ≠ chat provider**: retrieval always embeds with **Voyage** (`EMBEDDING_MODEL`,
+  1024-dim) regardless of `LLM_PROVIDER` (Anthropic has no embeddings API). `voyage-3` ↔ `voyage-law-2`
+  are both 1024-dim, so swapping them is env + re-ingest, no migration; other dims need a migration.
+- **voyageai has no Python 3.14 wheel** yet — pinned with a `python = "<3.14"` marker in
+  `pyproject.toml`; the deploy/CI runtime is 3.13, so this is a non-issue there.

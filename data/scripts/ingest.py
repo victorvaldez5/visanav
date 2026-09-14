@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
-"""Turn curated knowledge Markdown into vector-store records.
+"""Preview curated knowledge Markdown as vector-store chunks (dry run only).
 
 It works on human-contributed Markdown (rather than scraped HTML/PDF):
 
-    frontmatter + body  ->  cleaned text  ->  ~200-word chunks  ->  upsert
+    frontmatter + body  ->  cleaned text  ->  ~200-word chunks
 
 Each chunk carries the document's frontmatter as metadata (country, authority,
-topic, source_url, last_verified, ...), and records are upserted into a
-**per-country namespace** so retrieval can scope to the user's country.
+topic, source_url, last_verified, ...). This script is a dependency-light preview
+for contributors and CI — it needs no keys, no database, and no Django.
 
-By default this runs a DRY RUN (no network, no Pinecone needed) and just prints
-what would be upserted — handy for contributors and CI. Pass --upsert with the
-env vars set to actually write.
+**Authoritative ingestion lives in the API** (it embeds via Voyage and writes to
+pgvector, which this script deliberately does not depend on):
+
+    cd api && python manage.py ingest us            # dry run
+    cd api && python manage.py ingest us --upsert    # embed + write to pgvector
 
 Usage:
-    python data/scripts/ingest.py us                 # dry run for US
-    python data/scripts/ingest.py us --upsert        # write to Pinecone
-
-Env for --upsert:  PINECONE_API_KEY, PINECONE_INDEX
+    python data/scripts/ingest.py us                 # preview chunks for US
 """
 from __future__ import annotations
 
 import argparse
-import datetime as dt
-import os
 import re
 import sys
 import uuid
@@ -36,15 +33,6 @@ except ImportError:  # pragma: no cover
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 COUNTRIES_DIR = DATA_DIR / "countries"
-
-# Optionally load config/.env (only --upsert needs PINECONE_* below). Kept
-# optional so validation stays dependency-light; falls back to the shell env.
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv(DATA_DIR.parent / "config" / ".env")
-except ImportError:
-    pass
 
 MAX_WORDS = 200
 META_FIELDS = ("doc_id", "country", "authority", "topic", "title", "lang",
@@ -90,7 +78,6 @@ def records_for_country(code: str) -> list[dict]:
     for md in sorted(cdir.rglob("*.md")):
         fm, body = split_frontmatter(md.read_text(encoding="utf-8"))
         meta = {k: fm[k] for k in META_FIELDS if k in fm}
-        meta = {k: (v.isoformat() if isinstance(v, dt.date) else v) for k, v in meta.items()}
         for text in chunk(clean_text(body)):
             records.append({
                 "_id": f"{fm['doc_id']}-{uuid.uuid5(uuid.NAMESPACE_URL, text).hex[:8]}",
@@ -103,7 +90,6 @@ def records_for_country(code: str) -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("country", help="ISO alpha-2 country code, e.g. us")
-    ap.add_argument("--upsert", action="store_true", help="write to Pinecone (default: dry run)")
     args = ap.parse_args()
 
     code = args.country.lower()
@@ -111,27 +97,14 @@ def main() -> int:
         sys.exit(f"No such country: {code}")
 
     records = records_for_country(code)
-    namespace = code
-    print(f"{code.upper()}: {len(records)} chunk(s) -> namespace '{namespace}'")
-
-    if not args.upsert:
-        for r in records[:3]:
-            preview = r["chunk_text"][:100].replace("\n", " ")
-            print(f"  [{r['topic']}] {r['_id']}: {preview}...")
-        if len(records) > 3:
-            print(f"  ... and {len(records) - 3} more (dry run; pass --upsert to write)")
-        return 0
-
-    api_key, index_name = os.getenv("PINECONE_API_KEY"), os.getenv("PINECONE_INDEX")
-    if not api_key or not index_name:
-        sys.exit("--upsert requires PINECONE_API_KEY and PINECONE_INDEX env vars")
-
-    from pinecone import Pinecone  # imported lazily so dry runs need no dependency
-
-    index = Pinecone(api_key=api_key).Index(index_name)
-    for i in range(0, len(records), 96):
-        index.upsert_records(namespace, records[i:i + 96])
-    print(f"✓ upserted {len(records)} record(s) into '{index_name}' namespace '{namespace}'")
+    print(f"{code.upper()}: {len(records)} chunk(s)")
+    for r in records[:3]:
+        preview = r["chunk_text"][:100].replace("\n", " ")
+        print(f"  [{r.get('topic')}] {r['_id']}: {preview}...")
+    if len(records) > 3:
+        print(f"  ... and {len(records) - 3} more")
+    print("\nTo embed + write to pgvector: cd api && python manage.py ingest "
+          f"{code} --upsert")
     return 0
 
 

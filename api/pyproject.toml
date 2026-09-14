@@ -26,7 +26,14 @@ package-mode = false
 python = ">=3.10,<4.0"
 redis = "^6.4.0"
 django-redis = "^6.0.0"
-pinecone = "^7.3.0"
+# Vector store: pgvector provides the Django VectorField + CREATE EXTENSION op;
+# voyageai generates the embeddings (Pinecone did this server-side, pgvector does
+# not embed). Both are pure-Python — no Dockerfile/system-dep changes needed.
+pgvector = "^0.4.0"
+# voyageai has no 3.14 wheel yet; the deploy/CI runtime is 3.13 (Dockerfile, CI,
+# ruff target). Marker keeps the lock resolvable across the project's 3.10-<4.0
+# range without dropping the actual runtime.
+voyageai = {version = "^0.3.2", python = "<3.14"}
 django = ">=5.2.5"
 django-cors-headers = ">=4.7.0"
 djangorestframework = ">=3.16.1"

@@ -64,7 +64,8 @@ services:
       - "host.docker.internal:host-gateway"
 
   db:
-    image: postgres:15-alpine
+    # pgvector-enabled Postgres (provides the `vector` extension for RAG retrieval).
+    image: pgvector/pgvector:pg15
     restart: unless-stopped
     hostname: db
     # Credentials come from config/.env (the single env file all services read).

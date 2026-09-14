@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, List
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from pinecone import Pinecone
+from pgvector.django import CosineDistance
 from pydantic import BaseModel
 from pydantic_ai import Agent, RunContext
 
@@ -88,18 +88,6 @@ def build_model(provider: str, model_name: str):
 
 
 @lru_cache(maxsize=1)
-def get_pinecone() -> Pinecone:
-    """Return a process-wide Pinecone client, built on first use.
-
-    Constructing this lazily (rather than at import time) keeps the API
-    importable — and management commands, migrations and tests runnable —
-    without the Pinecone/provider keys present, and means a bad key surfaces on
-    the first chat request instead of crashing the process at boot.
-    """
-    return Pinecone(api_key=settings.PINECONE_API_KEY)
-
-
-@lru_cache(maxsize=1)
 def get_model():
     """Return the configured chat model, built on first use."""
     return build_model(
@@ -111,71 +99,68 @@ def get_model():
 
 @dataclass
 class Deps:
-    pinecone: Pinecone
-    # Pinecone namespace to search. ingest.py upserts curated knowledge per
-    # country (e.g. "us"), so this scopes retrieval to a populated corpus.
-    namespace: str
+    # Country whose curated corpus to search (KnowledgeChunk.country). ingest
+    # writes curated knowledge per country (e.g. "us"), so this scopes retrieval
+    # to a populated corpus.
+    country: str
 
 
 class SearchMatch(BaseModel):
     id: str
     score: Optional[float] = None
-    category: Optional[str] = None
+    topic: Optional[str] = None
+    title: Optional[str] = None
+    source_url: Optional[str] = None
     text: Optional[str] = None
 
 
 class SemanticSearchResult(BaseModel):
-    namespace: str
+    country: str
     query: str
     matches: List[SearchMatch]
 
 
-def search_result_to_dict(obj: Any, query: str, namespace: str) -> Dict[str, Any]:
-    matches = []
-    # The Pinecone SDK returns the hits under a singular ``result`` key;
-    # accept the plural too in case the response shape changes.
-    data = obj.to_dict() if hasattr(obj, "to_dict") else obj
-    results = data.get('result') or data.get('results') or {}
-    hits = results.get('hits', [])
-    for hit in hits:
-        _match = {}
-        _match['id'] = hit.get('_id')
-        _match['score'] = hit.get('_score')
-        fields = hit.get('fields', {})
-        _match['category'] = fields.get('category')
-        _match['text'] = fields.get('chunk_text')
-        matches.append(_match)
-
-    return {
-        "namespace": namespace,
-        "query": query,
-        "matches": matches
-    }
-
-
 async def semantic_search(ctx: RunContext[Deps], search_query: str):
     """
-    Perform a semantic similarity search on Pinecone to fetch the top‐k
-    documents relevant to the user's query.
+    Perform a semantic similarity search over the curated knowledge corpus
+    (pgvector) to fetch the top-k documents relevant to the user's query.
 
     Args:
         search_query: A standalone search query for the user's current
             question. Include details from earlier in the conversation that
             the question depends on, such as visa category or country.
     """
-    top_k = 3
-    namespace = ctx.deps.namespace
-    index = ctx.deps.pinecone.Index(host=settings.PINECONE_INDEX_HOST)
+    from core.embeddings import embed_query
+    from knowledge.models import KnowledgeChunk
 
-    # Pinecone's client is synchronous; run it off the event loop.
-    results = await asyncio.to_thread(
-        index.search,
-        namespace=namespace,
-        query={"inputs": {"text": search_query}, "top_k": top_k},
-        fields=["category", "chunk_text"],
+    top_k = 3
+    country = ctx.deps.country
+
+    # Voyage's client is synchronous; embed off the event loop (as the Pinecone
+    # call used to be), then rank by cosine distance in Postgres.
+    vector = await asyncio.to_thread(embed_query, search_query)
+    qs = (
+        KnowledgeChunk.objects.filter(country=country)
+        .annotate(distance=CosineDistance("embedding", vector))
+        .order_by("distance")[:top_k]
+        .values("chunk_id", "topic", "title", "source_url", "text", "distance")
     )
-    raw = search_result_to_dict(results, search_query, namespace)
-    return SemanticSearchResult(**raw).model_dump()
+    matches = [
+        SearchMatch(
+            id=row["chunk_id"],
+            # Cosine similarity in [0,1] is friendlier for the model than raw
+            # distance; higher = more relevant.
+            score=1.0 - row["distance"],
+            topic=row["topic"],
+            title=row["title"],
+            source_url=row["source_url"],
+            text=row["text"],
+        )
+        async for row in qs
+    ]
+    return SemanticSearchResult(
+        country=country, query=search_query, matches=matches
+    ).model_dump()
 
 
 class ResourceMatch(BaseModel):

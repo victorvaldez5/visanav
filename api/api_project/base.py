@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "locations",
     "network",
     'core',
+    "knowledge",
 ]
 
 MIDDLEWARE = [
@@ -154,16 +155,28 @@ CORS_ALLOW_ALL_ORIGINS = False  # dev.py opens this; prod.py keeps it locked
 MAILTRAP_API_KEY = os.environ.get("MAILTRAP_API_KEY")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
-# PINECONE SETTINGS
-PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
-# The Pinecone serverless index HOST (not the index name). Read from
-# PINECONE_INDEX_HOST (preferred) or the legacy INDEX_HOST. NOTE: the plain
-# PINECONE_INDEX env var (index *name*) is intentionally not used by the app.
-PINECONE_INDEX_HOST = os.environ.get("PINECONE_INDEX_HOST") or os.environ.get("INDEX_HOST")
-# Namespace the chat agent searches. This MUST match a namespace that has been
-# populated (data/scripts/ingest.py upserts curated knowledge per country, e.g.
-# "us"); a mismatch means retrieval silently returns nothing.
-PINECONE_NAMESPACE = os.environ.get("PINECONE_NAMESPACE", "us")
+# VECTOR STORE / EMBEDDINGS (pgvector + Voyage AI)
+# Retrieval lives in Postgres (pgvector); embeddings are generated explicitly on
+# both ingest and query by core/embeddings.py. Pinecone (which embedded
+# server-side) has been removed.
+#
+# Embedding provider + model. voyage-3 and voyage-law-2 are both 1024-dim, so
+# EMBEDDING_MODEL can be swapped between them with only a re-embed. EMBEDDING_DIM
+# is fixed to the KnowledgeChunk.embedding column type — changing it needs a
+# schema migration + full re-embed, so it lives here only as documentation/guard.
+EMBEDDING_PROVIDER = os.environ.get("EMBEDDING_PROVIDER", "voyage").lower()
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "voyage-3")
+EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIM") or "1024")
+VOYAGE_API_KEY = os.environ.get("VOYAGE_API_KEY")
+# Country whose curated corpus the chat agent searches. Replaces the old Pinecone
+# namespace; matches KnowledgeChunk.country rows written by `manage.py ingest`.
+KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
+# Where the ingest command reads curated Markdown from. Defaults to the repo's
+# data/countries (reachable from a full checkout; ingestion is not run in the
+# slim prod web image).
+KNOWLEDGE_DATA_DIR = os.environ.get("KNOWLEDGE_DATA_DIR") or str(
+    BASE_DIR.parent / "data" / "countries"
+)
 
 # OPEN_AI_SETTINGS
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
