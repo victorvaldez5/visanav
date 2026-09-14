@@ -68,7 +68,6 @@ class ProfileViewSet(viewsets.ModelViewSet):
         user_data = {}
 
         updated_user = {}
-        phone_number_json = {}
 
         for key, value in request.data.items():
             if key in ProfileSerializer.Meta.fields:
