@@ -36,6 +36,3 @@ PYCODE
 
 # Finally, launch the passed command (Gunicorn by default)
 exec "$@"
-
-# Finally, launch the passed command (Gunicorn by default)
-exec "$@"

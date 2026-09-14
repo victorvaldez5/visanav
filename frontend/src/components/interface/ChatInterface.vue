@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed} from "vue";
 import {useRoute, useRouter} from "vue-router";
-import AIResponse from "@/components/ui/chat/AIRespone.vue";
+import AIResponse from "@/components/ui/chat/AIResponse.vue";
 import UserPromptInput from "@/components/interface/UserPromptInput.vue";
 import {useConversation} from "@/composables/useConversations.ts";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
