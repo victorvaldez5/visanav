@@ -1,5 +1,34 @@
-import axios from "axios";
+import apiClient from "@/plugins/axios";
 import type {PaginatedResponse} from "@/composables/usePagination.ts";
+
+// The API serializes phone numbers, emails, and websites as objects (see
+// api/network/serializers.py), not bare strings.
+export interface OrganizationPhoneNumber {
+    id: number;
+    phone_number: string;
+    is_primary: boolean;
+}
+
+export interface OrganizationEmail {
+    id: number;
+    email: string;
+    is_primary: boolean;
+}
+
+export interface OrganizationWebsite {
+    id: number;
+    website: string;
+}
+
+// Filters accepted by getOrganizations. All optional; camelCase keys are
+// converted to snake_case query params before being sent to the API.
+export interface OrganizationFilters {
+    hasProBono?: boolean | null;
+    search?: string | null;
+    organizationType?: string | null;
+    subdivision?: string | null;
+    language?: string | null;
+}
 
 export interface Organization {
     id: number;
@@ -7,16 +36,17 @@ export interface Organization {
     slug: string;
     organization_type: string;
     addresses: any[];
-    websites: string[];
-    phone_numbers: string[];
-    emails: string[];
+    websites: OrganizationWebsite[];
+    phone_numbers: OrganizationPhoneNumber[];
+    emails: OrganizationEmail[];
     notes: string
     is_active: boolean;
 }
 
-const BASE_URL = '/api/network'
+// Path is relative to apiClient's baseURL (which already includes /api).
+const BASE_URL = '/network'
 export const networkService = {
-    async getOrganizations(page = 1, filters = {
+    async getOrganizations(page = 1, filters: OrganizationFilters = {
         hasProBono: null,
         search: null,
         organizationType: null,
@@ -38,7 +68,7 @@ export const networkService = {
             }
         });
 
-        const res = await axios.get<PaginatedResponse<Organization>>(
+        const res = await apiClient.get<PaginatedResponse<Organization>>(
             `${BASE_URL}/organizations/?${params.toString()}`
         );
         return res.data;

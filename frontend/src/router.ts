@@ -38,7 +38,7 @@ const routes = [
             try {
                 // Adjust URL/method/payload to match your backend
                 // Example: Django endpoint that verifies email/activation
-                const {data} = await apiClient.post("/api/auth/verify", {uid, token});
+                const {data} = await apiClient.post("/auth/verify", {uid, token});
 
                 // Expect backend to return the user's id to route to profile
                 const userId = data?.userId;

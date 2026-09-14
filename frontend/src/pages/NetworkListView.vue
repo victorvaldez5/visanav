@@ -123,7 +123,7 @@ async function handleLoadPage(newPage: number) {
             <div class="-mt-px flex divide-x divide-gray-300 dark:divide-white/10">
               <div class="flex w-0 flex-1">
                 <a
-                  :href="`mailto:${organization.emails}`"
+                  :href="`mailto:${organization.emails[0]?.email}`"
                   class="relative -mr-px inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-bl-lg border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
                 >
                   <Icon

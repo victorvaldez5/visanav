@@ -40,5 +40,8 @@ COPY --from=builder /app /app
 RUN chmod +x ./entrypoint.sh || true
 EXPOSE 8000
 ENTRYPOINT ["./entrypoint.sh"]
-# Gunicorn with Uvicorn worker for ASGI
-CMD ["gunicorn", "--bind", ":8000", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "api_project.asgi"]
+# Gunicorn with Uvicorn worker for ASGI.
+# Shell form so ${PORT} expands: Railway injects a dynamic $PORT to bind; Fly and
+# local compose set PORT=8000 (or fall back to the default here). `exec` keeps
+# gunicorn as PID 1's child so it receives SIGTERM for graceful shutdown.
+CMD ["sh", "-c", "exec gunicorn --bind :${PORT:-8000} --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker api_project.asgi"]

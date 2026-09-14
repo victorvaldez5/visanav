@@ -154,4 +154,75 @@ When you’re done:
 
 ---
 
+## Deploying the API (Railway)
+
+The API is deployed to **Railway** as a Dockerfile service plus a managed
+Postgres. Redis is not needed — the app uses Django's in-process `LocMemCache`.
+Build/deploy config lives in [`railway.json`](railway.json); it builds the
+`production` stage of [`api/Dockerfile`](api/Dockerfile) (the final stage) from
+the **repo root** as the build context.
+
+> Gunicorn binds `${PORT}` (Railway injects a dynamic port). Locally and under
+> compose, `PORT` defaults to `8000`.
+
+### One-time setup
+
+```bash
+railway init -n visanav              # create + link the project
+railway add --database postgres      # provision managed Postgres (named "Postgres", pgvector-ready)
+railway add --service visanav-api    # create the API service (empty for now)
+```
+
+### Environment variables (set on the API service)
+
+Set these **before the first `railway up`** — `prod.py` refuses to boot without
+`DJANGO_SECRET_KEY`, `ALLOWED_HOSTS`, and the `POSTGRES_*` vars. Postgres is wired
+from the Postgres service via reference variables, so nothing is copy-pasted, and
+`RAILWAY_PUBLIC_DOMAIN` auto-fills the generated `*.up.railway.app` host so
+`ALLOWED_HOSTS` needs no manual edit.
+
+```bash
+railway variables --service visanav-api \
+  --set 'DJANGO_SETTINGS_MODULE=api_project.prod' \
+  --set 'DJANGO_SECRET_KEY=<run: python -c "import secrets;print(secrets.token_urlsafe(64))">' \
+  --set 'ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}}' \
+  --set 'CSRF_TRUSTED_ORIGINS=https://<frontend-domain>,https://${{RAILWAY_PUBLIC_DOMAIN}}' \
+  --set 'FRONTEND_URL=https://<frontend-domain>' \
+  --set 'SECURE_SSL_REDIRECT=true' \
+  --set 'POSTGRES_DB=${{Postgres.PGDATABASE}}' \
+  --set 'POSTGRES_USER=${{Postgres.PGUSER}}' \
+  --set 'POSTGRES_PASSWORD=${{Postgres.PGPASSWORD}}' \
+  --set 'POSTGRES_HOST=${{Postgres.PGHOST}}' \
+  --set 'POSTGRES_PORT=${{Postgres.PGPORT}}' \
+  --set 'POSTGRES_SSLMODE=prefer' \
+  --set 'ANTHROPIC_API_KEY=<key>' \
+  --set 'PINECONE_API_KEY=<key>' \
+  --set 'PINECONE_INDEX=uscis' \
+  --set 'PINECONE_INDEX_HOST=<serverless-host>'
+```
+
+> **Gotcha:** `prod.py` reuses `CSRF_TRUSTED_ORIGINS` as `CORS_ALLOWED_ORIGINS`,
+> so it **must** include the frontend origin (with scheme) or the chat UI's
+> cross-origin calls to the API will be blocked. `POSTGRES_SSLMODE=prefer` is
+> used because the Postgres private endpoint (`*.railway.internal`) is reached
+> over Railway's isolated network; `prefer` negotiates TLS when available and
+> won't fail if it isn't (the prod default of `require` would).
+
+### Deploy
+
+```bash
+railway up --service visanav-api      # build + deploy from the repo root
+railway domain --service visanav-api  # generate the public HTTPS domain
+```
+
+> Prefer auto-deploys? Connect the GitHub repo to the API service in the Railway
+> dashboard instead of `railway up`; it reads `railway.json` and redeploys on push.
+
+`api/entrypoint.sh` runs `migrate` and `collectstatic` on container start, so
+the schema and WhiteNoise static manifest are applied automatically. (Optional
+hardening: move `migrate` to a Railway *pre-deploy command* so it runs once per
+release instead of on every cold start under scale-to-zero.)
+
+---
+
 ## Production Checklist

@@ -1,4 +1,5 @@
 import {authService} from "@/services/authService";
+import {API_BASE_URL} from "@/plugins/axios";
 
 export interface MessagePayload {
     user_message: string;
@@ -13,7 +14,10 @@ export interface StreamHandlers {
     onError?: (detail: string) => void;
 }
 
-const CHAT_URL = "/api/chat/";
+// Native fetch (not the axios apiClient) is used here so the SSE response body
+// can be streamed. Keep the base URL in sync with apiClient (see API_BASE_URL)
+// so cross-origin production (app.visanav.org → api.visanav.org) works.
+const CHAT_URL = `${API_BASE_URL}/chat/`;
 
 function parseFrame(raw: string, handlers: StreamHandlers) {
     let event = "message";

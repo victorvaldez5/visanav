@@ -2,8 +2,18 @@
 import axios from 'axios'
 import {authService} from '@/services/authService'
 
+// In dev, VITE_API_BASE_URL is unset and Vite proxies "/api" → http://api:8000
+// (see vite.config.ts). In production (Cloudflare Pages) the API is a different
+// origin (Railway), so this is set to the absolute API base incl. the /api prefix,
+// e.g. https://api-frosty-rain-5363-production.up.railway.app/api. Cross-origin
+// calls are covered by CORS on the Django side (CORS_ALLOWED_ORIGINS).
+// Single source of truth for the API base URL. Everything that talks to the
+// API — the axios apiClient below, and the native-fetch SSE chat stream in
+// messageService — must use this so cross-origin production works.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
+
 const apiClient = axios.create({
-    baseURL: '/api',
+    baseURL: API_BASE_URL,
     headers: {'Content-Type': 'application/json'}
 })
 
