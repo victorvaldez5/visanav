@@ -197,8 +197,8 @@ railway variables --service visanav-api \
   --set 'POSTGRES_SSLMODE=prefer' \
   --set 'ANTHROPIC_API_KEY=<key>' \
   --set 'PINECONE_API_KEY=<key>' \
-  --set 'PINECONE_INDEX=uscis' \
-  --set 'PINECONE_INDEX_HOST=<serverless-host>'
+  --set 'PINECONE_INDEX_HOST=<serverless-host>' \
+  --set 'PINECONE_NAMESPACE=us'
 ```
 
 > **Gotcha:** `prod.py` reuses `CSRF_TRUSTED_ORIGINS` as `CORS_ALLOWED_ORIGINS`,

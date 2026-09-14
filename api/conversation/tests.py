@@ -24,18 +24,20 @@ class SemanticSearchToolTests(SimpleTestCase):
                 ]
             }
         }
-        ctx = SimpleNamespace(deps=llm.Deps(pinecone=mock.MagicMock()))
+        pinecone = mock.MagicMock()
+        pinecone.Index.return_value = index
+        ctx = SimpleNamespace(deps=llm.Deps(pinecone=pinecone, namespace="us"))
         query = "Form I-130 petition for the spouse of a US citizen"
 
         # Model requests are blocked: the tool must search on the query it was
         # given rather than asking an LLM to rewrite it.
-        with (
-            mock.patch.object(models, "ALLOW_MODEL_REQUESTS", False),
-            mock.patch.object(llm, "pc") as pc,
-        ):
-            pc.Index.return_value = index
+        with mock.patch.object(models, "ALLOW_MODEL_REQUESTS", False):
             result = await llm.semantic_search(ctx, query)
 
+        # Searches the injected client, on the query it was handed, in the
+        # namespace from Deps (not a hardcoded one).
         self.assertEqual(index.search.call_args.kwargs["query"]["inputs"]["text"], query)
+        self.assertEqual(index.search.call_args.kwargs["namespace"], "us")
+        self.assertEqual(result["namespace"], "us")
         self.assertEqual(result["query"], query)
         self.assertEqual(result["matches"][0]["id"], "i-130-1")
