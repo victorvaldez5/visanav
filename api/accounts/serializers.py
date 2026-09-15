@@ -7,6 +7,7 @@ from rest_framework_simplejwt.serializers import AuthUser, TokenObtainPairSerial
 from rest_framework_simplejwt.tokens import Token
 
 from accounts.models import Profile
+from core.utils import assert_turnstile
 from locations.models import Subdivision, Country, Language
 
 User = get_user_model()
@@ -20,6 +21,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["username"] = user.username
         token["email"] = user.email
         return token
+
+    def validate(self, attrs):
+        # Bot check before we hit the (slow, brute-forceable) password path.
+        assert_turnstile(self.initial_data.get("turnstile_token", ""), self.context.get("request"))
+        return super().validate(attrs)
 
 
 class RegisterSerializer(ModelSerializer):
@@ -40,6 +46,10 @@ class RegisterSerializer(ModelSerializer):
             raise serializers.ValidationError("Passwords do not match.")
         validate_password(value)
         return value
+
+    def validate(self, attrs):
+        assert_turnstile(self.initial_data.get("turnstile_token", ""), self.context.get("request"))
+        return attrs
 
     def create(self, validated_data):
         return User.objects.create_user(

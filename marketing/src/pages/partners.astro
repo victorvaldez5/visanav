@@ -1,0 +1,249 @@
+---
+import Base from "../layouts/Base.astro";
+import { TURNSTILE_SITE_KEY } from "../config";
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
+  "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH",
+  "NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+  "VT","VA","WA","WV","WI","WY","PR","GU","VI",
+];
+
+const inputClass =
+  "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
+const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300";
+---
+
+<Base
+  title="For organizations — get listed or partner with VisaNav"
+  description="Nonprofits and pro-bono immigration providers can request to be listed in the VisaNav directory or partner to offer VisaNav to the people they serve. Every request is reviewed."
+  canonicalPath="/partners"
+>
+  <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+      For organizations that help immigrants
+    </h1>
+    <p class="mt-3 text-slate-600 dark:text-slate-300">
+      VisaNav is a free public tool. If your organization provides immigration
+      help, you can ask to be listed as a trusted resource, or partner with us to
+      offer VisaNav to the people you serve. We review every request before
+      anything is listed — this keeps the directory trustworthy.
+    </p>
+
+    <!-- Success panel (revealed after submit) -->
+    <div
+      id="success"
+      hidden
+      class="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-800 dark:bg-brand-900/20"
+    >
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Thank you — we've got your request</h2>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        A person will review it before anything is published. We'll reach out at
+        the email you provided if we need anything else.
+      </p>
+    </div>
+
+    <form id="partner-form" class="mt-8 space-y-6" novalidate>
+      <!-- Honeypot: hidden from people, catnip for bots. Do not remove. -->
+      <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;">
+        <label>Website (leave blank)
+          <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+        </label>
+      </div>
+
+      <div>
+        <label for="organization_name" class={labelClass}>Organization name <span class="text-red-500">*</span></label>
+        <input id="organization_name" name="organization_name" type="text" required class={inputClass} />
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div>
+          <label for="contact_name" class={labelClass}>Your name</label>
+          <input id="contact_name" name="contact_name" type="text" autocomplete="name" class={inputClass} />
+        </div>
+        <div>
+          <label for="contact_email" class={labelClass}>Contact email <span class="text-red-500">*</span></label>
+          <input id="contact_email" name="contact_email" type="email" required autocomplete="email" class={inputClass} />
+        </div>
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div>
+          <label for="contact_phone" class={labelClass}>Phone</label>
+          <input id="contact_phone" name="contact_phone" type="tel" autocomplete="tel" class={inputClass} />
+        </div>
+        <div>
+          <label for="website" class={labelClass}>Website</label>
+          <input id="website" name="website" type="url" placeholder="https://…" class={inputClass} />
+        </div>
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div>
+          <label for="city" class={labelClass}>City</label>
+          <input id="city" name="city" type="text" class={inputClass} />
+        </div>
+        <div>
+          <label for="state" class={labelClass}>State</label>
+          <select id="state" name="state" class={inputClass}>
+            <option value="">Select…</option>
+            {US_STATES.map((s) => <option value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <fieldset>
+        <legend class={labelClass}>What are you asking for?</legend>
+        <div class="mt-2 space-y-2">
+          <label class="flex items-start gap-3 rounded-lg border border-slate-300 p-3 dark:border-slate-700">
+            <input type="radio" name="intent" value="listing" checked class="mt-1 text-brand-600 focus:ring-brand-500" />
+            <span class="text-sm text-slate-700 dark:text-slate-300">
+              <strong class="font-semibold text-slate-900 dark:text-white">List us as a public resource</strong><br />
+              Add our organization to the VisaNav directory so people can find us.
+            </span>
+          </label>
+          <label class="flex items-start gap-3 rounded-lg border border-slate-300 p-3 dark:border-slate-700">
+            <input type="radio" name="intent" value="partner" class="mt-1 text-brand-600 focus:ring-brand-500" />
+            <span class="text-sm text-slate-700 dark:text-slate-300">
+              <strong class="font-semibold text-slate-900 dark:text-white">Partner with us</strong><br />
+              We'd like to offer VisaNav to the people we serve (a pilot).
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+        <input type="checkbox" name="offers_pro_bono" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+        We provide free (pro-bono) legal help
+      </label>
+
+      <div>
+        <label for="message" class={labelClass}>Anything else we should know?</label>
+        <textarea id="message" name="message" rows="4" class={inputClass}></textarea>
+      </div>
+
+      <!-- Cloudflare Turnstile: a privacy-friendly CAPTCHA. It drops a hidden
+           `cf-turnstile-response` input into this form; the API verifies it. -->
+      <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-theme="auto"></div>
+
+      <div id="error" hidden role="alert" class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"></div>
+
+      <button
+        id="submit"
+        type="submit"
+        class="rounded-lg bg-brand-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Submit request
+      </button>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        By submitting you confirm the information is accurate. Submissions are
+        reviewed before listing.
+      </p>
+    </form>
+
+    <!-- is:inline so Astro leaves this third-party loader untouched; it
+         implicit-renders the .cf-turnstile widget above on load. -->
+    <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  </section>
+</Base>
+
+<script>
+  import { SUBMISSIONS_ENDPOINT, TURNSTILE_SITE_KEY } from "../config";
+
+  const form = document.getElementById("partner-form") as HTMLFormElement;
+  const success = document.getElementById("success") as HTMLElement;
+  const errorBox = document.getElementById("error") as HTMLElement;
+  const submitBtn = document.getElementById("submit") as HTMLButtonElement;
+
+  // Turnstile tokens are single-use; refresh the widget after any failed attempt.
+  const resetTurnstile = () => (window as any).turnstile?.reset?.();
+
+  function showError(msg: string) {
+    errorBox.textContent = msg;
+    errorBox.hidden = false;
+    errorBox.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // Turn a DRF 400 body ({field: ["msg"], ...}) into one readable line.
+  function formatErrors(data: unknown): string {
+    if (data && typeof data === "object") {
+      const parts: string[] = [];
+      for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
+        const msg = Array.isArray(v) ? v.join(" ") : String(v);
+        parts.push(k === "detail" || k === "non_field_errors" ? msg : `${k}: ${msg}`);
+      }
+      if (parts.length) return parts.join("  ");
+    }
+    return "Something went wrong. Please check your entries and try again.";
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.hidden = true;
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    const fd = new FormData(form);
+    const turnstileToken = (fd.get("cf-turnstile-response") as string) || "";
+
+    // Turnstile usually solves silently on load; if it hasn't yet, ask the
+    // user to wait rather than submitting a request the API will reject.
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      showError("Please complete the verification challenge, then submit again.");
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      organization_name: fd.get("organization_name"),
+      contact_name: fd.get("contact_name") || "",
+      contact_email: fd.get("contact_email"),
+      contact_phone: fd.get("contact_phone") || "",
+      website: fd.get("website") || "",
+      city: fd.get("city") || "",
+      state: fd.get("state") || "",
+      offers_pro_bono: fd.get("offers_pro_bono") === "on",
+      intent: fd.get("intent") || "listing",
+      message: fd.get("message") || "",
+      hp_website: fd.get("hp_website") || "",
+      turnstile_token: turnstileToken,
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting…";
+    try {
+      const res = await fetch(SUBMISSIONS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        form.hidden = true;
+        success.hidden = false;
+        success.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      resetTurnstile(); // any non-2xx consumed the token; get a fresh one
+      if (res.status === 429) {
+        showError("Too many submissions from this network right now. Please try again later.");
+      } else {
+        let data: unknown = null;
+        try {
+          data = await res.json();
+        } catch {
+          /* non-JSON error */
+        }
+        showError(formatErrors(data));
+      }
+    } catch {
+      resetTurnstile();
+      showError("We couldn't reach the server. Check your connection and try again.");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit request";
+    }
+  });
+</script>

@@ -1,0 +1,155 @@
+---
+import Base from "../layouts/Base.astro";
+import { APP_URL } from "../config";
+import orgs from "../data/organizations.json";
+
+const total = orgs.length;
+const proBono = orgs.filter((o) => o.proBono).length;
+const states = new Set(orgs.map((o) => o.state).filter(Boolean)).size;
+
+const steps = [
+  {
+    title: "Ask in your own words",
+    body: "Describe your situation in plain language — no forms, no jargon, no account required.",
+  },
+  {
+    title: "Get clear answers with sources",
+    body: "VisaNav explains your options and points to official USCIS and government sources you can verify.",
+  },
+  {
+    title: "Find free help near you",
+    body: "Connect to recognized nonprofits and pro-bono providers in your state — not to anyone trying to sell you something.",
+  },
+];
+
+const trust = [
+  "100% free",
+  "No account needed",
+  "We don't sell your data",
+  "Not a law firm",
+];
+---
+
+<Base
+  title="VisaNav — Free, trustworthy immigration help"
+  description="A free public tool that explains your immigration options in plain language and connects you to recognized nonprofits and pro-bono legal help near you. No account, no cost, no data sold."
+>
+  <!-- Hero -->
+  <section class="relative overflow-hidden">
+    <div
+      class="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-brand-50 to-transparent dark:from-brand-900/20"
+    >
+    </div>
+    <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+      <div class="max-w-2xl">
+        <p class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-200">
+          Free public tool · not affiliated with USCIS or ICE
+        </p>
+        <h1 class="mt-5 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl dark:text-white">
+          Immigration is confusing. Getting help shouldn't be.
+        </h1>
+        <p class="mt-5 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+          VisaNav answers your immigration questions in plain language, cites
+          official sources, and points you to trustworthy free and low-cost help
+          near you. No account. No cost. Your information is never sold.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a
+            href={APP_URL}
+            class="rounded-lg bg-brand-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+          >
+            Start a free chat
+          </a>
+          <a
+            href="/directory"
+            class="rounded-lg border border-slate-300 bg-white px-5 py-3 text-base font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            Find help near you
+          </a>
+        </div>
+
+        <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
+          {
+            trust.map((t) => (
+              <li class="flex items-center gap-2">
+                <svg class="h-4 w-4 text-brand-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 011.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z" clip-rule="evenodd" />
+                </svg>
+                {t}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <h2 class="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+      How VisaNav helps
+    </h2>
+    <div class="mt-10 grid gap-6 sm:grid-cols-3">
+      {
+        steps.map((s, i) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/40">
+            <div class="grid h-9 w-9 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-800 dark:bg-brand-900/40 dark:text-brand-200">
+              {i + 1}
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{s.title}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{s.body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Directory teaser -->
+  <section class="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+    <div class="overflow-hidden rounded-2xl border border-brand-200 bg-brand-50 p-8 sm:p-10 dark:border-brand-800 dark:bg-brand-900/20">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div class="max-w-xl">
+          <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            A directory of real, trustworthy help
+          </h2>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">
+            Browse <strong>{total.toLocaleString()}</strong> nonprofit and
+            pro-bono organizations — including <strong>{proBono}</strong>{" "}
+            pro-bono legal providers — across <strong>{states}</strong> states,
+            drawn from official DOJ/EOIR recognized-organization data.
+          </p>
+        </div>
+        <a
+          href="/directory"
+          class="shrink-0 rounded-lg bg-brand-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+        >
+          Browse the directory
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- For organizations -->
+  <section class="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
+    <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div class="max-w-xl">
+          <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Do you run an organization that helps immigrants?
+          </h2>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">
+            Ask to be listed as a trusted resource, or partner with us to offer
+            VisaNav to the people you serve. Every request is reviewed before
+            it's listed.
+          </p>
+        </div>
+        <a
+          href="/partners"
+          class="shrink-0 rounded-lg border border-slate-300 bg-white px-5 py-3 text-base font-semibold text-slate-800 transition-colors hover:bg-white/70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+        >
+          Request to be included
+        </a>
+      </div>
+    </div>
+  </section>
+</Base>
