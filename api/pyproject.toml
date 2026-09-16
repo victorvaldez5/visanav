@@ -47,6 +47,10 @@ django-countries = "^7.6.1"
 django-filter = "^25.1"
 beautifulsoup4 = "^4.13.5"
 pdfplumber = "^0.11.7"
+# Used directly by core/encryption.py to encrypt conversation content at rest.
+# Also pulled transitively (pdfminer.six), but declared here so it survives any
+# future trimming of the PDF/scraper deps.
+cryptography = ">=42.0"
 pytest = "^8.4.2"
 # Pinned <1.37: opentelemetry-api 1.37 removed the `_events` module that
 # pydantic-ai 0.7.x imports, which breaks the app on a fresh dependency resolve.

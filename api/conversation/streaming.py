@@ -101,6 +101,25 @@ def _persist_messages(conversation_id, new_messages):
 
 
 @sync_to_async
+def _touch_retention(conversation_id):
+    """Refresh the conversation's retention window after a new turn.
+
+    Retention is measured from the last message, so an active chat keeps
+    resetting its clock and an abandoned one ages out. A legal hold or an
+    opted-in owner resolves to expires_at = NULL (kept).
+    """
+    conversation = (
+        Conversation.objects.select_related("user__profile")
+        .filter(id=conversation_id)
+        .first()
+    )
+    if conversation is None:
+        return
+    conversation.apply_retention_policy()
+    conversation.save(update_fields=["expires_at"])
+
+
+@sync_to_async
 def _check_rate_limit(identity: str, limit: int, window: int = 60) -> bool:
     """Soft fixed-window limiter to cap LLM spend from any one client.
 
@@ -227,6 +246,7 @@ async def chat_stream(request):
 
             new_messages = json.loads(run.result.new_messages_json())
             await _persist_messages(conversation_id, new_messages)
+            await _touch_retention(conversation_id)
             yield _sse("done", {"conversation": str(conversation_uuid)})
         except Exception:  # noqa: BLE001 - surface a clean error, log the rest
             logger.exception(

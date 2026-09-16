@@ -50,7 +50,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         # associate the logged-in user
-        serializer.save(user=user)
+        conversation = serializer.save(user=user)
+        # Stamp the initial retention window (refreshed each turn in streaming).
+        conversation.apply_retention_policy()
+        conversation.save(update_fields=["expires_at"])
         cache_key = per_user_cache_key("conversation-list", user)
         cache.delete(cache_key)
 

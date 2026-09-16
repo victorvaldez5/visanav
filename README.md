@@ -225,4 +225,65 @@ release instead of on every cold start under scale-to-zero.)
 
 ---
 
+## Data retention & encryption
+
+Conversations hold people's immigration questions — the most sensitive data in
+the app — so the store is built to keep as little as possible, for as short as
+possible, and never in plaintext.
+
+**Encryption at rest.** `Message.parts` (the raw conversation content) is stored
+Fernet-encrypted via `core/encryption.py` + `core.fields.EncryptedJSONField`; the
+database column holds ciphertext. This is *defence-in-depth for the store* — a DB
+dump, stolen backup, or leaked replica yields ciphertext. It is **not**
+end-to-end encryption: the API decrypts each turn to run the model, and whoever
+holds the key (including us, under legal process) can read stored chats. Set a
+real key in prod — `api_project.prod` refuses to boot without an explicit
+`CONVERSATION_ENCRYPTION_KEYS` (in dev/CI a throwaway key is derived from the dev
+`SECRET_KEY`, so no key material is committed):
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# → set as CONVERSATION_ENCRYPTION_KEYS on the API service
+```
+
+Rotate by prepending a new key (`new,old`) and re-saving rows; both are tried on
+decrypt.
+
+**Retention.** Each conversation carries an `expires_at`, set on creation and
+refreshed on every turn (so an active chat stays alive and an abandoned one ages
+out). Anonymous chats use `CONVERSATION_ANON_RETENTION_DAYS` (default 7);
+signed-in chats use `CONVERSATION_USER_RETENTION_DAYS` (default 30) **unless** the
+user opts into keeping history (`Profile.retain_history`), which sets
+`expires_at = NULL`. A window of `0` disables auto-expiry for that class.
+
+Deletion is enforced by a management command — schedule it (Railway cron service
+or a scheduled GitHub Action):
+
+```bash
+python manage.py purge_expired_conversations            # delete expired
+python manage.py purge_expired_conversations --dry-run  # report only
+```
+
+**Legal hold.** The purge command **never** deletes a conversation with
+`legal_hold=True`. Routine, policy-driven deletion is defensible; deleting data
+you're already on notice to preserve is not. When a subpoena or litigation-hold
+demand arrives, set the hold *before* the next purge — the "Place legal hold"
+admin action (at `/nimda/`) flips it for selected conversations; lift it when the
+duty ends. (The hold procedure is the one piece here genuinely worth confirming
+with counsel.)
+
+---
+
 ## Production Checklist
+
+- [ ] `DJANGO_SETTINGS_MODULE=api_project.prod`, and `DJANGO_SECRET_KEY` /
+      `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` / `POSTGRES_*` all set (prod
+      refuses to boot otherwise).
+- [ ] `CONVERSATION_ENCRYPTION_KEYS` set to a real, backed-up Fernet key — losing
+      it makes every stored conversation unreadable.
+- [ ] `purge_expired_conversations` scheduled (Railway cron or GitHub Action) and
+      confirmed running.
+- [ ] Retention windows (`CONVERSATION_*_RETENTION_DAYS`) reviewed for the launch
+      audience.
+- [ ] A written, dated retention policy that matches the above (routine deletion
+      is only defensible when it's consistent and documented).

@@ -4,6 +4,10 @@ from .models import Conversation, Message
 
 
 class MessageSerializer(serializers.ModelSerializer):
+    # parts is an EncryptedJSONField (stored as text); declare it explicitly so
+    # DRF serializes the decrypted native JSON rather than a stringified column.
+    parts = serializers.JSONField()
+
     class Meta:
         model = Message
         fields = [
@@ -22,8 +26,8 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Conversation
-        fields = ["id", "uuid", "title", "user", "created_at", "messages"]
-        read_only_fields = ["id", "uuid", "created_at", "user"]
+        fields = ["id", "uuid", "title", "user", "created_at", "expires_at", "messages"]
+        read_only_fields = ["id", "uuid", "created_at", "expires_at", "user"]
 
     def get_messages(self, obj):
         # Keep the prefetched rows but guarantee chronological order; the

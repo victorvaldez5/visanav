@@ -92,3 +92,9 @@ LOGGING = {
 REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"] = (
     "rest_framework.permissions.IsAuthenticated",
 )
+
+# Conversation content is encrypted at rest (core/encryption.py). Require an
+# explicit key in production — base.py's dev fallback is derived from the public
+# dev SECRET_KEY and must never protect real data. Losing this key makes every
+# stored conversation unreadable, so back it up.
+CONVERSATION_ENCRYPTION_KEYS = required_env("CONVERSATION_ENCRYPTION_KEYS")
