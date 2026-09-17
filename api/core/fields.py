@@ -46,8 +46,13 @@ class EncryptedJSONField(models.TextField):
     def _loads(value):
         try:
             return json.loads(decrypt(value))
-        except InvalidToken:
-            # Legacy / not-yet-encrypted row: parse as plaintext JSON. If that
-            # also fails, the JSON error propagates (a genuinely unreadable
-            # value — e.g. ciphertext under a key this process does not hold).
+        except (InvalidToken, UnicodeEncodeError):
+            # Legacy / not-yet-encrypted row: parse as plaintext JSON. A
+            # non-Fernet-token value either fails MultiFernet validation
+            # (InvalidToken) or, if it contains non-ASCII characters, fails
+            # earlier at token.encode("ascii") in decrypt() with
+            # UnicodeEncodeError — both indicate this is plaintext JSON, not
+            # an encrypted token. If plaintext parsing also fails, the JSON
+            # error propagates (a genuinely unreadable value — e.g.
+            # ciphertext under a key this process does not hold).
             return json.loads(value)
