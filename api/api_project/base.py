@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -173,3 +175,32 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 # core/llm.py and can be overridden with CHAT_MODEL.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").lower()
 CHAT_MODEL = os.environ.get("CHAT_MODEL")
+
+# ── Conversation privacy: retention + at-rest encryption ─────────────────────
+# Auto-delete windows (in days) enforced by the `purge_expired_conversations`
+# management command. Retention is measured from the last message and refreshed
+# each turn, so an active chat stays alive and an abandoned one ages out. A
+# value of 0 (or blank) disables auto-expiry for that class of conversation.
+#   - Anonymous chats keep nothing tied to an account; expire them quickly.
+#   - Signed-in chats age out too, UNLESS the user opts into keeping their
+#     history (accounts.Profile.retain_history), which sets expires_at = NULL.
+CONVERSATION_ANON_RETENTION_DAYS = int(
+    os.environ.get("CONVERSATION_ANON_RETENTION_DAYS") or "7"
+)
+CONVERSATION_USER_RETENTION_DAYS = int(
+    os.environ.get("CONVERSATION_USER_RETENTION_DAYS") or "30"
+)
+
+# Fernet key(s) encrypting conversation content at rest (core/encryption.py).
+# Comma-separated: the first encrypts, all are tried on decrypt, so rotate by
+# prepending a new key and re-saving rows. In prod this MUST be set explicitly
+# (prod.py fails to boot otherwise). In dev/CI/tests, rather than committing any
+# key material, derive a deterministic throwaway key from the (already public,
+# non-secret) dev SECRET_KEY — so local runs need zero setup and nothing
+# key-shaped lives in the repo. Generate a real prod key with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+CONVERSATION_ENCRYPTION_KEYS = os.environ.get("CONVERSATION_ENCRYPTION_KEYS") or (
+    base64.urlsafe_b64encode(
+        hashlib.sha256(f"conversation-fernet-dev:{SECRET_KEY}".encode()).digest()
+    ).decode()
+)

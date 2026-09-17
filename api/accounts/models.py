@@ -33,5 +33,11 @@ class Profile(models.Model):
     notify_system = models.BooleanField(default=True)
     notify_marketing = models.BooleanField(default=False)
 
+    # Privacy: opt in to keeping chat history across sessions. Off by default —
+    # signed-in conversations otherwise auto-expire like anonymous ones (see
+    # conversation.Conversation.apply_retention_policy). When on, the user's new
+    # conversations are retained (expires_at = NULL) until they delete them.
+    retain_history = models.BooleanField(default=False)
+
     def __str__(self):
         return f"{self.user.username} Profile"

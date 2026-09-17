@@ -64,12 +64,12 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     hostname: db
+    # Credentials come from config/.env (the single env file all services read).
+    # Do NOT add an `environment:` override here — it takes precedence over
+    # env_file, so the volume would initialize under the wrong role, and Postgres
+    # only applies POSTGRES_* on first init (renaming later silently mismatches).
     env_file:
       - config/.env
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-raul}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pswd}
-      POSTGRES_DB: ${POSTGRES_DB:-proejctraul}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:

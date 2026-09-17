@@ -225,4 +225,33 @@ release instead of on every cold start under scale-to-zero.)
 
 ---
 
+## Data retention & encryption
+
+Conversation content is the app's most sensitive data, so the store keeps little
+and holds none of it in plaintext.
+
+- **Encrypted at rest.** `Message.parts` is Fernet-encrypted (`core/encryption.py`).
+  Set `CONVERSATION_ENCRYPTION_KEYS` in prod; dev/CI derive a throwaway key.
+- **Retention.** Each conversation has an `expires_at`, refreshed per turn:
+  `CONVERSATION_ANON_RETENTION_DAYS` (7) / `CONVERSATION_USER_RETENTION_DAYS` (30),
+  or kept when the user opts in (`Profile.retain_history`). `0` disables it.
+- **Deletion.** `python manage.py purge_expired_conversations` (`--dry-run` to
+  preview); `railway.cron.json` runs it daily on Railway.
+- **Legal hold.** The purge skips `legal_hold=True` — set it (admin at `/nimda/`)
+  before deleting data you're on notice to preserve.
+
+---
+
 ## Production Checklist
+
+- [ ] `DJANGO_SETTINGS_MODULE=api_project.prod`, and `DJANGO_SECRET_KEY` /
+      `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` / `POSTGRES_*` all set (prod
+      refuses to boot otherwise).
+- [ ] `CONVERSATION_ENCRYPTION_KEYS` set to a real, backed-up Fernet key — losing
+      it makes every stored conversation unreadable.
+- [ ] `purge_expired_conversations` scheduled — the `railway.cron.json` service
+      is deployed, has its env vars set, and a dry-run was confirmed in its logs.
+- [ ] Retention windows (`CONVERSATION_*_RETENTION_DAYS`) reviewed for the launch
+      audience.
+- [ ] A written, dated retention policy that matches the above (routine deletion
+      is only defensible when it's consistent and documented).
