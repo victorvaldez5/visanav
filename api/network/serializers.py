@@ -47,6 +47,8 @@ class RepresentativeSerializer(serializers.ModelSerializer):
             "phone",
             "website",
             "address",
+            "dhs_only",
+            "accreditation_expiration",
             "is_active",
             "source_url",
             "last_verified",

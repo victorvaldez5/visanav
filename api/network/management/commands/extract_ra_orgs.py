@@ -1,9 +1,9 @@
 """Seed DOJ-recognized organizations from the committed roster fixture.
 
 Reads network/fixtures/ra-orgs.json (the parsed EOIR "Recognized Organizations"
-list) and upserts each into the flat Organization model, tagged
-accreditation="DOJ-recognized". Idempotent by slug. The JSON is the source of
-truth; re-parsing the source PDF is out of scope.
+list, with addresses + phones) and upserts each into the flat Organization
+model, tagged accreditation="DOJ-recognized". Idempotent by slug. Regenerate the
+fixture from the source roster PDFs with the ``build_ra_fixtures`` command.
 """
 import json
 from pathlib import Path

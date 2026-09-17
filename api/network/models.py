@@ -104,6 +104,11 @@ class Representative(models.Model):
         "locations.Address", null=True, blank=True, on_delete=models.SET_NULL
     )
 
+    # DOJ-accredited reps can be limited to DHS (USCIS) practice — not authorized
+    # to appear before the immigration courts or the BIA. This flags that scope.
+    dhs_only = models.BooleanField(default=False)
+    accreditation_expiration = models.DateField(null=True, blank=True)
+
     is_active = models.BooleanField(default=False)
     source_url = models.URLField(blank=True)
     last_verified = models.DateField(null=True, blank=True)

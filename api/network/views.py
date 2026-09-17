@@ -44,7 +44,7 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
 class RepresentativeFilter(FilterSet):
     class Meta:
         model = Representative
-        fields = ["provider_type", "organization"]
+        fields = ["provider_type", "organization", "dhs_only"]
 
 
 class RepresentativeViewSet(viewsets.ReadOnlyModelViewSet):

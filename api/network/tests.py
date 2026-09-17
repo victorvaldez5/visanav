@@ -299,3 +299,152 @@ def test_representatives_endpoint_empty_and_active_only():
     results = resp.data["results"]
     assert [r["name"] for r in results] == ["Jane Doe"]
     assert results[0]["provider_type"] == "attorney"
+
+
+# --- EOIR roster parser (build_ra_fixtures) -------------------------------
+# The parser works on pre-clustered rows (lists of {"x0", "text"} words), so its
+# wrapping / divider / malformed-data handling is testable without a real PDF.
+
+from network.management.commands.build_ra_fixtures import (  # noqa: E402
+    _iso,
+    _norm_zip,
+    parse_orgs,
+    parse_reps,
+)
+
+
+def _w(x, text):
+    return {"x0": float(x), "top": 0.0, "text": text}
+
+
+def _row(*pairs):
+    return [_w(x, t) for x, t in pairs]
+
+
+# Column x-positions mirror the real rosters (org dates at 362+, rep cells at
+# 38/126/192/276).
+def _org_header(name_words, date="01/02/20"):
+    return [_w(x, t) for x, t in name_words] + _row((362, date), (434, "01/02/26"), (506, "Active"))
+
+
+def test_norm_zip_handles_malformed_codes():
+    assert _norm_zip("85001") == "85001"
+    assert _norm_zip("482102416") == "48210-2416"  # ZIP+4 without the hyphen
+    assert _norm_zip("8611") == "08611"  # dropped leading zero
+    assert _norm_zip("85001-1234") == "85001-1234"
+
+
+def test_iso_pivots_two_digit_year():
+    assert _iso("11", "01", "27") == "2027-11-01"
+    assert _iso("01", "13", "96") == "1996-01-13"  # org recognition dates reach back
+
+
+def test_parse_orgs_wrapped_name_and_multi_office_and_zip():
+    rows = [
+        _org_header([(38, "Very"), (70, "Long"), (120, "Org")]),
+        _row((38, "Name"), (70, "Continued")),  # wrapped org name (no office keyword)
+        _row((38, "Principal"), (72, "Office")),
+        _row((38, "123"), (60, "Main"), (90, "St")),
+        _row((38, "Detroit,"), (70, "MI"), (90, "482102416")),  # malformed ZIP+4
+        _row((38, "(313)"), (60, "555-1000")),
+        _row((38, "Very"), (70, "Long"), (120, "Org"), (170, "Name"), (200, "Continued")),  # divider
+        _row((38, "Wayne"), (60, "Extension"), (100, "Office")),
+        _row((38, "9"), (50, "Elm"), (70, "Ave")),
+        _row((38, "Ferndale,"), (80, "MI"), (100, "48220")),
+    ]
+    orgs = parse_orgs(rows)
+
+    assert len(orgs) == 1
+    org = orgs[0]
+    assert org["organization_name"] == "Very Long Org Name Continued"
+    assert [a["address_name"] for a in org["addresses"]] == ["Principal Office", "Wayne Extension Office"]
+    principal = org["addresses"][0]
+    assert principal["line1"] == "123 Main St"
+    assert principal["city"] == "Detroit"
+    assert principal["postal_code"] == "48210-2416"  # normalized
+    assert principal["phone_number"] == "(313) 555-1000"
+
+
+def test_parse_orgs_stops_at_section_boundary():
+    rows = [
+        _org_header([(38, "Real"), (60, "Org")]),
+        _row((38, "Principal"), (72, "Office")),
+        _row((38, "1"), (50, "A"), (70, "St")),
+        _row((38, "Reno,"), (70, "NV"), (90, "89501")),
+        # The combined export's second section starts here.
+        _row((38, "Recognized"), (280, "Accreditation"), (360, "Expiration")),
+        _org_header([(38, "Ghost"), (60, "Org")]),
+        _row((38, "Principal"), (72, "Office")),
+    ]
+    orgs = parse_orgs(rows)
+    assert [o["organization_name"] for o in orgs] == ["Real Org"]
+
+
+def test_parse_reps_wrapped_name_org_and_dhs_scope():
+    rows = [
+        _row((38, "F")),  # centered alphabetical divider — furniture
+        _row((38, "Accredited"), (126, "Accreditation"), (180, "Expiration")),  # header — furniture
+        _row((38, "Doe,"), (70, "Jane"), (126, "11/01/27"), (192, "Active"),
+             (276, "Some"), (310, "Org"), (393, "01/01/20"), (453, "01/01/26"), (515, "Active")),
+        _row((38, "(DHS"), (70, "only)"), (276, "Inc.")),  # wrapped name + org
+        _row((38, "Roe,"), (70, "Ann"), (126, "05/18/26*"), (192, "Active"),
+             (276, "Other"), (310, "Group"), (393, "02/02/22"), (453, "02/02/28"), (515, "Active")),
+        _row((200, "Recognized"), (300, "Organization"), (360, "Address")),  # section boundary
+        _row((38, "Ghost,"), (70, "Rep"), (126, "01/01/30"), (192, "Active"), (276, "Nope")),
+    ]
+    reps = parse_reps(rows, last_verified="2026-09-13")
+
+    assert [r["name"] for r in reps] == ["Doe, Jane", "Roe, Ann"]
+    doe = reps[0]
+    assert doe["organization_name"] == "Some Org Inc."
+    assert doe["dhs_only"] is True
+    assert doe["accreditation_expiration"] == "2027-11-01"
+    assert doe["last_verified"] == "2026-09-13"
+    assert reps[1]["dhs_only"] is False  # no "(DHS only)" fragment
+
+
+# --- extract_ra_reps command ----------------------------------------------
+
+@pytest.mark.django_db
+def test_extract_ra_reps_links_by_name_and_is_idempotent(monkeypatch):
+    org = _make_org("firrp", name="Florence Immigrant and Refugee Rights Project")
+    rows = [
+        {
+            "name": "Doe, Jane",
+            "organization_name": "florence immigrant and refugee rights project",  # loose case
+            "accreditation_expiration": "2027-11-01",
+            "dhs_only": True,
+            "status": "Active",
+            "last_verified": "2026-09-13",
+        }
+    ]
+    monkeypatch.setattr(
+        "network.management.commands.extract_ra_reps._load_fixture", lambda: rows
+    )
+    call_command("extract_ra_reps", "--insert_to_db")
+    call_command("extract_ra_reps", "--insert_to_db")  # idempotent
+
+    reps = Representative.objects.all()
+    assert reps.count() == 1
+    rep = reps.get()
+    assert rep.organization_id == org.id  # linked by normalized name
+    assert rep.provider_type == "doj-accredited-rep"
+    assert rep.dhs_only is True
+    assert str(rep.accreditation_expiration) == "2027-11-01"
+    assert rep.is_active is True
+
+
+@pytest.mark.django_db
+def test_extract_ra_reps_seeds_unlinked_when_org_absent(monkeypatch):
+    rows = [
+        {"name": "Solo, Rep", "organization_name": "An Org With No Listing",
+         "status": "Active", "last_verified": "2026-09-13"}
+    ]
+    monkeypatch.setattr(
+        "network.management.commands.extract_ra_reps._load_fixture", lambda: rows
+    )
+    call_command("extract_ra_reps", "--insert_to_db")
+
+    rep = Representative.objects.get()
+    assert rep.organization_id is None  # no matching org, still seeded
+    assert rep.is_active is True
