@@ -36,9 +36,9 @@ const menuItems = [
         href: "/",
     },
     {
-        title: "Legal Network",
+        title: "Find Resources",
         icon: "icon-scale",
-        href: "/attorneys",
+        href: "/resources",
     },
     {
       title: "Applications",
@@ -112,9 +112,6 @@ const menuItems = [
                 <RouterLink :to="`/profile/${userId}`">
                   Account
                 </RouterLink>
-              </DropdownMenuItem>
-              <DropdownMenuItem as-child class="text-base">
-                <span>Billing</span>
               </DropdownMenuItem>
               <DropdownMenuItem @click="logout()" class="text-base">
                 <span>Sign out</span>

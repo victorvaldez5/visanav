@@ -1,129 +1,118 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
-class Attorney(models.Model):
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone_number = models.CharField(max_length=255)
-    address = models.ForeignKey("locations.Address", on_delete=models.CASCADE)
+class OrganizationType(models.TextChoices):
+    """Mirrors data/schema/resource.schema.json ``org_type`` (see vocabularies.md)."""
 
-    bar_number = models.CharField(max_length=255)
-    bar_number_verified = models.BooleanField(default=False)
-    bar_start = models.DateField()
-    bar_end = models.DateField()
+    SELF_OWNED = "self-owned", "Self Owned"
+    PUBLIC_COMPANY = "public-company", "Public Company"
+    PRIVATE_COMPANY = "private-company", "Private Company"
+    PARTNERSHIP = "partnership", "Partnership"
+    EDUCATIONAL = "educational", "Educational"
+    REFERRAL_SERVICE = "referral-service", "Referral Service"
+    COMMUNITY_ORGANIZATION = "community-organization", "Community Organization"
+    NONPROFIT = "non-profit", "Non-profit"
 
-    website = models.URLField()
-    notes = models.TextField(blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+class FeeModel(models.TextChoices):
+    FREE = "free", "Free"
+    SLIDING_SCALE = "sliding-scale", "Sliding scale"
+    LOW_COST = "low-cost", "Low cost"
+    PAID = "paid", "Paid"
+    UNKNOWN = "unknown", "Unknown"
 
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+
+class ProviderType(models.TextChoices):
+    ATTORNEY = "attorney", "Attorney"
+    DOJ_ACCREDITED_REP = "doj-accredited-rep", "DOJ Accredited Representative"
 
 
 class Organization(models.Model):
-    class OrganizationType(models.TextChoices):
-        SELF_OWNED = "self-owned", "Self Owned"
-        PUBLIC_COMPANY = "public-company", "Public Company"
-        PRIVATE_COMPANY = "private-company", "Private Company"
-        PARTNERSHIP = "partnership", "Partnership"
-        EDUCATIONAL = "educational", "Educational"
-        REFERRAL_SERVICE = "referral-service", "Referral service"
-        COMMUNITY_ORGANIZATION = "community-organization", "Community Organization"
-        NONPROFIT = "non-profit", "Non-profit"
+    """A place a person can get immigration help.
+
+    The columns mirror ``data/schema/resource.schema.json`` one-to-one so curated
+    resource YAML loads straight in (see the ``load_resources`` command). Contact
+    details that used to fan out into side-tables now live inline as Postgres
+    arrays.
+    """
 
     name = models.CharField(max_length=500)
+    # slug is the schema's ``org_id`` — stable and unique within the directory.
     slug = models.SlugField(unique=True)
-    organization_type = models.CharField(max_length=255)
-    notes = models.TextField(blank=True)
-    has_pro_bono = models.BooleanField(default=False)
-
+    organization_type = models.CharField(max_length=32, choices=OrganizationType.choices)
     description = models.TextField(blank=True)
 
-    is_active = models.BooleanField(default=False)
+    pro_bono = models.BooleanField(default=False)
+    fee_model = models.CharField(max_length=16, choices=FeeModel.choices, blank=True)
+    # e.g. "DOJ-recognized" — a strong trust signal.
+    accreditation = models.CharField(max_length=255, blank=True)
+
+    # Controlled vocab (data/schema/vocabularies.md); ISO 639-1 for languages.
+    services = ArrayField(models.CharField(max_length=64), default=list, blank=True)
+    languages = ArrayField(models.CharField(max_length=8), default=list, blank=True)
+
+    address = models.ForeignKey(
+        "locations.Address", null=True, blank=True, on_delete=models.SET_NULL
+    )
+    websites = ArrayField(models.URLField(), default=list, blank=True)
+    emails = ArrayField(models.EmailField(), default=list, blank=True)
+    phones = ArrayField(models.CharField(max_length=64), default=list, blank=True)
+
+    country = models.CharField(max_length=2, default="US")  # ISO 3166-1 alpha-2
+
+    # Trust signals: where the listing was sourced/verified, and when.
+    source_url = models.URLField(blank=True)
+    last_verified = models.DateField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
 
-class OrganizationAddress(models.Model):
-    address = models.ForeignKey("locations.Address", on_delete=models.CASCADE)
-    organization = models.ForeignKey("network.Organization", related_name="addresses", on_delete=models.CASCADE)
-    is_primary = models.BooleanField(default=False)
+class Representative(models.Model):
+    """An individual provider — a licensed attorney or a DOJ-accredited rep.
+
+    Replaces the old bar-licensure-only ``Attorney`` so the directory can list
+    DOJ-accredited representatives too. Read-only and empty for now; populating
+    it from the EOIR roster is a follow-up.
+    """
+
+    name = models.CharField(max_length=255)
+    provider_type = models.CharField(max_length=32, choices=ProviderType.choices)
+    # Bar number (attorneys) or accreditation id (DOJ-accredited reps).
+    credential = models.CharField(max_length=255, blank=True)
+
+    organization = models.ForeignKey(
+        "network.Organization",
+        null=True,
+        blank=True,
+        related_name="representatives",
+        on_delete=models.SET_NULL,
+    )
+
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=64, blank=True)
+    website = models.URLField(blank=True)
+    address = models.ForeignKey(
+        "locations.Address", null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    is_active = models.BooleanField(default=False)
+    source_url = models.URLField(blank=True)
+    last_verified = models.DateField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("address", "organization")
-
-
-class OrganizationPhoneNumber(models.Model):
-    phone_number = models.CharField(max_length=255)
-    organization = models.ForeignKey("network.Organization", related_name="phone_numbers", on_delete=models.CASCADE)
-    is_primary = models.BooleanField(default=False)
-
-    class Meta:
-        unique_together = ("phone_number", "organization")
-
-
-class OrganizationEmail(models.Model):
-    email = models.EmailField()
-    organization = models.ForeignKey("network.Organization", related_name="emails", on_delete=models.CASCADE)
-    is_primary = models.BooleanField(default=False)
-
-    class Meta:
-        unique_together = ("email", "organization")
+        ordering = ["name"]
 
     def __str__(self):
-        return self.email
-
-
-class OrganizationWebsites(models.Model):
-    website = models.URLField()
-    organization = models.ForeignKey("network.Organization", related_name="websites", on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ("website", "organization")
-
-    def __str__(self):
-        return self.website
-
-
-class OrganizationLanguage(models.Model):
-    language = models.ForeignKey("locations.Language", on_delete=models.CASCADE)
-    organization = models.ForeignKey("network.Organization", related_name="languages", on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ("language", "organization")
-
-
-class OrganizationSocialLink(models.Model):
-    class SocialLinkType(models.TextChoices):
-        FACEBOOK = "facebook", "Facebook"
-        TWITTER = "twitter", "Twitter"
-        INSTAGRAM = "instagram", "Instagram"
-        LINKEDIN = "linkedin", "LinkedIn"
-        X = "x", "X",
-        YOUTUBE = "youtube", "YouTube"
-        TIKTOK = "tiktok", "TikTok"
-        OTHER = "other", "Other"
-
-    platform = models.CharField(max_length=255, choices=SocialLinkType.choices)
-    link = models.URLField()
-    organization = models.ForeignKey("network.Organization", related_name="social_links", on_delete=models.CASCADE)
-
-
-class OrganizationMember(models.Model):
-    attorney = models.ForeignKey("network.Attorney", on_delete=models.CASCADE)
-    organization = models.ForeignKey("network.Organization", related_name="attorneys", on_delete=models.CASCADE)
-
-    membership_start_date = models.DateField()
-    membership_end_date = models.DateField()
-
-    class Meta:
-        unique_together = ("attorney", "organization")
-
-    def __str__(self):
-        return f"{self.attorney} - {self.organization}"
+        return self.name

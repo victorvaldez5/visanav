@@ -1,41 +1,12 @@
 from rest_framework import serializers
 
 from locations.serializers import AddressSerializer
-from network.models import Organization, OrganizationEmail, OrganizationPhoneNumber, OrganizationWebsites, \
-    OrganizationAddress
-
-
-class OrganizationEmailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrganizationEmail
-        fields = ("id", "email", "is_primary",)
-
-
-class OrganizationPhoneNumberSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrganizationPhoneNumber
-        fields = ("id", "phone_number", "is_primary",)
-
-
-class OrganizationWebsitesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrganizationWebsites
-        fields = ("id", "website",)
-
-
-class OrganizationAddressSerializer(serializers.ModelSerializer):
-    address = AddressSerializer()
-
-    class Meta:
-        model = OrganizationAddress
-        fields = ("id", "address", "is_primary",)
+from network.models import Organization, Representative
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
-    emails = OrganizationEmailSerializer(many=True)
-    phone_numbers = OrganizationPhoneNumberSerializer(many=True)
-    websites = OrganizationWebsitesSerializer(many=True)
-    addresses = OrganizationAddressSerializer(many=True)
+    # Contact details are inline arrays on the row; only the address is nested.
+    address = AddressSerializer(read_only=True)
 
     class Meta:
         model = Organization
@@ -43,13 +14,40 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "slug",
-            "has_pro_bono",
             "organization_type",
-            "notes",
             "description",
-            "is_active",
-            "addresses",
-            "emails",
-            "phone_numbers",
+            "pro_bono",
+            "fee_model",
+            "accreditation",
+            "services",
+            "languages",
+            "address",
             "websites",
+            "emails",
+            "phones",
+            "country",
+            "source_url",
+            "last_verified",
+            "is_active",
+        )
+
+
+class RepresentativeSerializer(serializers.ModelSerializer):
+    address = AddressSerializer(read_only=True)
+
+    class Meta:
+        model = Representative
+        fields = (
+            "id",
+            "name",
+            "provider_type",
+            "credential",
+            "organization",
+            "email",
+            "phone",
+            "website",
+            "address",
+            "is_active",
+            "source_url",
+            "last_verified",
         )

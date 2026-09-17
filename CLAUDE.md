@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository overview
 
-VisaNav (a.k.a. "Project Raul" / immigration-ai) is an immigration RAG chatbot that helps
-immigrants find status/services and connect with attorneys. It is a **monorepo of four
+VisaNav (a.k.a. "Project Raul" / immigration-ai) is a free immigration RAG chatbot that helps
+immigrants find status/services and connect with free/low-cost public resources. It is a **monorepo of four
 independently-deployed services** plus a shared config file:
 
-- `api/` — Django REST Framework backend (chat, auth, attorney directory). Deployed to **Railway**.
+- `api/` — Django REST Framework backend (chat, auth, public-resources directory). Deployed to **Railway**.
 - `frontend/` — Vue 3 + Vite SPA (chat UI). Deployed to **Cloudflare** (static `dist/` via Wrangler).
 - `scrapers/uscis_scraper/` — Scrapy spider that crawls USCIS → **Cloudflare R2**. Runs weekly via GitHub Actions.
 - `data/` — community-curated, per-country immigration knowledge/resources (Markdown + YAML) plus the scripts that validate and ingest them into the vector store.
@@ -97,9 +97,11 @@ or the `POSTGRES_*` vars are missing, and **reuses `CSRF_TRUSTED_ORIGINS` as `CO
    async, and does its own JWT auth** (allowing anonymous users) and its own soft rate-limiting
    (LocMemCache, per-process — a cost cap, not a hard quota).
 2. It drives the **pydantic-ai agent** built in `core/llm.py` (`get_agent()`, persona "Javi"),
-   whose one tool, `semantic_search`, queries **Pinecone**. The namespace comes from `Deps`
-   (`settings.PINECONE_NAMESPACE`, default `us`) — it **must** match a namespace that `ingest.py`
-   populated, or retrieval silently returns nothing. The index *host* is `PINECONE_INDEX_HOST`.
+   which has two tools: `semantic_search` queries **Pinecone** (namespace from `Deps`,
+   `settings.PINECONE_NAMESPACE`, default `us` — it **must** match a namespace `ingest.py`
+   populated, or retrieval silently returns nothing; the index *host* is `PINECONE_INDEX_HOST`),
+   and `resource_lookup` queries the `network.Organization` directory directly over the ORM
+   (US-only for now) to surface free/low-cost nonprofit and pro-bono help.
 3. Tokens stream back to the browser as **Server-Sent Events** (`status` / `delta` / `done` / `error`
    frames). This replaced an earlier Celery + Redis "enqueue and poll" design — **there is no Celery,
    no Redis, no Channels**; the cache is Django's in-process `LocMemCache`.
@@ -127,7 +129,7 @@ The Pinecone corpus is fed by two separate paths that do **not** currently conne
 - `accounts` — custom `User` (AbstractUser, `AUTH_USER_MODEL = accounts.User`) + `Profile`; JWT auth (SimpleJWT: 10-min access, 7-day refresh), registration, email verification.
 - `conversation` — `Conversation` / `Message` / `Feedback` models, the `ConversationViewSet`, and the SSE `chat_stream`. Conversations are keyed publicly by **UUID, not integer id**, so anonymous chats can't be enumerated.
 - `locations` — `Country` / `Subdivision` / `Address` / `Language` reference data.
-- `network` — the attorney/organization directory (`Attorney`, `Organization` and its related contact/address/language models).
+- `network` — the public-resources directory: a flat `Organization` (contact details are inline Postgres `ArrayField`s — no contact/address/language side-tables — matching `data/schema/resource.schema.json`) plus a read-only `Representative` (individual attorneys / DOJ-accredited reps; empty for now). Seeded via management commands (`load_resources <cc>`, `extract_ra_orgs`, `extract_probono`), not migrations.
 - `core` — shared infra: `llm.py` (the agent), `pagination.py`, `utils.py`, `mail.py`.
 
 URL roots (`api_project/urls.py`): `api/` (conversation), `api/auth/`, `api/locations/`,

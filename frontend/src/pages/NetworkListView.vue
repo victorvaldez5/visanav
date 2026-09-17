@@ -3,6 +3,7 @@ import {onMounted, ref, watch} from "vue";
 import {networkService, type Organization} from "@/services/networkService.ts";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
+import {Badge} from "@/components/ui/badge";
 import {toast} from "vue-sonner";
 import {usePagination} from "@/composables/usePagination.ts";
 import PaginationBar from "@/components/interface/PaginationBar.vue";
@@ -16,6 +17,17 @@ const {items, load, page, count, setPageData} = usePagination({
 const networkOrganizations = ref<Organization[]>([]);
 const searchText = ref("");
 const loading = ref(false);
+
+// A short, friendly label for the org's cost to the user.
+function costLabel(organization: Organization): string | null {
+  if (organization.pro_bono) return "Pro bono";
+  const map: Record<string, string> = {
+    free: "Free",
+    "sliding-scale": "Sliding scale",
+    "low-cost": "Low cost",
+  };
+  return map[organization.fee_model] ?? null;
+}
 
 watch(searchText, async (newVal) => {
   loading.value = true;
@@ -61,8 +73,11 @@ async function handleLoadPage(newPage: number) {
     <div class="md:flex md:items-center md:justify-between">
       <div class="min-w-0 flex-1">
         <h2 class="text-2xl/7 font-normal text-gray-800 sm:truncate sm:text-3xl sm:tracking-tight">
-          Search our Network
+          Find free &amp; low-cost immigration help
         </h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Nonprofit, pro-bono, and DOJ-recognized organizations near you.
+        </p>
       </div>
     </div>
 
@@ -92,6 +107,12 @@ async function handleLoadPage(newPage: number) {
                 <h3 class="truncate text-base font-medium text-gray-900 dark:text-white">
                   {{ organization.name }}
                 </h3>
+                <Badge
+                  v-if="costLabel(organization)"
+                  variant="default"
+                >
+                  {{ costLabel(organization) }}
+                </Badge>
               </div>
               <p class="mt-1 truncate text-sm text-muted-foreground">
                 {{ organization.organization_type }}
@@ -99,31 +120,31 @@ async function handleLoadPage(newPage: number) {
             </div>
           </div>
           <div class="p-6">
-            <div class="flex flex-col items-center space-x-3">
-              <template
-                v-for="orgAddress in organization.addresses"
-                :key="orgAddress.id"
-              >
-                <div
-                  v-if="orgAddress.is_primary"
-                  class="w-full mb-4"
-                >
-                  <h5>{{ orgAddress.address?.address_name || 'Primary Office' }}</h5>
-                  <p>
-                    {{ orgAddress.address.line1 }}
-                  </p>
-                  <span>{{ orgAddress.address.city }}, {{
-                    orgAddress.address.subdivision.name
-                  }}, {{ orgAddress.address.postal_code }}</span>
-                </div>
+            <div class="flex flex-col items-start space-y-1">
+              <template v-if="organization.address">
+                <h5 class="font-medium">
+                  {{ organization.address.subdivision?.name || organization.address.city }}
+                </h5>
+                <p>{{ organization.address.line1 }}</p>
+                <span>
+                  {{ organization.address.city }}<template v-if="organization.address.subdivision">, {{ organization.address.subdivision.name }}</template>
+                  {{ organization.address.postal_code }}
+                </span>
               </template>
+              <p
+                v-else-if="organization.description"
+                class="text-sm text-muted-foreground line-clamp-3"
+              >
+                {{ organization.description }}
+              </p>
             </div>
           </div>
           <div>
             <div class="-mt-px flex divide-x divide-gray-300 dark:divide-white/10">
               <div class="flex w-0 flex-1">
                 <a
-                  :href="`mailto:${organization.emails[0]?.email}`"
+                  v-if="organization.emails.length"
+                  :href="`mailto:${organization.emails[0]}`"
                   class="relative -mr-px inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-bl-lg border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
                 >
                   <Icon
@@ -135,14 +156,30 @@ async function handleLoadPage(newPage: number) {
               </div>
               <div class="-ml-px flex w-0 flex-1">
                 <a
-                  :href="`tel:${organization.phone_numbers[0]?.phone_number}`"
-                  class="relative inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-br-lg border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
+                  v-if="organization.phones.length"
+                  :href="`tel:${organization.phones[0]}`"
+                  class="relative inline-flex w-0 flex-1 items-center justify-center gap-x-3 border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
                 >
                   <Icon
                     name="icon-device-smartphone"
                     class="size-5 text-gray-400 dark:text-gray-500"
                   />
                   Call
+                </a>
+              </div>
+              <div class="-ml-px flex w-0 flex-1">
+                <a
+                  v-if="organization.websites.length"
+                  :href="organization.websites[0]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="relative inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-br-lg border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
+                >
+                  <Icon
+                    name="icon-globe"
+                    class="size-5 text-gray-400 dark:text-gray-500"
+                  />
+                  Website
                 </a>
               </div>
             </div>

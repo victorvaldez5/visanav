@@ -50,6 +50,9 @@ services:
       - config/.env
     volumes:
       - ./api:/app
+      # Curated resource corpus for `load_resources` (the ./api:/app mount would
+      # otherwise shadow the image's /app/data).
+      - ./data:/app/data
     environment:
       - PYTHONBUFFERED=1
       - PYTHONPATH=/app

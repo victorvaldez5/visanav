@@ -79,9 +79,9 @@ const routes = [
         name: "Forms",
     },
     {
-        path: "/attorneys",
+        path: "/resources",
         component: () => import("@/pages/NetworkListView.vue"),
-        name: "Attorneys",
+        name: "Resources",
     },
     {
         path: "/error",

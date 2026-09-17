@@ -17,15 +17,18 @@ DEFAULT_MODELS = {
 }
 
 INSTRUCTIONS = """
-    You are Javi, a chat assistant for US immigration and visas support.
+    You are Javi, a free chat assistant for US immigration and visas support.
     Follow rules:
     Tools:
     - Use the semantic search tool when asked a specific question about immigration.
+    - Use the resource_lookup tool to surface free/low-cost nonprofit and pro-bono
+      help and DOJ-recognized providers, especially when a user names a state.
 
     Role & Purpose:
     - Give clear, current info on processes, categories, forms, fees.
     - Explain eligibility, docs, next steps.
-    - Note you're not a lawyer; refer users to official sources or attorneys.
+    - Note you're not a lawyer; refer users to official government sources and to
+      free or low-cost nonprofit or pro-bono legal help (use resource_lookup).
     Tone & Style:
     - Empathetic, patient, respectful.
     - Plain language; define technical terms.
@@ -34,6 +37,17 @@ INSTRUCTIONS = """
     - Base answers on USCIS, State Dept, CBP sources.
     - Cite form numbers or official pages when possible.
     - If unsure, advise verification on uscis.gov or travel.state.gov.
+    Avoiding scams (raise proactively when relevant):
+    - Warn about "notario" fraud and anyone practicing law without authorization:
+      in the US a "notary public" is NOT a lawyer and cannot give legal advice.
+    - No one can guarantee approval or a faster case for a fee — treat such
+      promises as a red flag.
+    - Official government forms are free to download; never pay just for a blank
+      form.
+    - Only a licensed attorney or a DOJ-accredited representative at a
+      DOJ-recognized organization can represent someone; encourage verifying that
+      accreditation.
+    - Point users to uscis.gov/avoid-scams for how to spot and report fraud.
     Scope:
     - No tax, medical, or non-immigration legal advice.
     - Acknowledge and redirect questions outside this scope.
@@ -164,6 +178,80 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
     return SemanticSearchResult(**raw).model_dump()
 
 
+class ResourceMatch(BaseModel):
+    name: str
+    org_type: str
+    pro_bono: bool
+    fee_model: str
+    description: str
+    websites: List[str]
+    emails: List[str]
+    phones: List[str]
+    city: Optional[str] = None
+    region: Optional[str] = None
+
+
+async def resource_lookup(
+    ctx: RunContext[Deps],
+    region: Optional[str] = None,
+    pro_bono_only: bool = False,
+    service: Optional[str] = None,
+):
+    """
+    Find free/low-cost nonprofit and pro-bono immigration help and
+    DOJ-recognized providers from the resource directory.
+
+    Args:
+        region: US state to filter by, spelled out in full (e.g. "Arizona").
+        pro_bono_only: If true, only return organizations offering free pro-bono
+            help.
+        service: A single area of help to filter by, e.g. "asylum",
+            "removal-defense", "family-petitions".
+    """
+
+    def _query() -> List[Dict[str, Any]]:
+        # Imported here so this module stays importable without a DB configured.
+        from django.db import connection
+        from network.models import Organization
+
+        try:
+            qs = Organization.objects.filter(is_active=True)
+            if pro_bono_only:
+                qs = qs.filter(pro_bono=True)
+            if region:
+                qs = qs.filter(address__subdivision__name__iexact=region)
+            if service:
+                qs = qs.filter(services__contains=[service])
+            qs = qs.select_related("address", "address__subdivision")[:5]
+
+            matches = []
+            for org in qs:
+                addr = org.address
+                subdivision = addr.subdivision if addr else None
+                matches.append(
+                    ResourceMatch(
+                        name=org.name,
+                        org_type=org.organization_type,
+                        pro_bono=org.pro_bono,
+                        fee_model=org.fee_model,
+                        description=org.description,
+                        websites=list(org.websites or []),
+                        emails=list(org.emails or []),
+                        phones=list(org.phones or []),
+                        city=addr.city if addr else None,
+                        region=subdivision.name if subdivision else None,
+                    ).model_dump()
+                )
+            return matches
+        finally:
+            # Close the connection opened in this worker thread so the pooled
+            # thread doesn't hold a DB connection open between calls.
+            connection.close()
+
+    # The Django ORM is synchronous; run it off the event loop. US-only for now.
+    return await asyncio.to_thread(_query)
+
+
 @lru_cache(maxsize=1)
 def get_agent() -> Agent:
     """Build the chat agent on first use and register its tools.
@@ -174,4 +262,5 @@ def get_agent() -> Agent:
     """
     agent = Agent(model=get_model(), deps_type=Deps, instructions=INSTRUCTIONS)
     agent.tool(semantic_search)
+    agent.tool(resource_lookup)
     return agent

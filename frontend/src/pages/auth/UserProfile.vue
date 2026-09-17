@@ -21,7 +21,7 @@
             Profile
           </h2>
           <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            This information is used to communicate with you, and can be shared to verified attorneys with your consent
+            This information is used to communicate with you and to personalize the help and resources we surface for you.
           </p>
         </div>
 
@@ -135,7 +135,7 @@
             Personal Information
           </h2>
           <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Personal information that is used to personalize your AI experience and help us find attorneys near you
+            Personal information that is used to personalize your AI experience and help us surface free and low-cost immigration resources near you
           </p>
         </div>
 

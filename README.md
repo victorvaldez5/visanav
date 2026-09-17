@@ -2,9 +2,10 @@
 
 Immigration RAG AI Chatbot
 
-A chatbot that helps immigrants find the right immigration status and services. Helping people apply for immigration,
-find immigration status, and find immigration services. Connecting with the right attorneys and lawyers.
-Allowing for secure communication and document sharing with your attorneys.
+A free, open tool that helps immigrants understand their options and find trustworthy help. It answers
+immigration questions in plain language and points people to official government sources and to free or
+low-cost nonprofit and pro-bono legal help — including DOJ-recognized organizations — while warning about
+common immigration scams.
 
 ## Features
 

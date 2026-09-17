@@ -1,212 +1,118 @@
-import json
-import re
-from collections import OrderedDict
-from pathlib import Path
-from typing import List, Dict
+"""Seed pro-bono legal-service providers from the committed roster fixture.
 
-from bs4 import BeautifulSoup
+Reads network/fixtures/probono_clean.json (the parsed EOIR "List of Pro Bono
+Legal Service Providers") and upserts each into the flat Organization model with
+pro_bono=True. Idempotent by slug. The JSON is the source of truth.
+"""
+import json
+from pathlib import Path
+
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
-from locations.models import Subdivision, Address
-from network.models import Organization, OrganizationAddress, OrganizationWebsites, OrganizationPhoneNumber, \
-    OrganizationEmail
+from network.models import OrganizationType
 
-EMAIL_RE = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
-PHONE_RE = re.compile(
-    r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?:\s*(?:x|ext\.?|#)\s*\d+)?",
-    re.IGNORECASE,
+from ._seed_utils import (
+    build_org_index,
+    index_org,
+    normalize_url,
+    region_code_for,
+    resolve_org,
+    union_list,
+    upsert_address,
 )
-URL_RE = re.compile(r"(?:https?://|www\.)[^\s/$.?#].[^\s]*", re.IGNORECASE)
-CITY_STATE_ZIP_RE = re.compile(r"(.+?),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b")
+
+# The EOIR roster this data is sourced from.
+SOURCE_URL = "https://www.justice.gov/eoir/list-pro-bono-legal-service-providers"
+
+# The fixture's free-text org types map onto the enum's slugs.
+ORG_TYPE_CHOICES = set(OrganizationType.values)
 
 
-def detect_org_type(text: str):
-    # Per spec: '**' => referral service ; '*' => non-profit
-    if "**" in text:
-        return "referral service"
-    if "*" in text:
-        return "non-profit"
-    return None
+def _load_fixture() -> list:
+    path = Path(__file__).resolve().parent.parent.parent / "fixtures" / "probono_clean.json"
+    if not path.exists():
+        raise CommandError(f"Fixture not found: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def extract_fields(block_text: str):
-    lines = [re.sub(r"\s+", " ", ln).strip() for ln in block_text.splitlines()]
-    lines = [ln for ln in lines if ln]
-    full_text = "\n".join(lines)
-
-    org_type = detect_org_type(full_text)
-
-    org_name = None
-    for ln in lines:
-        candidate = re.sub(r"^[\*\-\u2022\•\s]+", "", ln.strip())
-        if not EMAIL_RE.search(candidate) and not PHONE_RE.search(candidate) and not URL_RE.search(candidate):
-            org_name = candidate
-            break
-
-    emails = list(OrderedDict.fromkeys(EMAIL_RE.findall(full_text)))
-    phones = list(OrderedDict.fromkeys(PHONE_RE.findall(full_text)))
-    websites = list(OrderedDict.fromkeys(URL_RE.findall(full_text)))
-
-    city = state = zipcode = None
-    address = None
-    csz_idx = None
-    for i, ln in enumerate(lines):
-        m = CITY_STATE_ZIP_RE.search(ln)
-        if m:
-            city, state, zipcode = m.group(1).strip(), m.group(2), m.group(3)
-            csz_idx = i
-            break
-
-    if csz_idx is not None and csz_idx - 1 >= 0:
-        street_line = lines[csz_idx - 1]
-        if not EMAIL_RE.search(street_line) and not PHONE_RE.search(street_line) and not URL_RE.search(street_line):
-            address = street_line
-
-    used_lines = set(filter(None, [org_name, address, lines[csz_idx] if csz_idx is not None else None]))
-    for ln in list(lines):
-        if EMAIL_RE.search(ln) or PHONE_RE.search(ln) or URL_RE.search(ln):
-            used_lines.add(ln)
-    notes = [ln for ln in lines if ln not in used_lines]
-
-    if org_name:
-        org_name = org_name.replace("**", "").replace("*", "").strip(" -•\u2022")
-
-    return {
-        "organization_name": org_name,
-        "organization_type": org_type,
-        "address": address,
-        "city": city,
-        "state": state,
-        "zip_code": zipcode,
-        "email_addresses": emails,
-        "telephone_numbers": phones,
-        "websites": websites,
-        "notes": notes,
-    }
-
-
-def safe_first(seq):
-    try:
-        return next((x for x in seq if x), None)
-    except Exception:
-        return None
-
-
-def key_fn(r: dict):
-    name = (r.get("organization_name") or "").lower().strip()
-    city = (r.get("city") or "").lower().strip()
-    state = (r.get("state") or "").upper().strip()
-    email = safe_first(r.get("email_addresses") or [])
-    site = safe_first(r.get("websites") or [])
-    phone = safe_first(r.get("telephone_numbers") or [])
-    return name, city, state, email, site, phone
-
-
-def parse_json(html_path: Path) -> List[Dict]:
-    soup = BeautifulSoup(html_path.read_text(encoding="utf-8", errors="ignore"), "html.parser")
-    tds = soup.find_all("td")
-
-    rows = []
-    for td in tds:
-        # noinspection PyArgumentList
-        txt = td.get_text(separator="\n", strip=True)
-        if txt:
-            rows.append(extract_fields(txt))
-
-    rows = [r for r in rows if r.get("organization_type")]
-
-    seen = set()
-    deduped = []
-    for r in rows:
-        k = key_fn(r)
-        if k in seen:
-            continue
-        seen.add(k)
-        deduped.append(r)
-    return deduped
+def _org_type(raw: str) -> str:
+    slug = slugify(raw or "")
+    return slug if slug in ORG_TYPE_CHOICES else OrganizationType.COMMUNITY_ORGANIZATION
 
 
 class Command(BaseCommand):
-    help = "Extract & clean pro bono legal service providers from an HTML table into JSON and writes to file or database"
-
-    def handle_write(self, data: List[Dict], out_path: Path):
-        out_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        self.stdout.write(self.style.SUCCESS(f"Wrote {len(data)} records to {out_path}"))
-
-    def handle_db(self, data: List[Dict]):
-        for org in data:
-            telephone_numbers = org.get('telephone_numbers', [])
-            emails = org.get('email_addresses', [])
-            websites = org.get('websites', [])
-            notes = org.get('notes', [])
-            address_line = org.get('address', '')
-            city = org.get('city', '')
-            state = org.get('state', '')
-            zip_code = org.get('zip_code', '')
-            org_name = org.get('organization_name', '')
-            org_type = slugify(org.get('organization_type', ''))
-            org_slug = slugify(org_name[:50])
-
-            organization = Organization.objects.filter(slug=org_slug).first()
-            if organization is None:
-                organization = Organization.objects.create(
-                    name=org_name,
-                    slug=org_slug,
-                    organization_type=org_type,
-                    notes=notes,
-                    is_active=True,
-                    has_pro_bono=True,
-                )
-            else:
-                organization.organization_type = org_type
-                organization.notes = notes
-                organization.has_pro_bono = True
-                organization.save()
-                self.stdout.write(self.style.SUCCESS(f"Updated {org_name}"))
-
-            for website in websites:
-                OrganizationWebsites.objects.get_or_create(organization=organization, website=website)
-            for phone_number in telephone_numbers:
-                OrganizationPhoneNumber.objects.get_or_create(organization=organization, phone_number=phone_number)
-
-            for email in emails:
-                OrganizationEmail.objects.get_or_create(organization=organization, email=email)
-
-            subdivision = Subdivision.objects.filter(code=f"US-{state}").first()
-            if subdivision is None:
-                self.stdout.write(self.style.WARNING(f"Skipping {org_name} address due to missing subdivision"))
-                continue
-
-            existing_address = organization.addresses.filter(address__line1=address_line, address__city=city,
-                                                             address__postal_code=zip_code)
-            if not existing_address.exists():
-                address = Address.objects.filter(line1=address_line, city=city, postal_code=zip_code,
-                                                 subdivision=subdivision).first()
-                if address is None:
-                    address = Address.objects.get(
-                        line1=address_line,
-                        city=city,
-                        subdivision=subdivision,
-                        postal_code=zip_code,
-                    )
-
-                OrganizationAddress.objects.create(organization=organization, address=address, is_primary=True)
+    help = "Seed pro-bono legal-service providers from probono_clean.json into Organization."
 
     def add_arguments(self, parser):
-        parser.add_argument("html_path", type=str, help="Path to the HTML file")
-        parser.add_argument("--out", type=str, required=False, default="probono_clean.json", help="Output JSON path")
-        parser.add_argument('--insert_to_db', required=False, type=bool, default=False, help='Insert to DB')
+        parser.add_argument(
+            "--insert_to_db",
+            action="store_true",
+            help="Write to the DB (otherwise a dry-run count is printed).",
+        )
 
-    def handle(self, *args, **opts):
-        html_path = Path('network', 'fixtures', opts["html_path"])
-        out_path = Path('network', 'fixtures', opts["out"])
+    def handle(self, *args, **options):
+        data = [r for r in _load_fixture() if r.get("organization_name")]
 
-        if not html_path.exists():
-            raise CommandError(f"Input file not found: {html_path}")
-        organization_data = parse_json(html_path)
-        if out_path:
-            self.handle_write(organization_data, out_path)
+        if not options["insert_to_db"]:
+            self.stdout.write(f"DRY RUN: would seed {len(data)} pro-bono organizations.")
+            return
 
-        if opts["insert_to_db"]:
-            self.handle_db(organization_data)
+        created = updated = enriched = 0
+        index = build_org_index()
+        for row in data:
+            name = row["organization_name"]
+            slug = slugify(name[:50])
+            region = region_code_for(row.get("state"))
+            emails = row.get("email_addresses", []) or []
+            phones = row.get("telephone_numbers", []) or []
+            websites = [normalize_url(w) for w in row.get("websites", []) if w]
+            notes = " ".join(row.get("notes") or []).strip()
+
+            org, origin = resolve_org(name, slug, region, index)
+
+            if origin == "foreign":
+                # Matched a curated (or otherwise richer) row: flag it pro-bono
+                # and add contacts, but keep its own fee_model/description/type.
+                org.pro_bono = True
+                org.fee_model = org.fee_model or "free"
+                org.emails = union_list(org.emails, emails)
+                org.phones = union_list(org.phones, phones)
+                org.websites = union_list(org.websites, websites)
+                org.description = org.description or notes
+                org.source_url = org.source_url or SOURCE_URL
+                org.is_active = True
+                org.save()
+                enriched += 1
+                continue
+
+            # Own or new row: fully (re)populate from the roster.
+            org.name = name
+            org.organization_type = _org_type(row.get("organization_type"))
+            org.description = notes
+            org.pro_bono = True
+            org.fee_model = "free"
+            org.emails = emails
+            org.phones = phones
+            org.websites = websites
+            org.country = "US"
+            org.source_url = SOURCE_URL
+            org.is_active = True
+            org.address = upsert_address(
+                org.address,
+                line1=row.get("address", "") or "",
+                city=row.get("city", "") or "",
+                region=row.get("state"),
+                postal_code=row.get("zip_code", "") or "",
+            )
+            org.save()
+            index_org(index, org, region)
+
+            created += origin == "new"
+            updated += origin == "own"
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Pro-bono orgs: {created} created, {updated} updated, {enriched} enriched existing"
+            )
+        )

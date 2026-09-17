@@ -47,6 +47,8 @@ django-countries = "^7.6.1"
 django-filter = "^25.1"
 beautifulsoup4 = "^4.13.5"
 pdfplumber = "^0.11.7"
+# Reads curated resource YAML (data/countries/<cc>/resources/) in load_resources.
+pyyaml = "^6.0"
 # Used directly by core/encryption.py to encrypt conversation content at rest.
 # Also pulled transitively (pdfminer.six), but declared here so it survives any
 # future trimming of the PDF/scraper deps.
