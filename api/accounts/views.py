@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_decode
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -43,6 +44,59 @@ class RegisterView(generics.CreateAPIView):
             user.save()
             return Response({"message": "Email verified successfully."}, status=200)
         return Response({"message": "Invalid token."}, status=400)
+
+
+class AccountErasureView(APIView):
+    """Permanently erase the authenticated user and everything they own.
+
+    Deleting the ``User`` cascades to their ``Profile`` and, via the
+    ``conversations`` relation, their ``Conversation``/``Message``/``Feedback``
+    rows — the GDPR/CCPA "right to delete". The account password is required as
+    confirmation of an irreversible action.
+
+    A conversation under a legal hold is preserved: a preservation duty (e.g. a
+    subpoena) overrides the erasure right, so if any exist the request is refused
+    (409) and nothing is deleted, rather than destroying held data. Anonymous
+    conversations aren't owned by an account — they auto-expire and can be
+    deleted individually by UUID.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        password = request.data.get("password") or ""
+        if not user.check_password(password):
+            return Response(
+                {"detail": "Password is incorrect."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        held = user.conversations.filter(legal_hold=True)
+        held_count = held.count()
+        if held_count:
+            return Response(
+                {
+                    "detail": (
+                        "Some of your conversations are under a legal hold and "
+                        "cannot be deleted right now. They will be removed once "
+                        "the hold is lifted."
+                    ),
+                    "held_conversations": held_count,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        conversations_deleted = user.conversations.count()
+        user.delete()
+        return Response(
+            {
+                "detail": "Your account and all associated data have been "
+                "permanently deleted.",
+                "conversations_deleted": conversations_deleted,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class UserViewSet(viewsets.ModelViewSet):
