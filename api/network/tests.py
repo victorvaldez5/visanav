@@ -448,3 +448,31 @@ def test_extract_ra_reps_seeds_unlinked_when_org_absent(monkeypatch):
     rep = Representative.objects.get()
     assert rep.organization_id is None  # no matching org, still seeded
     assert rep.is_active is True
+
+
+# --- download_ra_rosters command ------------------------------------------
+
+def test_download_ra_rosters_matches_links_by_text(tmp_path, monkeypatch):
+    page = """
+      <a href="/eoir/media/1/dl?inline">Organizations and Representatives, Listed by State</a>
+      <a href="/media/2/dl?inline">Accredited Representatives List</a>
+      <a href="/media/3/dl?inline">Recognized Organizations List</a>
+      <a href="http://twitter.com/x">Share</a>
+    """
+
+    def fake_fetch(url):
+        return page.encode() if url.endswith("roster-reports") else b"%PDF-1.7 stub"
+
+    monkeypatch.setattr(
+        "network.management.commands.download_ra_rosters._fetch", fake_fetch
+    )
+    call_command("download_ra_rosters", "--raw-dir", str(tmp_path))
+
+    # Only the two rosters the parser needs are saved (the org-by-rep list and
+    # non-roster social links are skipped).
+    saved = sorted(p.name for p in tmp_path.glob("*.pdf"))
+    assert saved == [
+        "raroster-reps.pdf",
+        "recognized_org_and_accredited_rep_roster_by_state_and_city.pdf",
+    ]
+    assert (tmp_path / "raroster-reps.pdf").read_bytes().startswith(b"%PDF")

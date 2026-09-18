@@ -16,7 +16,8 @@ Sources (drop the PDFs in ``data/raw/``):
   * ``raroster-reps.pdf``                          -> ra-reps.json   (accredited representatives)
 
 Usage (inside the api container, which has pdfplumber + the mounted data/):
-    python manage.py build_ra_fixtures
+    python manage.py build_ra_fixtures            # parse the PDFs already in data/raw/
+    python manage.py build_ra_fixtures --download  # fetch the latest first, then parse
 """
 import json
 import logging
@@ -25,6 +26,7 @@ from datetime import date
 from pathlib import Path
 
 import pdfplumber
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from ._seed_utils import repo_data_dir
@@ -351,9 +353,16 @@ class Command(BaseCommand):
             default=None,
             help="Directory holding the roster PDFs (default: <repo>/data/raw).",
         )
+        parser.add_argument(
+            "--download",
+            action="store_true",
+            help="Fetch the latest roster PDFs (download_ra_rosters) before parsing.",
+        )
 
     def handle(self, *args, **options):
         raw_dir = Path(options["raw_dir"]) if options["raw_dir"] else repo_data_dir() / "raw"
+        if options["download"]:
+            call_command("download_ra_rosters", "--raw-dir", str(raw_dir))
         if not raw_dir.is_dir():
             raise CommandError(f"Raw PDF directory not found: {raw_dir}")
 
