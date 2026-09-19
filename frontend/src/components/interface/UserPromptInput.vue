@@ -3,11 +3,11 @@
     <Textarea
       v-model="prompt"
       class="border-0"
-      placeholder="Type a message..."
+      :placeholder="$t('chat.placeholder')"
     />
     <div class="flex space-x-2">
       <Button @click="sendPrompt">
-        Submit
+        {{ $t("chat.submit") }}
       </Button>
     </div>
   </div>

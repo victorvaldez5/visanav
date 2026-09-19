@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {computed} from "vue";
 import {useRoute, useRouter} from "vue-router";
+import {useI18n} from "vue-i18n";
 import AIResponse from "@/components/ui/chat/AIResponse.vue";
 import SourcesList from "@/components/ui/chat/SourcesList.vue";
+import ConversationDisclaimer from "@/components/interface/ConversationDisclaimer.vue";
 import UserPromptInput from "@/components/interface/UserPromptInput.vue";
 import {useConversation} from "@/composables/useConversations.ts";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
@@ -11,6 +13,7 @@ import {toast} from "vue-sonner";
 
 const router = useRouter();
 const route = useRoute();
+const {t} = useI18n();
 const authStore = useAuthStore();
 const {userId} = storeToRefs(authStore);
 
@@ -23,14 +26,8 @@ const conversationUuid = computed<string | null>(() => {
 const {messageHistory, createConversation, postMessage, isStreaming, streamStatus} =
     useConversation(conversationUuid);
 
-const STATUS_LABELS: Record<string, string> = {
-  thinking: "Thinking for a good answer...",
-  researching: "Researching official sources...",
-  writing: "Writing your answer...",
-};
-const statusLabel = computed(
-    () => STATUS_LABELS[streamStatus.value ?? "thinking"] ?? "Thinking...",
-);
+// Server steps: "thinking" | "researching" | "writing" -> localized label.
+const statusLabel = computed(() => t(`chat.${streamStatus.value ?? "thinking"}`));
 
 async function onSubmit(prompt: string) {
   try {
@@ -57,6 +54,8 @@ async function onSubmit(prompt: string) {
     class="max-w-3xl mx-auto flex flex-col h-screen"
   >
     <div class="flex-1 overflow-y-scroll my-4 mb-36 px-4">
+      <!-- Short disclaimer at the start of the conversation -->
+      <ConversationDisclaimer class="mb-4" />
       <!-- Render the chat history -->
       <div
         v-for="(message, i) in messageHistory"
@@ -99,10 +98,10 @@ async function onSubmit(prompt: string) {
       v-if="messageHistory?.length === 0"
       class="mb-4 text-center text-2xl font-medium tracking-tight"
     >
-      Hello, I am here to answer all of your Visa and Immigration
-      questions!
+      {{ $t("chat.welcome") }}
     </h3>
     <UserPromptInput @submit-prompt="onSubmit($event)" />
+    <ConversationDisclaimer class="mt-4" />
   </div>
 </template>
 <style scoped>

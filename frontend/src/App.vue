@@ -3,6 +3,7 @@
   <SidebarProvider>
     <AppSidebar />
     <SidebarInset>
+      <BetaBanner />
       <header class="flex py-4 px-5 gap-3">
         <SidebarTrigger />
         <Separator orientation="vertical" class="mr-2 h-5" />
@@ -18,6 +19,7 @@ import {SidebarProvider, SidebarInset, SidebarTrigger} from "@/components/ui/sid
 import {Separator} from "@/components/ui/separator";
 import {RouterView} from 'vue-router'
 import AppSidebar from "@/components/interface/AppSidebar.vue";
+import BetaBanner from "@/components/interface/BetaBanner.vue";
 import {breakpointsTailwind, useBreakpoints} from "@vueuse/core";
 import {provide} from "vue";
 import {Toaster} from 'vue-sonner';

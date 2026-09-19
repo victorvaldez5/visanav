@@ -24,7 +24,7 @@ function formatVerified(iso?: string | null): string | null {
     class="mt-3 border-t pt-2 text-sm"
   >
     <p class="mb-1 font-medium text-muted-foreground">
-      Sources
+      {{ $t("sources.title") }}
     </p>
     <ul class="space-y-1">
       <li
@@ -43,7 +43,7 @@ function formatVerified(iso?: string | null): string | null {
         <span
           v-if="formatVerified(source.last_verified)"
           class="text-xs text-muted-foreground"
-        >· Last verified {{ formatVerified(source.last_verified) }}</span>
+        >· {{ $t("sources.lastVerified", { date: formatVerified(source.last_verified) }) }}</span>
       </li>
     </ul>
   </div>
