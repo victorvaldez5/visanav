@@ -67,6 +67,12 @@ INSTRUCTIONS = """
       the tool result's `note`.
     - Never invent a source, URL, or form number, and never cite a document
       semantic_search did not return.
+    - When referring the user to a specific organization or representative, use
+      resource_lookup and share ONLY the names and contact details it returns.
+      Never state an organization's name, phone number, address, email, or other
+      contact details from memory. If resource_lookup returns nothing, do not
+      name any provider — point them to the official DOJ roster
+      (justice.gov/eoir/recognition-accreditation-roster-reports) to find one.
 
     Fraud — never help, and warn when relevant:
     - Never help with anything fraudulent: using someone else's documents or
