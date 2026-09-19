@@ -64,20 +64,9 @@ CORS_ALLOW_CREDENTIALS = True
 # Static files via WhiteNoise (already configured in base)
 # Ensure you run `collectstatic` during deployment
 
-# Logging suitable for containers/managed platforms
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
-        }
-    },
-    "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
-    },
-    "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
-}
+# Logging: the shared, privacy-first config in base.py (console handler, root at
+# LOG_LEVEL, and third-party LLM/HTTP loggers pinned so bodies never leak) is
+# already container-friendly, so prod inherits it unchanged.
 
 # Email (configure your SMTP in env, else fail loudly)
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

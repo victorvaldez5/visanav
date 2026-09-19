@@ -107,6 +107,43 @@ CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("CHAT_RATE_LIMIT_PER_MINUTE") or
 # Hard cap on a single chat message so one request can't burn a huge prompt.
 CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS") or "4000")
 
+# ── Logging: privacy-first ───────────────────────────────────────────────────
+# VisaNav serves a vulnerable population, so logs must NEVER contain the text of
+# a user's question or the model's answer. Two rules enforce that:
+#   1. Application code logs only content-free diagnostics — request ids, latency,
+#      error codes, retrieval scores, retrieved document ids. It never logs
+#      message text, the (model-generated) search query, IP addresses, or user
+#      agents. (The chat endpoint uses the client IP only as an in-memory
+#      rate-limit key; abuse events log a salted hash of it, never the raw IP.)
+#   2. Third-party HTTP/LLM clients that CAN dump full request/response bodies
+#      (the Anthropic/OpenAI SDKs, httpx, urllib3) are pinned to a floor at/above
+#      INFO here, so raising the root level to DEBUG to troubleshoot can never
+#      leak prompt or completion content through them, and neither can an
+#      ANTHROPIC_LOG=debug / OPENAI_LOG=debug env var.
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+    },
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        # These emit full HTTP request/response bodies — which include the user's
+        # message and the model's reply — when their level is DEBUG. Pin them so
+        # that never happens regardless of the root level.
+        "anthropic": {"level": "INFO", "propagate": True},
+        "openai": {"level": "INFO", "propagate": True},
+        "httpx": {"level": "WARNING", "propagate": True},
+        "httpcore": {"level": "WARNING", "propagate": True},
+        "urllib3": {"level": "WARNING", "propagate": True},
+    },
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"

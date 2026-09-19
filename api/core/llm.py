@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional, Dict, Any, List
@@ -8,6 +9,8 @@ from django.core.exceptions import ImproperlyConfigured
 from pgvector.django import CosineDistance
 from pydantic import BaseModel
 from pydantic_ai import Agent, RunContext
+
+logger = logging.getLogger(__name__)
 
 # Per-provider default chat models: the cheapest capable option for each
 # provider. Override with the CHAT_MODEL env var.
@@ -158,6 +161,18 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
         )
         async for row in qs
     ]
+    # Content-free retrieval diagnostic: which documents were retrieved and how
+    # relevant they scored. We log the corpus chunk ids + scores only — never the
+    # search query (model-generated, may paraphrase the user) or the chunk text.
+    # These scores are what to tune RAG_MIN_SCORE against on real traffic.
+    logger.info(
+        "semantic_search country=%s hits=%s",
+        country,
+        [
+            (m.id, round(m.score, 3) if m.score is not None else None)
+            for m in matches
+        ],
+    )
     return SemanticSearchResult(
         country=country, query=search_query, matches=matches
     ).model_dump()
