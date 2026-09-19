@@ -3,7 +3,11 @@ name = "api"
 version = "0.1.0"
 description = "an api server"
 authors = [{ name = "Victor Valdez", email = "vv.digitalfuturesllc@gmail.com" }]
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.12,<4.0"
+# Dependencies are declared in [tool.poetry.dependencies] below; mark them dynamic
+# so PEP 621-aware tooling (and the Railway builder) reads them from there instead
+# of treating the project as having no dependencies and re-resolving its own set.
+dynamic = ["dependencies"]
 
 [build-system]
 requires = ["poetry-core>=2.1.0,<3.0.0"]
@@ -23,7 +27,8 @@ dev = ["ruff>=0.16,<0.17", "pytest-django>=4.9"]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<4.0"
+# Django 6.1 requires Python >=3.12; the deploy/CI runtime is 3.13.
+python = ">=3.12,<4.0"
 # Vector store: pgvector provides the Django VectorField + CREATE EXTENSION op;
 # voyageai generates the embeddings (Pinecone did this server-side, pgvector does
 # not embed). Both are pure-Python — no Dockerfile/system-dep changes needed.
@@ -32,15 +37,18 @@ pgvector = "^0.5.0"
 # ruff target). Marker keeps the lock resolvable across the project's 3.10-<4.0
 # range without dropping the actual runtime.
 voyageai = {version = "^0.5.0", python = "<3.14"}
-django = ">=5.2.5"
-django-cors-headers = ">=4.7.0"
-djangorestframework = ">=3.16.1"
-djangorestframework-simplejwt = ">=5.5.1"
-gunicorn = ">=23.0.0"
-psycopg2-binary = ">=2.9.10"
-python-dotenv = ">=1.1.1"
-python-jose = ">=3.5.0"
-whitenoise = ">=6.9.0"
+# Pinned to a major line so a fresh resolve (e.g. on the Railway builder) can't
+# drift onto an untested major — an unbounded `>=` let Django jump 5.2 -> 6.1 in a
+# prod build. Bump deliberately; the lock still pins the exact patch.
+django = "~6.1"
+django-cors-headers = "^4.9"
+djangorestframework = "^3.18"
+djangorestframework-simplejwt = "^5.5"
+gunicorn = "^26.2"
+psycopg2-binary = "^2.9.10"
+python-dotenv = "^1.1"
+python-jose = "^3.5"
+whitenoise = "^6.12"
 uvicorn = { extras = ["standard"], version = "^0.53.0" }
 mailtrap = "^2.1.0"
 # Use the slim package with only the providers we support (anthropic + openai);
@@ -59,7 +67,7 @@ pyyaml = "^6.0"
 # Used directly by core/encryption.py to encrypt conversation content at rest.
 # Also pulled transitively (pdfminer.six), but declared here so it survives any
 # future trimming of the PDF/scraper deps.
-cryptography = ">=42.0"
+cryptography = ">=42.0,<51"
 pytest = "^9.1"
 
 [tool.poetry.group.dev.dependencies]
@@ -83,7 +91,7 @@ select = ["E4", "E7", "E9", "F"]
 [tool.ruff.lint.per-file-ignores]
 # Django settings compose with `from .base import *`; the star import (F403) and
 # the names it pulls in (F405) are the idiom here, not a mistake.
-"api_project/dev.py" = ["F403"]
+"api_project/dev.py" = ["F403", "F405"]
 "api_project/prod.py" = ["F403", "F405"]
 
 [tool.pytest.ini_options]
