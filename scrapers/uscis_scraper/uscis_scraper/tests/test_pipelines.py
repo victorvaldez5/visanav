@@ -3,6 +3,7 @@ import os
 import pytest
 from scrapy import Request
 from scrapy.exceptions import NotConfigured, DropItem
+from scrapy.utils.test import get_crawler
 from ..pipelines import HTMLPagesPipeline, NamedFilesPipeline, ContentHashPipeline
 
 
@@ -39,7 +40,7 @@ def test_html_pages_pipeline_local(tmp_path):
 
 
 def test_named_files_pipeline_requests_and_path():
-    pipe = NamedFilesPipeline(store_uri="unused")
+    pipe = NamedFilesPipeline(crawler=get_crawler(), store_uri="unused")
     item = {
         "file_urls": ["http://foo/bar/baz.pdf"],
         "parent_page": "https://site/ar-11",
@@ -109,7 +110,7 @@ def test_html_pipeline_xhtml_local(tmp_path):
 
 
 def test_named_files_pipeline_no_urls():
-    pipe = NamedFilesPipeline(store_uri="unused")
+    pipe = NamedFilesPipeline(crawler=get_crawler(), store_uri="unused")
     # item without file_urls or empty list
     for itm in ({}, {"file_urls": []}):
         reqs = list(pipe.get_media_requests(itm, info=None))
@@ -117,7 +118,7 @@ def test_named_files_pipeline_no_urls():
 
 
 def test_named_files_pipeline_uncategorized_path():
-    pipe = NamedFilesPipeline(store_uri="u")
+    pipe = NamedFilesPipeline(crawler=get_crawler(), store_uri="u")
     # a plain form PDF (no instruction pattern) buckets under pdf/forms/
     req = Request("http://x.com/a.pdf", meta={})
     path = pipe.file_path(req)
@@ -125,7 +126,7 @@ def test_named_files_pipeline_uncategorized_path():
 
 
 def test_named_files_pipeline_multiple_requests():
-    pipe = NamedFilesPipeline(store_uri="dummy://")
+    pipe = NamedFilesPipeline(crawler=get_crawler(), store_uri="dummy://")
     item = {
         "file_urls": ["http://foo.com/files/a.pdf", "https://bar.org/b.txt"],
         "parent_page": "https://example.com/section",
@@ -138,7 +139,7 @@ def test_named_files_pipeline_multiple_requests():
 
 
 def test_named_files_pipeline_nested_parent_path():
-    pipe = NamedFilesPipeline(store_uri="dummy://")
+    pipe = NamedFilesPipeline(crawler=get_crawler(), store_uri="dummy://")
     # a deeply nested parent_page path
     parent = "https://site.com/a/b/c/d"
     req = Request("http://cdn.com/doc.pdf", meta={"parent_page": parent})
@@ -216,7 +217,7 @@ def test_content_hash_skips_pdf(tmp_path):
     ],
 )
 def test_named_files_pipeline_various_basenames(url, expected_name):
-    pipe = NamedFilesPipeline(store_uri="dummy://")
+    pipe = NamedFilesPipeline(crawler=get_crawler(), store_uri="dummy://")
     req = Request(url, meta={"parent_page": "https://host/"})
     path = pipe.file_path(req)
     # split the returned path
