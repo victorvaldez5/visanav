@@ -44,3 +44,6 @@ pyrightconfig.json
 /output/raw/pdf/*
 
 api/staticfiles
+
+# Eval run outputs (generated; review locally, do not commit)
+api/evals/results/
