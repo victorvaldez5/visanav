@@ -407,7 +407,7 @@
 <script setup lang="ts">
 import {useForm} from 'vee-validate';
 import {toTypedSchema} from "@vee-validate/zod";
-import {ChevronsUpDown} from "lucide-vue-next";
+import {ChevronsUpDown} from "@lucide/vue";
 import * as z from "zod";
 import {Input} from "@/components/ui/input/index.js";
 import {Switch} from "@/components/ui/switch";

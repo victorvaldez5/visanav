@@ -13,7 +13,7 @@ export default defineConfig(({command}) => ({
     plugins: [vue(), tailwindcss(), ...(command === 'serve' ? [eslint()] : [])],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src'),
+            '@': path.resolve(import.meta.dirname, './src'),
         }
     },
     server: {

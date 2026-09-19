@@ -17,23 +17,21 @@ exclude = ["staticfiles"]
 [dependency-groups]
 # Pin ruff to a minor line so CI lint is deterministic — a newer minor can add
 # rules and turn CI red on unchanged code. Bump deliberately, not incidentally.
-dev = ["ruff>=0.12.8,<0.13", "pytest-django>=4.9"]
+dev = ["ruff>=0.16,<0.17", "pytest-django>=4.9"]
 
 [tool.poetry]
 package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
-redis = "^6.4.0"
-django-redis = "^6.0.0"
 # Vector store: pgvector provides the Django VectorField + CREATE EXTENSION op;
 # voyageai generates the embeddings (Pinecone did this server-side, pgvector does
 # not embed). Both are pure-Python — no Dockerfile/system-dep changes needed.
-pgvector = "^0.4.0"
+pgvector = "^0.5.0"
 # voyageai has no 3.14 wheel yet; the deploy/CI runtime is 3.13 (Dockerfile, CI,
 # ruff target). Marker keeps the lock resolvable across the project's 3.10-<4.0
 # range without dropping the actual runtime.
-voyageai = {version = "^0.3.2", python = "<3.14"}
+voyageai = {version = "^0.5.0", python = "<3.14"}
 django = ">=5.2.5"
 django-cors-headers = ">=4.7.0"
 djangorestframework = ">=3.16.1"
@@ -43,22 +41,17 @@ psycopg2-binary = ">=2.9.10"
 python-dotenv = ">=1.1.1"
 python-jose = ">=3.5.0"
 whitenoise = ">=6.9.0"
-uvicorn = { extras = ["standard"], version = "^0.35.0" }
+uvicorn = { extras = ["standard"], version = "^0.53.0" }
 mailtrap = "^2.1.0"
 # Use the slim package with only the providers we support (anthropic + openai);
 # the full `pydantic-ai` bundles every provider, including Bedrock (→ boto3).
-pydantic-ai-slim = {extras = ["anthropic", "openai"], version = "^0.7.4"}
-# Pinned to 0.64.x: pydantic-ai-slim[anthropic] 0.7.6 only requires anthropic>=0.61
-# (open upper bound), but its Anthropic model imports beta symbols that drift across
-# anthropic releases — 1.x dropped `BetaBase64PDFBlockParam` and 0.125 dropped
-# `UserLocation`, both of which pydantic-ai 0.7.x imports. A fresh resolve that grabs
-# either breaks Anthropic model construction (every chat request). 0.64.0 is the
-# version pinned alongside pydantic-ai-slim 0.7.6 and is verified to import cleanly.
-anthropic = ">=0.64,<0.65"
+# The [anthropic] extra pulls a compatible anthropic SDK, so we don't pin it
+# ourselves (a hand pin here is what drifted out of sync with pydantic-ai before).
+pydantic-ai-slim = {extras = ["anthropic", "openai"], version = "^2.46"}
 django-phonenumber-field = {extras = ["phonenumberslite"], version = "^8.1.0"}
-pycountry = "^24.6.1"
-django-countries = "^7.6.1"
-django-filter = "^25.1"
+pycountry = "^26.2.16"
+django-countries = "^9.1.0"
+django-filter = "^26.1"
 beautifulsoup4 = "^4.13.5"
 pdfplumber = "^0.11.7"
 # Reads curated resource YAML (data/countries/<cc>/resources/) in load_resources.
@@ -67,13 +60,10 @@ pyyaml = "^6.0"
 # Also pulled transitively (pdfminer.six), but declared here so it survives any
 # future trimming of the PDF/scraper deps.
 cryptography = ">=42.0"
-pytest = "^8.4.2"
-# Pinned <1.37: opentelemetry-api 1.37 removed the `_events` module that
-# pydantic-ai 0.7.x imports, which breaks the app on a fresh dependency resolve.
-opentelemetry-api = ">=1.30,<1.37"
+pytest = "^9.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.2"
+pytest = "^9.1"
 
 [tool.ruff]
 # Match the deploy/CI runtime (Docker + Railway build on 3.13) so version-gated
@@ -81,6 +71,14 @@ pytest = "^8.4.2"
 target-version = "py313"
 # Generated/data-only migrations aren't hand-maintained code; don't lint them.
 extend-exclude = ["**/migrations/**"]
+
+[tool.ruff.lint]
+# Pin the enforced rule set explicitly so lints don't drift when ruff is
+# upgraded — a newer ruff can broaden its *default* select and turn CI red on
+# unchanged code (the reason ruff used to be version-pinned here). This mirrors
+# ruff's classic default (pyflakes + core pycodestyle); widen it deliberately,
+# not incidentally.
+select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # Django settings compose with `from .base import *`; the star import (F403) and
