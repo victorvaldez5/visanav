@@ -48,6 +48,13 @@ mailtrap = "^2.1.0"
 # Use the slim package with only the providers we support (anthropic + openai);
 # the full `pydantic-ai` bundles every provider, including Bedrock (→ boto3).
 pydantic-ai-slim = {extras = ["anthropic", "openai"], version = "^0.7.4"}
+# Pinned to 0.64.x: pydantic-ai-slim[anthropic] 0.7.6 only requires anthropic>=0.61
+# (open upper bound), but its Anthropic model imports beta symbols that drift across
+# anthropic releases — 1.x dropped `BetaBase64PDFBlockParam` and 0.125 dropped
+# `UserLocation`, both of which pydantic-ai 0.7.x imports. A fresh resolve that grabs
+# either breaks Anthropic model construction (every chat request). 0.64.0 is the
+# version pinned alongside pydantic-ai-slim 0.7.6 and is verified to import cleanly.
+anthropic = ">=0.64,<0.65"
 django-phonenumber-field = {extras = ["phonenumberslite"], version = "^8.1.0"}
 pycountry = "^24.6.1"
 django-countries = "^7.6.1"

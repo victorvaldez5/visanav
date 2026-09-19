@@ -201,33 +201,29 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "1.7.0"
+version = "0.64.0"
 description = "The official Python library for the anthropic API"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "anthropic-1.7.0-py3-none-any.whl", hash = "sha256:6b681b6ee00f232bb54f50f9a0d6d30e7be368c1b6f754bfd470c8385b8b6058"},
-    {file = "anthropic-1.7.0.tar.gz", hash = "sha256:0ab1b04668606ba1ae93f6d9e8dcc2e0c4f0debebd4eea4773a3a595f0836db1"},
+    {file = "anthropic-0.64.0-py3-none-any.whl", hash = "sha256:6f5f7d913a6a95eb7f8e1bda4e75f76670e8acd8d4cd965e02e2a256b0429dd1"},
+    {file = "anthropic-0.64.0.tar.gz", hash = "sha256:3d496c91a63dff64f451b3e8e4b238a9640bf87b0c11d0b74ddc372ba5a3fe58"},
 ]
 
 [package.dependencies]
-anyio = ">=4.1.0,<5"
-docstring-parser = ">=0.15,<1"
-httpx2 = ">=2.0.0,<3"
+anyio = ">=3.5.0,<5"
+distro = ">=1.7.0,<2"
+httpx = ">=0.25.0,<1"
 jiter = ">=0.4.0,<1"
-pydantic = ">=1.10.0,<3"
-sniffio = ">=1,<2"
-typing-extensions = ">=4.14,<5"
+pydantic = ">=1.9.0,<3"
+sniffio = "*"
+typing-extensions = ">=4.10,<5"
 
 [package.extras]
-aiohttp = ["aiohttp (>=3.10.0,<4)"]
-aws = ["boto3 (>=1.28.57,<2)", "botocore (>=1.31.57,<2)"]
-bedrock = ["boto3 (>=1.28.57,<2)", "botocore (>=1.31.57,<2)"]
-google-cloud = ["google-auth[requests] (>=2,<3)"]
-mcp = ["mcp (>=1.0,<3) ; python_version >= \"3.10\""]
+aiohttp = ["aiohttp", "httpx-aiohttp (>=0.1.8)"]
+bedrock = ["boto3 (>=1.28.57)", "botocore (>=1.31.57)"]
 vertex = ["google-auth[requests] (>=2,<3)"]
-webhooks = ["standardwebhooks (>=1.0.1,<2)"]
 
 [[package]]
 name = "anyio"
@@ -720,7 +716,6 @@ description = "Distro - an OS platform information API"
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
-markers = "python_version <= \"3.13\""
 files = [
     {file = "distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2"},
     {file = "distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed"},
@@ -905,23 +900,6 @@ doc = ["Sphinx", "sphinx_rtd_theme (>=0.1.9)"]
 lint = ["pre-commit", "pyupgrade", "ruff", "yesqa"]
 python-jose = ["python-jose (==3.3.0)"]
 test = ["cryptography", "freezegun", "pytest", "pytest-cov", "pytest-django", "pytest-xdist", "tox"]
-
-[[package]]
-name = "docstring-parser"
-version = "0.18.0"
-description = "Parse Python docstrings in reST, Google and Numpydoc format"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "docstring_parser-0.18.0-py3-none-any.whl", hash = "sha256:b3fcbed555c47d8479be0796ef7e19c2670d428d72e96da63f3a40122860374b"},
-    {file = "docstring_parser-0.18.0.tar.gz", hash = "sha256:292510982205c12b1248696f44959db3cdd1740237a968ea1e2e7a900eeb2015"},
-]
-
-[package.extras]
-dev = ["pre-commit (>=2.16.0) ; python_version >= \"3.9\"", "pydoctor (>=25.4.0)", "pytest"]
-docs = ["pydoctor (>=25.4.0)"]
-test = ["pytest"]
 
 [[package]]
 name = "ecdsa"
@@ -4749,4 +4727,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "630c2e22817f4dbce820332d0d5bd3d2439bd0d51ddb6257b01e06f7abe524d8"
+content-hash = "42a9840cfc58eaacd9de20c65667df1c2c167816094a20d329e66b27314916d6"
