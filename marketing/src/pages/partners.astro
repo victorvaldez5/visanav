@@ -10,8 +10,8 @@ const US_STATES = [
 ];
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
-const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300";
+  "mt-1 w-full border border-input bg-surface px-3 py-2 text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
+const labelClass = "block text-sm font-medium text-foreground";
 ---
 
 <Base
@@ -20,10 +20,10 @@ const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300
   canonicalPath="/partners"
 >
   <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-    <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+    <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
       For organizations that help immigrants
     </h1>
-    <p class="mt-3 text-slate-600 dark:text-slate-300">
+    <p class="mt-3 text-muted-foreground">
       VisaNav is a free public tool. If your organization provides immigration
       help, you can ask to be listed as a trusted resource, or partner with us to
       offer VisaNav to the people you serve. We review every request before
@@ -34,10 +34,10 @@ const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300
     <div
       id="success"
       hidden
-      class="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-800 dark:bg-brand-900/20"
+      class="mt-8 border border-vn-orange-200 bg-vn-orange-50 p-6"
     >
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Thank you — we've got your request</h2>
-      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+      <h2 class="text-lg font-semibold text-vn-orange-900">Thank you — we've got your request</h2>
+      <p class="mt-2 text-sm text-vn-orange-800">
         A person will review it before anything is published. We'll reach out at
         the email you provided if we need anything else.
       </p>
@@ -52,7 +52,7 @@ const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300
       </div>
 
       <div>
-        <label for="organization_name" class={labelClass}>Organization name <span class="text-red-500">*</span></label>
+        <label for="organization_name" class={labelClass}>Organization name <span class="text-link">*</span></label>
         <input id="organization_name" name="organization_name" type="text" required class={inputClass} />
       </div>
 
@@ -62,7 +62,7 @@ const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300
           <input id="contact_name" name="contact_name" type="text" autocomplete="name" class={inputClass} />
         </div>
         <div>
-          <label for="contact_email" class={labelClass}>Contact email <span class="text-red-500">*</span></label>
+          <label for="contact_email" class={labelClass}>Contact email <span class="text-link">*</span></label>
           <input id="contact_email" name="contact_email" type="email" required autocomplete="email" class={inputClass} />
         </div>
       </div>
@@ -95,25 +95,25 @@ const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300
       <fieldset>
         <legend class={labelClass}>What are you asking for?</legend>
         <div class="mt-2 space-y-2">
-          <label class="flex items-start gap-3 rounded-lg border border-slate-300 p-3 dark:border-slate-700">
-            <input type="radio" name="intent" value="listing" checked class="mt-1 text-brand-600 focus:ring-brand-500" />
-            <span class="text-sm text-slate-700 dark:text-slate-300">
-              <strong class="font-semibold text-slate-900 dark:text-white">List us as a public resource</strong><br />
+          <label class="flex items-start gap-3 border border-border p-3">
+            <input type="radio" name="intent" value="listing" checked class="mt-1 accent-vn-orange-500" />
+            <span class="text-sm text-muted-foreground">
+              <strong class="font-semibold text-foreground">List us as a public resource</strong><br />
               Add our organization to the VisaNav directory so people can find us.
             </span>
           </label>
-          <label class="flex items-start gap-3 rounded-lg border border-slate-300 p-3 dark:border-slate-700">
-            <input type="radio" name="intent" value="partner" class="mt-1 text-brand-600 focus:ring-brand-500" />
-            <span class="text-sm text-slate-700 dark:text-slate-300">
-              <strong class="font-semibold text-slate-900 dark:text-white">Partner with us</strong><br />
+          <label class="flex items-start gap-3 border border-border p-3">
+            <input type="radio" name="intent" value="partner" class="mt-1 accent-vn-orange-500" />
+            <span class="text-sm text-muted-foreground">
+              <strong class="font-semibold text-foreground">Partner with us</strong><br />
               We'd like to offer VisaNav to the people we serve (a pilot).
             </span>
           </label>
         </div>
       </fieldset>
 
-      <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-        <input type="checkbox" name="offers_pro_bono" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+      <label class="flex items-center gap-2 text-sm font-medium text-foreground">
+        <input type="checkbox" name="offers_pro_bono" class="h-4 w-4 accent-vn-orange-500" />
         We provide free (pro-bono) legal help
       </label>
 
@@ -126,16 +126,16 @@ const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300
            `cf-turnstile-response` input into this form; the API verifies it. -->
       <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-theme="auto"></div>
 
-      <div id="error" hidden role="alert" class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"></div>
+      <div id="error" hidden role="alert" class="border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"></div>
 
       <button
         id="submit"
         type="submit"
-        class="rounded-lg bg-brand-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+        class="bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         Submit request
       </button>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <p class="text-xs text-muted-foreground">
         By submitting you confirm the information is accurate. Submissions are
         reviewed before listing.
       </p>

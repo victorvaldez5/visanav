@@ -1,34 +1,29 @@
 ---
+import Logo from "./Logo.astro";
 const year = new Date().getFullYear();
 ---
 
-<footer class="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
+<footer class="border-t border-border bg-surface-muted">
   <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
     <div class="flex flex-col gap-8 sm:flex-row sm:justify-between">
       <div class="max-w-sm">
-        <div class="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-          <span
-            class="grid h-7 w-7 place-items-center rounded-md bg-brand-600 text-xs font-bold text-white"
-            aria-hidden="true">VN</span
-          >
-          <span>VisaNav</span>
-        </div>
-        <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">
+        <Logo />
+        <p class="mt-3 text-sm text-muted-foreground">
           A free, public-interest tool that helps immigrants understand their
           options and find trustworthy, low-cost help.
         </p>
       </div>
 
       <nav aria-label="Footer" class="grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
-        <a href="/" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">Home</a>
-        <a href="/directory" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">Find help</a>
-        <a href="/partners" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">For organizations</a>
-        <a href="/directory" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">Resource directory</a>
+        <a href="/" class="text-muted-foreground hover:text-foreground">Home</a>
+        <a href="/directory" class="text-muted-foreground hover:text-foreground">Find help</a>
+        <a href="/partners" class="text-muted-foreground hover:text-foreground">For organizations</a>
+        <a href="/directory" class="text-muted-foreground hover:text-foreground">Resource directory</a>
       </nav>
     </div>
 
-    <div class="mt-8 border-t border-slate-200 pt-6 text-xs leading-relaxed text-slate-500 dark:border-slate-800 dark:text-slate-500">
-      <p class="font-medium text-slate-600 dark:text-slate-400">
+    <div class="mt-8 border-t border-border pt-6 text-xs leading-relaxed text-muted-foreground">
+      <p class="font-semibold text-foreground">
         VisaNav is not a law firm and does not provide legal advice.
       </p>
       <p class="mt-1">

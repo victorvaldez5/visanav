@@ -6,6 +6,9 @@ import orgs from "../data/organizations.json";
 const total = orgs.length;
 const proBono = orgs.filter((o) => o.proBono).length;
 const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sort();
+
+const controlClass =
+  "mt-1 w-full border border-input bg-surface px-3 py-2 text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
 ---
 
 <Base
@@ -14,10 +17,10 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
   canonicalPath="/directory"
 >
   <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-    <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+    <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
       Find trustworthy immigration help
     </h1>
-    <p class="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">
+    <p class="mt-3 max-w-2xl text-muted-foreground">
       {total.toLocaleString()} nonprofit and pro-bono organizations — including
       {proBono} pro-bono legal providers — from official DOJ/EOIR recognized-organization
       data. Free to browse. Being listed here is not an endorsement; always
@@ -27,32 +30,29 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
     <!-- Filters -->
     <div class="mt-8 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
       <div>
-        <label for="q" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Search by name or city</label>
+        <label for="q" class="block text-sm font-medium text-foreground">Search by name or city</label>
         <input
           id="q"
           type="search"
           autocomplete="off"
           placeholder="e.g. Catholic Charities, Houston…"
-          class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          class={controlClass}
         />
       </div>
       <div>
-        <label for="state" class="block text-sm font-medium text-slate-700 dark:text-slate-300">State</label>
-        <select
-          id="state"
-          class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 sm:w-40 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-        >
+        <label for="state" class="block text-sm font-medium text-foreground">State</label>
+        <select id="state" class:list={["sm:w-40", controlClass]}>
           <option value="">All states</option>
           {states.map((s) => <option value={s}>{s}</option>)}
         </select>
       </div>
-      <label class="flex items-center gap-2 pb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-        <input id="probono" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+      <label class="flex items-center gap-2 pb-2 text-sm font-medium text-foreground">
+        <input id="probono" type="checkbox" class="h-4 w-4 accent-vn-orange-500" />
         Pro-bono only
       </label>
     </div>
 
-    <p id="count" class="mt-6 text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
+    <p id="count" class="mt-6 scroll-mt-24 text-sm text-muted-foreground" aria-live="polite">
       Showing {total.toLocaleString()} organizations
     </p>
 
@@ -61,39 +61,39 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
       {
         orgs.map((o) => (
           <li
-            class="org-card rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/40"
+            class="org-card border border-border bg-surface p-5 shadow-sm"
             data-name={o.name.toLowerCase()}
             data-city={(o.city || "").toLowerCase()}
             data-state={o.state}
             data-probono={o.proBono ? "1" : "0"}
           >
             <div class="flex items-start justify-between gap-3">
-              <h2 class="font-semibold text-slate-900 dark:text-white">{o.name}</h2>
+              <h2 class="font-semibold text-foreground">{o.name}</h2>
               {o.proBono && (
-                <span class="shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800 dark:bg-brand-900/40 dark:text-brand-200">
+                <span class="shrink-0 bg-vn-orange-100 px-2 py-0.5 text-xs font-semibold text-vn-orange-800">
                   Pro bono
                 </span>
               )}
             </div>
 
             {(o.city || o.state) && (
-              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p class="mt-1 text-sm text-muted-foreground">
                 {[o.city, o.state].filter(Boolean).join(", ")}
               </p>
             )}
 
-            <dl class="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+            <dl class="mt-3 space-y-1 text-sm text-muted-foreground">
               {o.phone && (
                 <div class="flex gap-2">
                   <dt class="sr-only">Phone</dt>
-                  <dd><a href={`tel:${o.phone.replace(/[^\d+]/g, "")}`} class="hover:text-brand-700 dark:hover:text-brand-300">{o.phone}</a></dd>
+                  <dd><a href={`tel:${o.phone.replace(/[^\d+]/g, "")}`} class="hover:text-link">{o.phone}</a></dd>
                 </div>
               )}
               {o.website && (
                 <div class="flex gap-2">
                   <dt class="sr-only">Website</dt>
                   <dd class="truncate">
-                    <a href={o.website} target="_blank" rel="noopener noreferrer nofollow" class="text-brand-700 hover:underline dark:text-brand-300">
+                    <a href={o.website} target="_blank" rel="noopener noreferrer nofollow" class="text-link hover:underline">
                       Visit website
                     </a>
                   </dd>
@@ -103,7 +103,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
 
             <a
               href={orgAppLink(o.id)}
-              class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:gap-2 dark:text-brand-300"
+              class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-link hover:gap-2"
             >
               Ask VisaNav about this org
               <span aria-hidden="true">→</span>
@@ -113,49 +113,126 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
       }
     </ul>
 
-    <p id="empty" hidden class="mt-10 text-center text-slate-500 dark:text-slate-400">
+    <p id="empty" hidden class="mt-10 text-center text-muted-foreground">
       No organizations match your search. Try a different state or clear the filters.
     </p>
+
+    <!-- Pagination. Hidden until the script activates it, so with JS disabled the
+         full server-rendered list stays visible (no dead controls). -->
+    <nav
+      id="pager"
+      hidden
+      aria-label="Directory pages"
+      class="mt-8 flex items-center justify-center gap-2 sm:gap-3"
+    >
+      <button
+        id="prev"
+        type="button"
+        class="border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
+      >
+        <span aria-hidden="true">←</span> Prev
+      </button>
+      <span id="pageinfo" class="min-w-32 text-center text-sm text-muted-foreground">Page 1 of 1</span>
+      <button
+        id="next"
+        type="button"
+        class="border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
+      >
+        Next <span aria-hidden="true">→</span>
+      </button>
+    </nav>
   </section>
 </Base>
 
 <script>
+  const PAGE_SIZE = 24;
+
   const q = document.getElementById("q") as HTMLInputElement;
   const state = document.getElementById("state") as HTMLSelectElement;
   const probono = document.getElementById("probono") as HTMLInputElement;
   const count = document.getElementById("count") as HTMLElement;
   const empty = document.getElementById("empty") as HTMLElement;
+  const results = document.getElementById("results") as HTMLElement;
+  const pager = document.getElementById("pager") as HTMLElement;
+  const prevBtn = document.getElementById("prev") as HTMLButtonElement;
+  const nextBtn = document.getElementById("next") as HTMLButtonElement;
+  const pageInfo = document.getElementById("pageinfo") as HTMLElement;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".org-card"));
   const nf = new Intl.NumberFormat();
 
-  function apply() {
+  let matches: HTMLElement[] = cards; // cards passing the current filter
+  let page = 1; // 1-based, within the filtered set
+
+  function matchesFilter(card: HTMLElement, term: string, st: string, pb: boolean) {
+    const matchesTerm =
+      !term ||
+      (card.dataset.name ?? "").includes(term) ||
+      (card.dataset.city ?? "").includes(term);
+    const matchesState = !st || card.dataset.state === st;
+    const matchesPb = !pb || card.dataset.probono === "1";
+    return matchesTerm && matchesState && matchesPb;
+  }
+
+  // Show only the current page's slice of the filtered set; hide everything else.
+  function render() {
+    const total = matches.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    page = Math.min(Math.max(page, 1), totalPages);
+
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const onPage = new Set(matches.slice(start, end));
+    for (const card of cards) card.hidden = !onPage.has(card);
+
+    if (total === 0) {
+      count.textContent = "No organizations found";
+    } else {
+      const to = Math.min(end, total);
+      count.textContent =
+        `Showing ${nf.format(start + 1)}–${nf.format(to)} of ` +
+        `${nf.format(total)} organization${total === 1 ? "" : "s"}`;
+    }
+    empty.hidden = total !== 0;
+
+    // Only surface the pager when there's more than one page to move through.
+    if (total > PAGE_SIZE) {
+      pager.hidden = false;
+      prevBtn.disabled = page <= 1;
+      nextBtn.disabled = page >= totalPages;
+      pageInfo.textContent = `Page ${nf.format(page)} of ${nf.format(totalPages)}`;
+    } else {
+      pager.hidden = true;
+    }
+  }
+
+  // Recompute the filtered set. Any filter change returns to the first page.
+  function applyFilter() {
     const term = q.value.trim().toLowerCase();
     const st = state.value;
     const pb = probono.checked;
-    let visible = 0;
+    matches = cards.filter((card) => matchesFilter(card, term, st, pb));
+    page = 1;
+    render();
+  }
 
-    for (const card of cards) {
-      const matchesTerm =
-        !term ||
-        (card.dataset.name ?? "").includes(term) ||
-        (card.dataset.city ?? "").includes(term);
-      const matchesState = !st || card.dataset.state === st;
-      const matchesPb = !pb || card.dataset.probono === "1";
-      const show = matchesTerm && matchesState && matchesPb;
-      card.hidden = !show;
-      if (show) visible++;
-    }
-
-    count.textContent = `Showing ${nf.format(visible)} organization${visible === 1 ? "" : "s"}`;
-    empty.hidden = visible !== 0;
+  function goTo(next: number) {
+    page = next;
+    render();
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    count.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   }
 
   let raf = 0;
   const schedule = () => {
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(apply);
+    raf = requestAnimationFrame(applyFilter);
   };
   q.addEventListener("input", schedule);
-  state.addEventListener("change", apply);
-  probono.addEventListener("change", apply);
+  state.addEventListener("change", applyFilter);
+  probono.addEventListener("change", applyFilter);
+  prevBtn.addEventListener("click", () => goTo(page - 1));
+  nextBtn.addEventListener("click", () => goTo(page + 1));
+
+  // Activate pagination now that JS is running (no-JS users keep the full list).
+  applyFilter();
 </script>
