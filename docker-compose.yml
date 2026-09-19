@@ -56,6 +56,10 @@ services:
     environment:
       - PYTHONBUFFERED=1
       - PYTHONPATH=/app
+      # The ./data:/app/data mount above puts the corpus here, but the default
+      # (BASE_DIR.parent/data/countries) resolves to /data in the container
+      # because api code lives at /app, not /app/api. Point ingest at the mount.
+      - KNOWLEDGE_DATA_DIR=/app/data/countries
     ports:
       - "8000:8000"
     depends_on:
