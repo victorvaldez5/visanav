@@ -21,7 +21,11 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15-alpine
+        # pgvector-enabled image so the `vector` extension is available. Tests run
+        # --no-migrations (schema from models), so the extension is seeded into
+        # template1 below before the test DB is created (api/conftest.py mirrors
+        # this for local runs).
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_USER: raul
           POSTGRES_PASSWORD: pswd

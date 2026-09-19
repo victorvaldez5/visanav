@@ -26,7 +26,14 @@ package-mode = false
 python = ">=3.10,<4.0"
 redis = "^6.4.0"
 django-redis = "^6.0.0"
-pinecone = "^7.3.0"
+# Vector store: pgvector provides the Django VectorField + CREATE EXTENSION op;
+# voyageai generates the embeddings (Pinecone did this server-side, pgvector does
+# not embed). Both are pure-Python — no Dockerfile/system-dep changes needed.
+pgvector = "^0.4.0"
+# voyageai has no 3.14 wheel yet; the deploy/CI runtime is 3.13 (Dockerfile, CI,
+# ruff target). Marker keeps the lock resolvable across the project's 3.10-<4.0
+# range without dropping the actual runtime.
+voyageai = {version = "^0.3.2", python = "<3.14"}
 django = ">=5.2.5"
 django-cors-headers = ">=4.7.0"
 djangorestframework = ">=3.16.1"
@@ -41,6 +48,13 @@ mailtrap = "^2.1.0"
 # Use the slim package with only the providers we support (anthropic + openai);
 # the full `pydantic-ai` bundles every provider, including Bedrock (→ boto3).
 pydantic-ai-slim = {extras = ["anthropic", "openai"], version = "^0.7.4"}
+# Pinned to 0.64.x: pydantic-ai-slim[anthropic] 0.7.6 only requires anthropic>=0.61
+# (open upper bound), but its Anthropic model imports beta symbols that drift across
+# anthropic releases — 1.x dropped `BetaBase64PDFBlockParam` and 0.125 dropped
+# `UserLocation`, both of which pydantic-ai 0.7.x imports. A fresh resolve that grabs
+# either breaks Anthropic model construction (every chat request). 0.64.0 is the
+# version pinned alongside pydantic-ai-slim 0.7.6 and is verified to import cleanly.
+anthropic = ">=0.64,<0.65"
 django-phonenumber-field = {extras = ["phonenumberslite"], version = "^8.1.0"}
 pycountry = "^24.6.1"
 django-countries = "^7.6.1"

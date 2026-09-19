@@ -18,7 +18,7 @@ There are two kinds of data:
 ```
 data/
   schema/            canonical JSON Schemas + controlled vocabularies
-  scripts/           validate.py (CI gate) and ingest.py (build the corpus)
+  scripts/           validate.py (CI gate) and ingest.py (chunk preview; corpus is built by `manage.py ingest` in the API)
   countries/
     _template/       copy this to start a new country
     us/              worked example
@@ -48,6 +48,13 @@ pip install -r data/scripts/requirements.txt
 python data/scripts/validate.py            # validate everything (CI runs this)
 python data/scripts/validate.py us         # just one country
 python data/scripts/ingest.py us           # dry-run: see the chunks that would be built
+```
+
+Building the actual corpus (embed via Voyage → write to pgvector) happens in the API, not
+here:
+
+```bash
+cd api && python manage.py ingest us --upsert   # needs VOYAGE_API_KEY + a database
 ```
 
 To contribute, read [CONTRIBUTING-data.md](CONTRIBUTING-data.md).
