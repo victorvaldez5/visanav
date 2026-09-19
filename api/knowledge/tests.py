@@ -5,6 +5,7 @@ tests exercise real pgvector cosine ranking, so they require the `vector`
 extension (seeded via api/conftest.py + the pgvector Postgres image in CI).
 """
 import asyncio
+from datetime import date
 
 import pytest
 
@@ -61,8 +62,9 @@ def _chunk(chunk_id, country, vector, **meta):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_semantic_search_ranks_by_cosine_and_scopes_country(fake_voyage):
+def test_semantic_search_ranks_scopes_and_gates_by_confidence(fake_voyage, settings):
     # Query embeds to [1, 0, 0, ...]; nearest by cosine is the aligned vector.
+    settings.RAG_MIN_SCORE = 0.5
     dims = 1024
     q = [1.0] + [0.0] * (dims - 1)
     monkey_vec = q
@@ -72,23 +74,60 @@ def test_semantic_search_ranks_by_cosine_and_scopes_country(fake_voyage):
 
     fake_voyage.embed = fake_embed
 
-    near = [1.0] + [0.0] * (dims - 1)
-    mid = [0.5, 0.5] + [0.0] * (dims - 2)
-    far = [0.0, 1.0] + [0.0] * (dims - 2)
-    _chunk("us-near", "us", near, topic="near", title="Near", source_url="https://uscis.gov/a")
+    near = [1.0] + [0.0] * (dims - 1)          # cosine sim 1.0  -> confident
+    mid = [0.5, 0.5] + [0.0] * (dims - 2)      # cosine sim ~0.707 -> confident
+    far = [0.0, 1.0] + [0.0] * (dims - 2)      # cosine sim 0.0  -> gated out
+    _chunk("us-near", "us", near, topic="near", title="Near",
+           source_url="https://uscis.gov/a", last_verified=date(2026, 2, 10))
     _chunk("us-mid", "us", mid, topic="mid")
     _chunk("us-far", "us", far, topic="far")
     _chunk("ca-near", "ca", near, topic="other-country")  # must be excluded by scope
 
-    result = asyncio.run(semantic_search_ctx(Deps(country="us"), "any query"))
+    deps = Deps(country="us")
+    result = asyncio.run(semantic_search_ctx(deps, "any query"))
 
+    # Ranked by cosine, scoped to the country, and the sub-threshold hit (us-far,
+    # sim 0.0) is gated out — its text never reaches the model.
     ids = [m["id"] for m in result["matches"]]
-    assert ids == ["us-near", "us-mid", "us-far"]
+    assert ids == ["us-near", "us-mid"]
+    assert "us-far" not in ids
     assert "ca-near" not in ids
+    assert result["has_confident_source"] is True
+
     top = result["matches"][0]
     assert top["title"] == "Near"
     assert top["source_url"] == "https://uscis.gov/a"
-    assert top["score"] == pytest.approx(1.0, abs=1e-4)  # cosine sim of identical vectors
+    assert top["last_verified"] == "2026-02-10"  # ISO date surfaced for the UI
+    assert top["score"] == pytest.approx(1.0, abs=1e-4)  # identical vectors
+
+    # Confident sources are collected on Deps for the streaming view to emit,
+    # with citation metadata only (no chunk text).
+    assert [s["id"] for s in deps.sources] == ["us-near", "us-mid"]
+    assert deps.sources[0]["last_verified"] == "2026-02-10"
+    assert "text" not in deps.sources[0]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_semantic_search_confidence_gate_triggers_fallback(fake_voyage, settings):
+    # Only an off-axis (irrelevant) chunk exists, so nothing clears the floor.
+    settings.RAG_MIN_SCORE = 0.5
+    dims = 1024
+    q = [1.0] + [0.0] * (dims - 1)
+    fake_voyage.embed = lambda texts, model, input_type: _FakeResp([q for _ in texts])
+
+    far = [0.0, 1.0] + [0.0] * (dims - 2)  # cosine sim 0.0
+    _chunk("us-far", "us", far, topic="far", title="Irrelevant",
+           source_url="https://uscis.gov/z")
+
+    deps = Deps(country="us")
+    result = asyncio.run(semantic_search_ctx(deps, "any query"))
+
+    # No confident source: no matches/text returned, the fallback is signalled,
+    # and nothing is collected for citation.
+    assert result["matches"] == []
+    assert result["has_confident_source"] is False
+    assert result["note"]  # non-empty fallback instruction for the model
+    assert deps.sources == []
 
 
 async def semantic_search_ctx(deps, query):

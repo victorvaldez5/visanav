@@ -81,7 +81,7 @@ export function useConversation(
         // optimistic render: user bubble + growing assistant bubble
         messageHistory.value.push({parts: [{part_kind: "user-prompt", content: prompt}]});
         const assistantIndex =
-            messageHistory.value.push({parts: [{part_kind: "text", content: ""}]}) - 1;
+            messageHistory.value.push({parts: [{part_kind: "text", content: ""}], sources: []}) - 1;
 
         isStreaming.value = true;
         streamStatus.value = "thinking";
@@ -98,6 +98,10 @@ export function useConversation(
                     onDelta: (text) => {
                         // mutate through the reactive proxy so Vue tracks it
                         messageHistory.value[assistantIndex].parts[0].content += text;
+                    },
+                    onSources: (sources) => {
+                        // Official citations for this answer; rendered under it.
+                        messageHistory.value[assistantIndex].sources = sources;
                     },
                     onDone: () => {
                         succeeded = true;

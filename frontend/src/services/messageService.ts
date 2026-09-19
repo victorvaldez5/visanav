@@ -7,9 +7,21 @@ export interface MessagePayload {
     conversation: string;
 }
 
+/** An official source that grounded an answer (from the RAG corpus). */
+export interface Source {
+    id: string;
+    title?: string | null;
+    source_url?: string | null;
+    /** ISO date (YYYY-MM-DD) the source was last checked, if known. */
+    last_verified?: string | null;
+    score?: number | null;
+    topic?: string | null;
+}
+
 export interface StreamHandlers {
     onStatus?: (step: string) => void;
     onDelta?: (text: string) => void;
+    onSources?: (sources: Source[]) => void;
     onDone?: (data: any) => void;
     onError?: (detail: string) => void;
 }
@@ -44,6 +56,9 @@ function parseFrame(raw: string, handlers: StreamHandlers) {
             break;
         case "delta":
             handlers.onDelta?.(data.text);
+            break;
+        case "sources":
+            handlers.onSources?.(data.sources ?? []);
             break;
         case "done":
             handlers.onDone?.(data);

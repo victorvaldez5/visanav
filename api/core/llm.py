@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Optional, Dict, Any, List
 
@@ -40,6 +40,17 @@ INSTRUCTIONS = """
     - Base answers on USCIS, State Dept, CBP sources.
     - Cite form numbers or official pages when possible.
     - If unsure, advise verification on uscis.gov or travel.state.gov.
+    Citations & sourcing (strict):
+    - For any factual claim about immigration, first call semantic_search and
+      base the answer on what it returns. The UI shows the retrieved sources to
+      the user, so ground your answer in them.
+    - If semantic_search returns has_confident_source = false (or no matches), do
+      NOT answer from general knowledge. Say plainly you couldn't find this in an
+      official source, then point the user to the official government site
+      (uscis.gov / travel.state.gov) and to an accredited representative
+      (use resource_lookup). Follow the tool result's `note`.
+    - Never invent a source, URL, or form number, and never cite a document
+      semantic_search did not return.
     Avoiding scams (raise proactively when relevant):
     - Warn about "notario" fraud and anyone practicing law without authorization:
       in the US a "notary public" is NOT a lawyer and cannot give legal advice.
@@ -106,6 +117,10 @@ class Deps:
     # writes curated knowledge per country (e.g. "us"), so this scopes retrieval
     # to a populated corpus.
     country: str
+    # Confident sources retrieved during this turn, collected so the streaming
+    # view can surface them to the UI as clickable citations. Mutated by
+    # semantic_search; one Deps instance per chat turn (never shared).
+    sources: list = field(default_factory=list)
 
 
 class SearchMatch(BaseModel):
@@ -114,6 +129,8 @@ class SearchMatch(BaseModel):
     topic: Optional[str] = None
     title: Optional[str] = None
     source_url: Optional[str] = None
+    # ISO date (YYYY-MM-DD) the source was last checked, shown next to the link.
+    last_verified: Optional[str] = None
     text: Optional[str] = None
 
 
@@ -121,6 +138,11 @@ class SemanticSearchResult(BaseModel):
     country: str
     query: str
     matches: List[SearchMatch]
+    # False when no retrieved document met the confidence threshold. When False,
+    # matches carry no text and Javi must NOT answer from general knowledge —
+    # see the tool result's `note` and the citation rules in INSTRUCTIONS.
+    has_confident_source: bool = True
+    note: Optional[str] = None
 
 
 async def semantic_search(ctx: RunContext[Deps], search_query: str):
@@ -138,6 +160,7 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
 
     top_k = 3
     country = ctx.deps.country
+    min_score = settings.RAG_MIN_SCORE
 
     # Voyage's client is synchronous; embed off the event loop (as the Pinecone
     # call used to be), then rank by cosine distance in Postgres.
@@ -146,7 +169,10 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
         KnowledgeChunk.objects.filter(country=country)
         .annotate(distance=CosineDistance("embedding", vector))
         .order_by("distance")[:top_k]
-        .values("chunk_id", "topic", "title", "source_url", "text", "distance")
+        .values(
+            "chunk_id", "topic", "title", "source_url", "last_verified",
+            "text", "distance",
+        )
     )
     matches = [
         SearchMatch(
@@ -157,24 +183,72 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
             topic=row["topic"],
             title=row["title"],
             source_url=row["source_url"],
+            last_verified=(
+                row["last_verified"].isoformat() if row["last_verified"] else None
+            ),
             text=row["text"],
         )
         async for row in qs
     ]
-    # Content-free retrieval diagnostic: which documents were retrieved and how
-    # relevant they scored. We log the corpus chunk ids + scores only — never the
-    # search query (model-generated, may paraphrase the user) or the chunk text.
-    # These scores are what to tune RAG_MIN_SCORE against on real traffic.
+
+    # Confidence gate: only matches at/above the threshold count as a real
+    # official source. Below it, we withhold the chunk text from the model and
+    # signal the fallback, so Javi can't dress up a weak/irrelevant hit (or its
+    # own general knowledge) as if it were sourced.
+    confident = [m for m in matches if (m.score or 0.0) >= min_score]
+
+    # Content-free retrieval diagnostic: which documents were retrieved, how they
+    # scored, and whether any cleared the threshold. We log the corpus chunk ids
+    # + scores only — never the search query (model-generated, may paraphrase the
+    # user) or the chunk text. Tune RAG_MIN_SCORE against these on real traffic.
     logger.info(
-        "semantic_search country=%s hits=%s",
+        "semantic_search country=%s min_score=%.2f confident=%d hits=%s",
         country,
+        min_score,
+        len(confident),
         [
             (m.id, round(m.score, 3) if m.score is not None else None)
             for m in matches
         ],
     )
+
+    if not confident:
+        return SemanticSearchResult(
+            country=country,
+            query=search_query,
+            matches=[],
+            has_confident_source=False,
+            note=(
+                "No official source in the knowledge base met the confidence "
+                "threshold for this query. Do NOT answer from general knowledge. "
+                "Tell the user you couldn't find this in an official source, and "
+                "point them to the relevant official government site (e.g. "
+                "uscis.gov or travel.state.gov) and to an accredited "
+                "representative (use resource_lookup)."
+            ),
+        ).model_dump()
+
+    # Collect confident sources (deduped by chunk id, keep the strongest) so the
+    # streaming view can surface them to the UI. Store citation metadata only —
+    # no chunk text.
+    existing = {s["id"] for s in ctx.deps.sources}
+    for m in confident:
+        if m.id in existing:
+            continue
+        existing.add(m.id)
+        ctx.deps.sources.append(
+            {
+                "id": m.id,
+                "title": m.title,
+                "source_url": m.source_url,
+                "last_verified": m.last_verified,
+                "score": round(m.score, 3) if m.score is not None else None,
+                "topic": m.topic,
+            }
+        )
+
     return SemanticSearchResult(
-        country=country, query=search_query, matches=matches
+        country=country, query=search_query, matches=confident
     ).model_dump()
 
 

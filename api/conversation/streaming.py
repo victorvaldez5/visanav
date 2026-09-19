@@ -94,12 +94,17 @@ def _load_history(conversation_id):
 
 
 @sync_to_async
-def _persist_messages(conversation_id, new_messages):
+def _persist_messages(conversation_id, new_messages, sources=None):
     """Persist the new messages produced by an agent run (user request +
-    tool calls + assistant response), mirroring the old task's shape."""
+    tool calls + assistant response), mirroring the old task's shape.
+
+    ``sources`` (the confident citations collected during the turn) is attached
+    to the final assistant response so the UI can render them on reload too.
+    """
+    last_response = None
     for message in new_messages:
         if message.get("kind") == "response":
-            Message.objects.create(
+            last_response = Message.objects.create(
                 conversation_id=conversation_id,
                 parts=message.get("parts"),
                 timestamp=message.get("timestamp"),
@@ -113,6 +118,9 @@ def _persist_messages(conversation_id, new_messages):
                 instructions=message.get("instructions"),
                 kind=message.get("kind"),
             )
+    if sources and last_response is not None:
+        last_response.sources = sources
+        last_response.save(update_fields=["sources"])
 
 
 @sync_to_async
@@ -272,12 +280,17 @@ async def chat_stream(request):
                             )
 
             new_messages = json.loads(run.result.new_messages_json())
-            await _persist_messages(conversation_id, new_messages)
+            await _persist_messages(conversation_id, new_messages, deps.sources)
             await _touch_retention(conversation_id)
+            # Surface the official sources that grounded the answer as clickable
+            # citations. Metadata only (title/url/last_verified/score) — no text.
+            if deps.sources:
+                yield _sse("sources", {"sources": deps.sources})
             logger.info(
-                "chat turn ok req=%s latency_ms=%d",
+                "chat turn ok req=%s latency_ms=%d sources=%d",
                 request_id,
                 int((time.monotonic() - start) * 1000),
+                len(deps.sources),
             )
             yield _sse("done", {"conversation": str(conversation_uuid)})
         except Exception as exc:  # noqa: BLE001 - surface a clean error, log the rest

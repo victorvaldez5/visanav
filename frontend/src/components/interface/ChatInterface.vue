@@ -2,6 +2,7 @@
 import {computed} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import AIResponse from "@/components/ui/chat/AIResponse.vue";
+import SourcesList from "@/components/ui/chat/SourcesList.vue";
 import UserPromptInput from "@/components/interface/UserPromptInput.vue";
 import {useConversation} from "@/composables/useConversations.ts";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
@@ -71,10 +72,10 @@ async function onSubmit(prompt: string) {
           v-else-if="message.parts[0].part_kind === 'text'"
           class="p-3 text-left my-2"
         >
-          <AIResponse
-            v-if="message.parts[0].content"
-            :source="message.parts[0].content"
-          />
+          <template v-if="message.parts[0].content">
+            <AIResponse :source="message.parts[0].content" />
+            <SourcesList :sources="message.sources" />
+          </template>
           <div
             v-else-if="isStreaming"
             class="text-body font-semibold text-transparent bg-clip-text bg-gradient-to-r to-gray-300 via-gray-500 from-gray-800 bg-[length:200%_100%] animate-shimmer"

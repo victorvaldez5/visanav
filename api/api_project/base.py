@@ -208,6 +208,13 @@ VOYAGE_API_KEY = os.environ.get("VOYAGE_API_KEY")
 # Country whose curated corpus the chat agent searches. Replaces the old Pinecone
 # namespace; matches KnowledgeChunk.country rows written by `manage.py ingest`.
 KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
+# Retrieval confidence floor. semantic_search scores matches as cosine similarity
+# in [0,1] (1 = identical). A match below this is treated as "not a confident
+# official source": its text is withheld from the model and Javi must fall back
+# to pointing at the official site / a representative rather than answering from
+# general knowledge. 0.5 is a conservative starting point for voyage-3; tune it
+# against the retrieval scores now logged by semantic_search (see core/llm.py).
+RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE") or "0.5")
 # Where the ingest command reads curated Markdown from. Defaults to the repo's
 # data/countries (reachable from a full checkout; ingestion is not run in the
 # slim prod web image).
