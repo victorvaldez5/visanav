@@ -115,11 +115,13 @@ CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS") or "4000")
 #      message text, the (model-generated) search query, IP addresses, or user
 #      agents. (The chat endpoint uses the client IP only as an in-memory
 #      rate-limit key; abuse events log a salted hash of it, never the raw IP.)
-#   2. Third-party HTTP/LLM clients that CAN dump full request/response bodies
-#      (the Anthropic/OpenAI SDKs, httpx, urllib3) are pinned to a floor at/above
-#      INFO here, so raising the root level to DEBUG to troubleshoot can never
-#      leak prompt or completion content through them, and neither can an
-#      ANTHROPIC_LOG=debug / OPENAI_LOG=debug env var.
+#   2. The Anthropic/OpenAI SDKs and the HTTP clients they use log the request
+#      body (which contains the user's message and the model's reply) at DEBUG.
+#      They are pinned to an INFO/WARNING floor below, so raising the root level
+#      to DEBUG to troubleshoot can never leak prompt/completion content through
+#      them. The one bypass is the SDKs' own ANTHROPIC_LOG / OPENAI_LOG=debug env
+#      vars, which force their own loggers to DEBUG at import — so never set those
+#      in any environment that handles real user data.
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 LOGGING = {
@@ -133,13 +135,18 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        # These emit full HTTP request/response bodies — which include the user's
-        # message and the model's reply — when their level is DEBUG. Pin them so
-        # that never happens regardless of the root level.
+        # The LLM SDKs log the request body (user message + model reply) via
+        # `log.debug("Request options: ...")` under their own logger; pinning to
+        # INFO drops that DEBUG line regardless of the root level. The HTTP
+        # clients log request URLs/lifecycle (not bodies) — quieted for cleaner
+        # logs. NOTE: the Anthropic SDK vendors its HTTP stack and logs it under
+        # httpx2/httpcore2, not httpx/httpcore, so both spellings are pinned.
         "anthropic": {"level": "INFO", "propagate": True},
         "openai": {"level": "INFO", "propagate": True},
         "httpx": {"level": "WARNING", "propagate": True},
         "httpcore": {"level": "WARNING", "propagate": True},
+        "httpx2": {"level": "WARNING", "propagate": True},
+        "httpcore2": {"level": "WARNING", "propagate": True},
         "urllib3": {"level": "WARNING", "propagate": True},
     },
 }
