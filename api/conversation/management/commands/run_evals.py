@@ -10,10 +10,14 @@ Usage (from api/, with the env that has ANTHROPIC/VOYAGE keys + DB configured):
     python manage.py run_evals
     python manage.py run_evals --lang es --limit 5
     python manage.py run_evals --input evals/javi_advice_evals.yaml --out /tmp/run.md
+    python manage.py run_evals --delay 21   # free Voyage tier is 3 req/min
 
-Each prompt costs a real LLM + embedding call, so a full run is ~30 calls.
+Each prompt costs a real LLM + embedding call, so a full run is ~30 calls. On a
+free Voyage key (3 requests/minute) a fast run will hit rate limits and some
+items will error; pass --delay to space the prompts out.
 """
 import datetime as dt
+import time
 from pathlib import Path
 
 import yaml
@@ -38,6 +42,9 @@ class Command(BaseCommand):
                             help="Only run prompts in this language.")
         parser.add_argument("--category", default=None,
                             help="Only run prompts in this category.")
+        parser.add_argument("--delay", type=float, default=0.0,
+                            help="Seconds to wait between prompts (use ~21 on a "
+                                 "free Voyage key: 3 requests/minute).")
 
     def handle(self, *args, **opts):
         # Imported here so the command module stays importable without a model
@@ -84,6 +91,8 @@ class Command(BaseCommand):
         ]
 
         for n, item in enumerate(items, start=1):
+            if opts["delay"] and n > 1:
+                time.sleep(opts["delay"])
             qid = item.get("id", f"item-{n}")
             question = item.get("question", "")
             self.stdout.write(f"[{n}/{len(items)}] {qid} …")
