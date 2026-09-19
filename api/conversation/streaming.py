@@ -70,11 +70,22 @@ def _get_conversation(conversation_uuid):
     return Conversation.objects.filter(uuid=conversation_uuid).first()
 
 
+# The persisted fields that make up a pydantic-ai message. Notably this excludes
+# the Django-only columns (`id` and the `conversation` FK): pydantic-ai's message
+# models define their own `conversation_id` field (a str), so feeding it our FK
+# column — an int — makes ModelMessagesTypeAdapter reject the whole history.
+_MESSAGE_FIELDS = ("parts", "instructions", "kind", "timestamp", "model_name")
+
+
 @sync_to_async
 def _load_history(conversation_id):
-    qs = Message.objects.filter(conversation_id=conversation_id).order_by("id")
+    qs = (
+        Message.objects.filter(conversation_id=conversation_id)
+        .order_by("id")
+        .values(*_MESSAGE_FIELDS)
+    )
     return ModelMessagesTypeAdapter.validate_python(
-        to_jsonable_python(list(qs.values()))
+        to_jsonable_python(list(qs))
     )
 
 
