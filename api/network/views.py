@@ -1,10 +1,15 @@
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
-from rest_framework import filters, viewsets
+from rest_framework import filters, generics, viewsets
 from rest_framework.permissions import AllowAny
+from rest_framework.throttling import ScopedRateThrottle
 
-from network.models import Organization, Representative
-from network.serializers import OrganizationSerializer, RepresentativeSerializer
+from network.models import Organization, Representative, OrganizationSubmission
+from network.serializers import (
+    OrganizationSerializer,
+    RepresentativeSerializer,
+    OrganizationSubmissionSerializer,
+)
 
 
 class OrganizationFilter(FilterSet):
@@ -58,3 +63,17 @@ class RepresentativeViewSet(viewsets.ReadOnlyModelViewSet):
         return Representative.objects.filter(is_active=True).select_related(
             "organization", "address", "address__subdivision"
         )
+
+
+class OrganizationSubmissionCreateView(generics.CreateAPIView):
+    """Public 'request to be included' intake from the marketing site.
+
+    Create-only and open to anyone (AllowAny), but every submission lands as
+    PENDING for admin review — nothing is auto-listed. Tighter throttle than the
+    global default since it's an unauthenticated write endpoint."""
+
+    queryset = OrganizationSubmission.objects.all()
+    serializer_class = OrganizationSubmissionSerializer
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "submission"

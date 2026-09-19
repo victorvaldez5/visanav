@@ -114,9 +114,9 @@
     --sidebar-accent-foreground: var(--vn-orange-900);
     --sidebar-border: var(--vn-blue-200);
     --sidebar-ring: var(--vn-orange-300);
-    --font-sans: Open Sans, ui-sans-serif, sans-serif, system-ui;
-    --font-serif: Noto Serif, ui-serif, serif;
-    --font-mono: Ubuntu Sans Mono, ui-monospace, monospace;
+    --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, sans-serif, system-ui;
+    --font-serif: "Noto Serif", ui-serif, serif;
+    --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
     --radius: 0rem;
     --shadow-x: 0;
     --shadow-y: 1px;
@@ -169,9 +169,9 @@
     --sidebar-accent-foreground: #e6f6ff;
     --sidebar-border: #52606d;
     --sidebar-ring: #ef4e4e;
-    --font-sans: Open Sans, ui-sans-serif, sans-serif, system-ui;
-    --font-serif: Noto Serif, ui-serif, serif;
-    --font-mono: Ubuntu Sans Mono, ui-monospace, monospace;
+    --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, sans-serif, system-ui;
+    --font-serif: "Noto Serif", ui-serif, serif;
+    --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
     --radius: 0rem;
     --shadow-x: 0;
     --shadow-y: 1px;

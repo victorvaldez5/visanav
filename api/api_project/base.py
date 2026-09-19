@@ -141,7 +141,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "1000/day", "user": "10000/day"},
+    "DEFAULT_THROTTLE_RATES": {"anon": "1000/day", "user": "10000/day", "submission": "20/day"},
 }
 
 SIMPLE_JWT = {
@@ -177,6 +177,12 @@ KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
 KNOWLEDGE_DATA_DIR = os.environ.get("KNOWLEDGE_DATA_DIR") or str(
     BASE_DIR.parent / "data" / "countries"
 )
+
+# Cloudflare Turnstile — bot protection on the public NGO intake form.
+# Set the secret key in production; empty disables server-side verification so
+# local dev, tests, and CI run without it. Pairs with PUBLIC_TURNSTILE_SITE_KEY
+# on the marketing site (both must be real keys in prod, or both test keys).
+TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
 
 # OPEN_AI_SETTINGS
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")

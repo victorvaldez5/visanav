@@ -1,0 +1,13 @@
+{
+  // Deploys the built ./dist as static assets on Cloudflare (www.visanav.org),
+  // mirroring frontend/wrangler.jsonc. Build first (`npm run build`), then
+  // `wrangler deploy` uploads ./dist — this config keeps deploys deterministic.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "visanav-www",
+  "compatibility_date": "2026-09-14",
+  "assets": {
+    "directory": "./dist",
+    // Multi-page static site: serve the generated 404.html for unknown paths.
+    "not_found_handling": "404-page"
+  }
+}

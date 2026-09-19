@@ -63,6 +63,11 @@
       </FormItem>
     </FormField>
 
+    <div
+      ref="turnstileEl"
+      class="flex justify-center"
+    />
+
     <Button :disabled="loading">
       {{ loading ? "Creating Account..." : "Create Account" }}
     </Button>
@@ -70,6 +75,7 @@
 </template>
 
 <script setup lang="ts">
+import {useTemplateRef} from "vue";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
@@ -78,6 +84,7 @@ import {toTypedSchema} from "@vee-validate/zod";
 import {z} from "zod";
 import {useForm} from "vee-validate";
 import {FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form";
+import {useTurnstile} from "@/composables/useTurnstile";
 
 interface RegisterForm {
   email: string;
@@ -102,18 +109,22 @@ const {values, handleSubmit, setErrors} = useForm<RegisterForm>({
   validationSchema: formSchema,
 });
 
+const turnstileEl = useTemplateRef<HTMLElement>("turnstileEl");
+const {token: turnstileToken, reset: resetTurnstile} = useTurnstile(turnstileEl);
+
 const onSubmit = handleSubmit(async (submitValues) => {
   try {
     if (submitValues.password !== submitValues.password2) {
       error.value = "Passwords do not match";
       return
     }
-    await register(submitValues.email, submitValues.password, submitValues.password2);
+    await register(submitValues.email, submitValues.password, submitValues.password2, turnstileToken.value);
   } catch (e: any) {
-    console.error(e.response.data);
+    resetTurnstile(); // token is single-use; refresh it for a retry
+    console.error(e.response?.data);
     setErrors({
-      email: e.response.data.email,
-      password: e.response.data.password
+      email: e.response?.data?.email,
+      password: e.response?.data?.password
     });
   }
 });

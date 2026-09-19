@@ -69,11 +69,6 @@ const routes = [
     },
 
     {
-        path: "/documents",
-        component: () => import("@/pages/DocumentsView.vue"),
-        name: "Documents",
-    },
-    {
         path: "/forms",
         component: () => import("@/pages/FormsView.vue"),
         name: "Forms",

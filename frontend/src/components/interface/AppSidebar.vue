@@ -22,7 +22,6 @@ import { useAuthStore } from "@/stores/useAuthStore.ts";
 import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
-import {Badge} from "@/components/ui/badge";
 
 const authStore = useAuthStore();
 const { isAuthenticated, username, userId,  userEmail} = storeToRefs(authStore);
@@ -36,12 +35,12 @@ const menuItems = [
         href: "/",
     },
     {
-        title: "Find Resources",
+        title: "Public Resources",
         icon: "icon-scale",
         href: "/resources",
     },
     {
-      title: "Applications",
+      title: "Forms",
       icon: "icon-folder",
       href: "/forms",
     },
@@ -69,7 +68,6 @@ const menuItems = [
                 <RouterLink :to="item.href">
                   <Icon :name="item.icon" class="w-4 h-4"></Icon>
                   <span class="text-base">{{ item.title }}</span>
-                  <Badge v-if="item.href === '/forms'" variant="default">Coming Soon</Badge>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -1,0 +1,778 @@
+[
+  {
+    "number": "I-129F",
+    "title": "Petition for Alien Fiancé(e)",
+    "summary": "Petition to bring your fiancé(e) (K-1) or spouse (K-3) to the United States.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-129f",
+    "fileOnline": false
+  },
+  {
+    "number": "I-130",
+    "title": "Petition for Alien Relative",
+    "summary": "Petition to sponsor a family member (spouse, child, parent, or sibling) for a green card.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-130",
+    "fileOnline": true
+  },
+  {
+    "number": "I-130A",
+    "title": "Supplemental Information for Spouse Beneficiary",
+    "summary": "Extra information form for the spouse beneficiary of a Form I-130 petition.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-130a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-134",
+    "title": "Declaration of Financial Support",
+    "summary": "Promise to financially support someone during a temporary stay in the U.S.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-134",
+    "fileOnline": false
+  },
+  {
+    "number": "I-361",
+    "title": "Affidavit of Financial Support and Intent to Petition for Legal Custody for Public Law 97-359 Amerasian",
+    "summary": "Financial support affidavit filed in support of a Form I-360 Amerasian petition.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-361",
+    "fileOnline": false
+  },
+  {
+    "number": "I-363",
+    "title": "Request to Enforce Affidavit of Financial Support and Intent to Petition for Legal Custody for Public Law 97-359 Amerasian",
+    "summary": "Request to enforce the financial-support affidavit for a Public Law 97-359 Amerasian.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-363",
+    "fileOnline": false
+  },
+  {
+    "number": "I-817",
+    "title": "Application for Family Unity Benefits",
+    "summary": "Request initial benefits under the Family Unity Program, or to request an extension of such benefits.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-817",
+    "fileOnline": false
+  },
+  {
+    "number": "I-864",
+    "title": "Affidavit of Support Under Section 213A of the INA",
+    "summary": "Sponsor's affidavit of support showing you can financially support an immigrant.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-864",
+    "fileOnline": false
+  },
+  {
+    "number": "I-864A",
+    "title": "Contract Between Sponsor and Household Member",
+    "summary": "Use this form if you are a household member and want to promise to make your income and/or assets available to help support sponsored immigrants.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-864a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-865",
+    "title": "Sponsor's Notice of Change of Address",
+    "summary": "Report a sponsor's new address and/or residence.",
+    "category": "Family & sponsorship",
+    "url": "https://www.uscis.gov/i-865",
+    "fileOnline": false
+  },
+  {
+    "number": "I-90",
+    "title": "Application to Replace Permanent Resident Card (Green Card)",
+    "summary": "Replace or renew your green card (Permanent Resident Card).",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-90",
+    "fileOnline": true
+  },
+  {
+    "number": "I-407",
+    "title": "Record of Abandonment of Lawful Permanent Resident Status",
+    "summary": "Let us know you are voluntarily abandoning your status as a lawful permanent resident (LPR) of the United States.",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-407",
+    "fileOnline": false
+  },
+  {
+    "number": "I-485",
+    "title": "Application to Register Permanent Residence or Adjust Status",
+    "summary": "Apply for a green card from inside the U.S. (adjustment of status).",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-485",
+    "fileOnline": true
+  },
+  {
+    "number": "I-687",
+    "title": "Application for Status as a Temporary Resident Under Section 245A of the Immigration and Nationality Act",
+    "summary": "Apply for temporary resident status under the 1986 IRCA legalization program (now limited to certain settlements).",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-687",
+    "fileOnline": false
+  },
+  {
+    "number": "I-693",
+    "title": "Report of Immigration Medical Examination and Vaccination Record",
+    "summary": "Immigration medical exam and vaccination record used with a green card application.",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-693",
+    "fileOnline": false
+  },
+  {
+    "number": "I-698",
+    "title": "Application to Adjust Status from Temporary to Permanent Resident (Under Section 245A of the INA)",
+    "summary": "Adjust from temporary to permanent resident status under the 1986 IRCA amnesty program.",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-698",
+    "fileOnline": false
+  },
+  {
+    "number": "I-751",
+    "title": "Petition to Remove Conditions on Residence",
+    "summary": "Remove the conditions on a green card you got through marriage.",
+    "category": "Green card & residence",
+    "url": "https://www.uscis.gov/i-751",
+    "fileOnline": false
+  },
+  {
+    "number": "N-300",
+    "title": "Application to File Declaration of Intention",
+    "summary": "Use this form if you are a permanent resident and want to declare your intent to become a U.S. citizen.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-300",
+    "fileOnline": false
+  },
+  {
+    "number": "N-336",
+    "title": "Request for a Hearing on a Decision in Naturalization Proceedings (Under Section 336 of the INA)",
+    "summary": "Request a hearing before an immigration officer on the denial of your Form N-400, Application for Naturalization.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-336",
+    "fileOnline": true
+  },
+  {
+    "number": "N-400",
+    "title": "Application for Naturalization",
+    "summary": "Apply to become a U.S. citizen (naturalization).",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-400",
+    "fileOnline": true
+  },
+  {
+    "number": "N-426",
+    "title": "Request for Certification of Military or Naval Service",
+    "summary": "This form is used by an applicant for naturalization to request that the Department of Defense verify the applicant's military or naval service.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-426",
+    "fileOnline": false
+  },
+  {
+    "number": "N-470",
+    "title": "Application to Preserve Residence for Naturalization Purposes",
+    "summary": "Preserve your continuous residence for naturalization while working abroad for a year or more.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-470",
+    "fileOnline": false
+  },
+  {
+    "number": "N-565",
+    "title": "Application for Replacement Naturalization/Citizenship Document",
+    "summary": "Replace a lost, stolen, or incorrect naturalization or citizenship certificate.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-565",
+    "fileOnline": true
+  },
+  {
+    "number": "N-600",
+    "title": "Application for Certificate of Citizenship",
+    "summary": "Apply for a Certificate of Citizenship as proof you are a U.S. citizen.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-600",
+    "fileOnline": true
+  },
+  {
+    "number": "N-600K",
+    "title": "Application for Citizenship and Issuance of Certificate Under Section 322",
+    "summary": "Children who regularly reside in a foreign country may use this form to claim U.S. citizenship based on their parents.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-600k",
+    "fileOnline": true
+  },
+  {
+    "number": "N-644",
+    "title": "Application for Posthumous Citizenship",
+    "summary": "The certificate establishes only that the person is considered to be a citizen of the United States as of the date of his/her death, and is invalid for all other purposes.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-644",
+    "fileOnline": false
+  },
+  {
+    "number": "N-648",
+    "title": "Medical Certification for Disability Exceptions",
+    "summary": "Doctor's certification to request a disability exception to the citizenship test.",
+    "category": "Citizenship & naturalization",
+    "url": "https://www.uscis.gov/n-648",
+    "fileOnline": false
+  },
+  {
+    "number": "I-9",
+    "title": "Employment Eligibility Verification",
+    "summary": "Employer form to verify a new hire's identity and permission to work in the U.S.",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-9",
+    "fileOnline": false
+  },
+  {
+    "number": "I-129",
+    "title": "Petition for a Nonimmigrant Worker",
+    "summary": "Employer petition for a temporary worker (H-1B, L-1, O-1, and others).",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-129",
+    "fileOnline": true
+  },
+  {
+    "number": "I-129S",
+    "title": "Nonimmigrant Petition Based on Blanket L Petition",
+    "summary": "Classify alien employees as L-1 nonimmigrant intracompany transferees (executives, managers, or specialized knowledge professionals) under a previously approved blanket L petition.",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-129s",
+    "fileOnline": false
+  },
+  {
+    "number": "I-140",
+    "title": "Immigrant Petition for Alien Workers",
+    "summary": "Employer petition for a foreign worker to get an employment-based green card.",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-140",
+    "fileOnline": true
+  },
+  {
+    "number": "I-140G",
+    "title": "Immigrant Petition for the Gold Card Program",
+    "summary": "Petition for an immigrant visa under the Gold Card program established by Executive Order 14351, The Gold Card.",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-140g",
+    "fileOnline": false
+  },
+  {
+    "number": "I-765",
+    "title": "Application for Employment Authorization",
+    "summary": "Apply for a work permit (Employment Authorization Document, or EAD).",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-765",
+    "fileOnline": true
+  },
+  {
+    "number": "I-765V",
+    "title": "Application for Employment Authorization for Abused Nonimmigrant Spouse",
+    "summary": "Certain abused nonimmigrant spouses may use Form I-765V to request an employment authorization document (EAD).",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-765v",
+    "fileOnline": false
+  },
+  {
+    "number": "I-907",
+    "title": "Request for Premium Processing Service",
+    "summary": "Request Premium Processing Service on certain petitions or applications for which this service is available.",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-907",
+    "fileOnline": true
+  },
+  {
+    "number": "I-941",
+    "title": "Application for Entrepreneur Parole",
+    "summary": "Request parole as a startup entrepreneur whose work offers a significant public benefit.",
+    "category": "Work & employment",
+    "url": "https://www.uscis.gov/i-941",
+    "fileOnline": false
+  },
+  {
+    "number": "I-360",
+    "title": "Petition for Amerasian, Widow(er), or Special Immigrant",
+    "summary": "Self-petition for a green card as a VAWA abuse survivor, widow(er), or special immigrant.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-360",
+    "fileOnline": false
+  },
+  {
+    "number": "I-589",
+    "title": "Application for Asylum and for Withholding of Removal",
+    "summary": "Apply for asylum if you fear returning to your country.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-589",
+    "fileOnline": false
+  },
+  {
+    "number": "I-730",
+    "title": "Refugee/Asylee Relative Petition",
+    "summary": "Petition to bring your spouse and children to the U.S. as a refugee or asylee.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-730",
+    "fileOnline": false
+  },
+  {
+    "number": "I-821",
+    "title": "Application for Temporary Protected Status",
+    "summary": "Apply for Temporary Protected Status (TPS).",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-821",
+    "fileOnline": true
+  },
+  {
+    "number": "I-821D",
+    "title": "Consideration of Deferred Action for Childhood Arrivals",
+    "summary": "Request or renew DACA (Deferred Action for Childhood Arrivals).",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-821d",
+    "fileOnline": true
+  },
+  {
+    "number": "I-881",
+    "title": "Application for Suspension of Deportation or Special Rule Cancellation of Removal (Pursuant to Section 203 of Public Law 105-100 (NACARA))",
+    "summary": "Apply for NACARA suspension of deportation or special-rule cancellation of removal.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-881",
+    "fileOnline": false
+  },
+  {
+    "number": "I-914",
+    "title": "Application for T Nonimmigrant Status",
+    "summary": "Apply for a T visa as a victim of human trafficking.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-914",
+    "fileOnline": false
+  },
+  {
+    "number": "I-918",
+    "title": "Petition for U Nonimmigrant Status",
+    "summary": "Apply for a U visa as a victim of a serious crime.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/I-918",
+    "fileOnline": false
+  },
+  {
+    "number": "I-929",
+    "title": "Petition for Qualifying Family Member of a U-1 Nonimmigrant",
+    "summary": "Request immigration benefits on behalf of a family member who never held U nonimmigrant status.",
+    "category": "Humanitarian & protection",
+    "url": "https://www.uscis.gov/i-929",
+    "fileOnline": false
+  },
+  {
+    "number": "I-102",
+    "title": "Application for Replacement/Initial Nonimmigrant Arrival-Departure Document",
+    "summary": "Replace a lost, stolen, or incorrect I-94 arrival/departure record.",
+    "category": "Travel & parole",
+    "url": "https://www.uscis.gov/i-102",
+    "fileOnline": false
+  },
+  {
+    "number": "I-131",
+    "title": "Application for Travel Documents, Parole Documents, and Arrival/Departure Records",
+    "summary": "Apply for a travel document — advance parole, a re-entry permit, or a refugee travel document.",
+    "category": "Travel & parole",
+    "url": "https://www.uscis.gov/i-131",
+    "fileOnline": true
+  },
+  {
+    "number": "I-131A",
+    "title": "Application for Carrier Documentation",
+    "summary": "Request a boarding document to return to the U.S. when a green-card holder's card is lost abroad.",
+    "category": "Travel & parole",
+    "url": "https://www.uscis.gov/i-131a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-539",
+    "title": "Application to Extend/Change Nonimmigrant Status",
+    "summary": "Extend or change your nonimmigrant status (for example, as a visitor or student).",
+    "category": "Change or extend status",
+    "url": "https://www.uscis.gov/i-539",
+    "fileOnline": true
+  },
+  {
+    "number": "I-539A",
+    "title": "Supplemental Information for Application to Extend/Change Nonimmigrant Status",
+    "summary": "Co-applicant supplement filed together with Form I-539.",
+    "category": "Change or extend status",
+    "url": "https://www.uscis.gov/i-539a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-566",
+    "title": "Interagency Record of Request - A, G or NATO Dependent Employment Authorization or Change/Adjustment to/from A, G or NATO Status",
+    "summary": "Certify or change A, G, or NATO status, or request dependent work authorization.",
+    "category": "Change or extend status",
+    "url": "https://www.uscis.gov/i-566",
+    "fileOnline": false
+  },
+  {
+    "number": "EOIR-29",
+    "title": "Notice of Appeal to the Board of Immigration Appeals from a Decision of a DHS Officer",
+    "summary": "Appeal an unfavorable USCIS decision on a Form I-130 or Form I-360 Widow(er).",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/eoir-29",
+    "fileOnline": false
+  },
+  {
+    "number": "I-191",
+    "title": "Application for Relief Under Former Section 212(c) of the Immigration and Nationality Act (INA)",
+    "summary": "Use this form if you are a lawful permanent resident and wish to file for relief under former INA section 212(c).",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-191",
+    "fileOnline": false
+  },
+  {
+    "number": "I-192",
+    "title": "Application for Advance Permission to Enter as a Nonimmigrant",
+    "summary": "Ask for advance permission to enter the U.S. as an inadmissible nonimmigrant or a T/U applicant.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-192",
+    "fileOnline": false
+  },
+  {
+    "number": "I-193",
+    "title": "Application for Waiver of Passport and/or Visa",
+    "summary": "For an alien who is a legal resident of the United States to reenter the United States without the alien's passport and/or visa.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-193",
+    "fileOnline": false
+  },
+  {
+    "number": "I-212",
+    "title": "Application for Permission to Reapply for Admission into the United States After Deportation or Removal",
+    "summary": "Ask permission to reapply for admission after a prior deportation or removal.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-212",
+    "fileOnline": false
+  },
+  {
+    "number": "I-290B",
+    "title": "Notice of Appeal or Motion",
+    "summary": "Appeal, or file a motion to reopen or reconsider, a denied USCIS decision.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-290b",
+    "fileOnline": false
+  },
+  {
+    "number": "I-601",
+    "title": "Application for Waiver of Grounds of Inadmissibility",
+    "summary": "Ask USCIS to waive a reason you'd otherwise be barred from a green card or visa.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-601",
+    "fileOnline": false
+  },
+  {
+    "number": "I-601A",
+    "title": "Application for Provisional Unlawful Presence Waiver",
+    "summary": "Request a provisional waiver of unlawful presence before leaving for a visa interview.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-601a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-602",
+    "title": "Application by Refugee for Waiver of Inadmissibility Grounds",
+    "summary": "Refugee's request to waive a ground of inadmissibility.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-602",
+    "fileOnline": false
+  },
+  {
+    "number": "I-612",
+    "title": "Application for Waiver of the Foreign Residence Requirement (under Section 212(e) of the Immigration and Nationality Act, as Amended)",
+    "summary": "Exchange Visitors (J-1) may file this application to apply for a waiver of the two-year foreign residence requirement of INA Section 212(e).",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-612",
+    "fileOnline": false
+  },
+  {
+    "number": "I-690",
+    "title": "Application for Waiver of Grounds of Inadmissibility Under Sections 245A or 210 of the Immigration and Nationality Act",
+    "summary": "Apply for a waiver of inadmissibility if you are an applicant for adjustment of status under section 245A or 210 of the Immigration and Nationality Act.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-690",
+    "fileOnline": false
+  },
+  {
+    "number": "I-694",
+    "title": "Notice of Appeal of Decision Under Sections 210 or 245A of the Immigration and Nationality Act",
+    "summary": "Appeal a denial under the 1986 IRCA amnesty program to the USCIS Administrative Appeals Office.",
+    "category": "Waivers & appeals",
+    "url": "https://www.uscis.gov/i-694",
+    "fileOnline": false
+  },
+  {
+    "number": "I-600",
+    "title": "Petition to Classify Orphan as an Immediate Relative",
+    "summary": "U.S. citizens use this form to request that USCIS classify an orphan as an immediate relative.",
+    "category": "Adoption",
+    "url": "https://www.uscis.gov/i-600",
+    "fileOnline": false
+  },
+  {
+    "number": "I-600A",
+    "title": "Application for Advance Processing of an Orphan Petition",
+    "summary": "Get pre-approved as a suitable adoptive parent before identifying an orphan to adopt.",
+    "category": "Adoption",
+    "url": "https://www.uscis.gov/i-600a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-800",
+    "title": "Petition to Classify Convention Adoptee as an Immediate Relative",
+    "summary": "Determine the child's eligibility for classification as a Convention adoptee.",
+    "category": "Adoption",
+    "url": "https://www.uscis.gov/i-800",
+    "fileOnline": false
+  },
+  {
+    "number": "I-800A",
+    "title": "Application for Determination of Suitability to Adopt a Child from a Convention Country",
+    "summary": "USCIS uses this form to adjudicate the eligibility and suitability of the applicant(s) who want to adopt a child who is habitually resident in a Hague Adoption Convention country.",
+    "category": "Adoption",
+    "url": "https://www.uscis.gov/i-800a",
+    "fileOnline": false
+  },
+  {
+    "number": "I-526",
+    "title": "Immigrant Petition by Standalone Investor",
+    "summary": "Standalone investor's petition for an EB-5 immigrant investor green card.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-526",
+    "fileOnline": false
+  },
+  {
+    "number": "I-526E",
+    "title": "Immigrant Petition by Regional Center Investor",
+    "summary": "Regional-center investor's petition for an EB-5 immigrant investor green card.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-526e",
+    "fileOnline": false
+  },
+  {
+    "number": "I-829",
+    "title": "Petition by Investor to Remove Conditions on Permanent Resident Status",
+    "summary": "Use this form if you are a conditional permanent resident who obtained status through entrepreneurship and want to remove the conditions on your residence.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-829",
+    "fileOnline": false
+  },
+  {
+    "number": "I-956",
+    "title": "Application for Regional Center Designation",
+    "summary": "Request an amendment to an approved regional center designated under INA 203(b)(5)(E).",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-956",
+    "fileOnline": false
+  },
+  {
+    "number": "I-956F",
+    "title": "Application for Approval of an Investment in a Commercial Enterprise",
+    "summary": "A designated regional center uses this form to request approval of each particular investment offering through an associated new commercial enterprise.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-956f",
+    "fileOnline": false
+  },
+  {
+    "number": "I-956G",
+    "title": "Regional Center Annual Statement",
+    "summary": "Designated regional centers use this form to provide required information, certifications and evidence to support their continued eligibility for regional center designation.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-956g",
+    "fileOnline": false
+  },
+  {
+    "number": "I-956H",
+    "title": "Bona Fides of Persons Involved with Regional Center Program",
+    "summary": "Attestation of good standing for people involved with an EB-5 regional center.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-956h",
+    "fileOnline": false
+  },
+  {
+    "number": "I-956K",
+    "title": "Registration for Direct and Third-Party Promoters",
+    "summary": "Registration for direct or third-party promoters of EB-5 regional center investments.",
+    "category": "Investor (EB-5)",
+    "url": "https://www.uscis.gov/i-956k",
+    "fileOnline": false
+  },
+  {
+    "number": "AR-11",
+    "title": "Alien’s Change of Address Card",
+    "summary": "Report a change of address to USCIS — required within 10 days of moving.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/ar-11",
+    "fileOnline": true
+  },
+  {
+    "number": "G-28",
+    "title": "Notice of Entry of Appearance as Attorney or Accredited Representative",
+    "summary": "Notice that an attorney or accredited representative is representing you.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-28",
+    "fileOnline": false
+  },
+  {
+    "number": "G-28I",
+    "title": "Notice of Entry of Appearance as Attorney in Matters Outside the Geographical Confines of the United States",
+    "summary": "Notice of appearance for an attorney licensed outside the U.S. in an overseas DHS matter.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-28i",
+    "fileOnline": false
+  },
+  {
+    "number": "G-325A",
+    "title": "Biographic Information (for Deferred Action)",
+    "summary": "Provide biographic information in support of certain deferred-action requests.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-325a",
+    "fileOnline": false
+  },
+  {
+    "number": "G-845",
+    "title": "Verification Request",
+    "summary": "Verify the immigration status of applications for federal, state, or local public benefits and licenses.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-845",
+    "fileOnline": false
+  },
+  {
+    "number": "G-884",
+    "title": "Request for the Return of Original Documents",
+    "summary": "Request the return of original documents submitted to establish eligibility for an immigration benefit.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-884",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1041",
+    "title": "Genealogy Index Search Request",
+    "summary": "Request a search of USCIS historical indices.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1041",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1041A",
+    "title": "Genealogy Records Request",
+    "summary": "Obtain copies of USCIS historical records.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1041a",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1145",
+    "title": "E-Notification of Application/Petition Acceptance",
+    "summary": "Request a text message and/or email when USCIS accepts your form.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1145",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1256",
+    "title": "Declaration for Interpreted USCIS Interview",
+    "summary": "Declaration acknowledging the interpreter you bring to a USCIS interview.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1256",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1450",
+    "title": "Authorization for Credit Card Transactions",
+    "summary": "Pay fees for any form processed at a USCIS lockbox.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1450",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1566",
+    "title": "Request for Certificate of Non-Existence",
+    "summary": "Determine if specific immigration records exist within our database.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1566",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1650",
+    "title": "Authorization for ACH Transactions",
+    "summary": "Electronically pay the filing fees and other applicable fees for benefit requests with an Automatic Clearing House (ACH) debit payment from a U.S. bank account.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1650",
+    "fileOnline": false
+  },
+  {
+    "number": "G-1651",
+    "title": "Exemption for Paper Fee Payment",
+    "summary": "An exemption of the required electronic payment for U.S. Citizenship and Immigration Services benefit requests.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/g-1651",
+    "fileOnline": false
+  },
+  {
+    "number": "I-356",
+    "title": "Request for Cancellation of Public Charge Bond",
+    "summary": "Request cancellation of a public charge bond for an alien that was submitted on Form I-945, Public Charge Bond.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-356",
+    "fileOnline": false
+  },
+  {
+    "number": "I-508",
+    "title": "Request for Waiver of Certain Rights, Privileges, Exemptions and Immunities",
+    "summary": "Waive certain diplomatic rights privileges, exemptions, and immunities associated with your occupational status.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-508",
+    "fileOnline": false
+  },
+  {
+    "number": "I-824",
+    "title": "Application for Action on an Approved Application or Petition",
+    "summary": "Request additional action on a previously approved application or petition.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-824",
+    "fileOnline": false
+  },
+  {
+    "number": "I-854",
+    "title": "Inter-Agency Alien Witness and Informant Record",
+    "summary": "Law enforcement agencies use Form I-854A to request an alien witness and/or informant receive classification as an S nonimmigrant.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-854",
+    "fileOnline": false
+  },
+  {
+    "number": "I-905",
+    "title": "Application for Authorization to Issue Certification for Health Care Workers",
+    "summary": "Use this form if you work with an organization and want to apply for authorization to issue certificates to health care workers.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-905",
+    "fileOnline": false
+  },
+  {
+    "number": "I-910",
+    "title": "Application for Civil Surgeon Designation",
+    "summary": "Apply for civil surgeon designation.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-910",
+    "fileOnline": false
+  },
+  {
+    "number": "I-912",
+    "title": "Request for Fee Waiver",
+    "summary": "Request a fee waiver if you can't afford the filing fee.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-912",
+    "fileOnline": true
+  },
+  {
+    "number": "I-945",
+    "title": "Public Charge Bond",
+    "summary": "Financial bond posted when USCIS finds an applicant inadmissible on public-charge grounds but otherwise admissible.",
+    "category": "Records, fees & other",
+    "url": "https://www.uscis.gov/i-945",
+    "fileOnline": false
+  }
+]

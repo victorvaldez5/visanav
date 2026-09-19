@@ -121,3 +121,43 @@ class Representative(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class OrganizationSubmission(models.Model):
+    """An NGO's request to be listed in the public-resources directory or to
+    partner. Submitted from the public marketing site; NEVER auto-listed — an
+    admin reviews and approves each one at /nimda/ before it becomes an
+    Organization. This gate is what keeps notarios/scammers out of a directory
+    whose whole value is trust."""
+
+    class Intent(models.TextChoices):
+        LISTING = "listing", "Be listed as a public resource"
+        PARTNER = "partner", "Offer VisaNav to our clients (pilot partner)"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    organization_name = models.CharField(max_length=500)
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField()
+    contact_phone = models.CharField(max_length=64, blank=True)
+    website = models.URLField(blank=True)
+    city = models.CharField(max_length=255, blank=True)
+    state = models.CharField(max_length=64, blank=True)
+    offers_pro_bono = models.BooleanField(default=False)
+    intent = models.CharField(max_length=32, choices=Intent.choices, default=Intent.LISTING)
+    message = models.TextField(blank=True)
+
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.PENDING)
+    reviewer_notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.organization_name} ({self.get_status_display()})"
