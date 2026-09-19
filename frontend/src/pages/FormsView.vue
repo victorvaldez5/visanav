@@ -12,7 +12,7 @@
   <div class="max-w-3xl mx-auto flex flex-col h-screen prose justify-center items-center">
     <h3>Manage all your applications in one place</h3>
     <ul class="list-disc">
-      <li>Collaborate with attorneys</li>
+      <li>Find free and low-cost help near you</li>
       <li>Create and edit documents conversationally</li>
       <li>Use AI to find errors before forms are submitted</li>
       <li>View and track application progress</li>

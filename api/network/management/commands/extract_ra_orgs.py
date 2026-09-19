@@ -1,209 +1,116 @@
-import json
-import re
-from typing import List, Dict
+"""Seed DOJ-recognized organizations from the committed roster fixture.
 
-import pdfplumber
-from django.core.management import BaseCommand
+Reads network/fixtures/ra-orgs.json (the parsed EOIR "Recognized Organizations"
+list, with addresses + phones) and upserts each into the flat Organization
+model, tagged accreditation="DOJ-recognized". Idempotent by slug. Regenerate the
+fixture from the source roster PDFs with the ``build_ra_fixtures`` command.
+"""
+import json
+from pathlib import Path
+
+from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
-from locations.models import Subdivision, Address
-from network.models import Organization, OrganizationAddress, OrganizationPhoneNumber
+from network.models import OrganizationType
 
-PHONE_RE = re.compile(r"(?:\+?1[\s\-\.]?)?\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4}")
-CSZ_RE = re.compile(r"^\s*(?P<city>.*?),\s*(?P<state>[A-Z]{2})\s+(?P<zip>\d{5}(?:-\d{4})?)\s*$")
+from ._seed_utils import (
+    build_org_index,
+    index_org,
+    region_code_for,
+    resolve_org,
+    union_list,
+    upsert_address,
+)
 
-
-def normalize_phone(phone: str) -> str:
-    return re.sub(r"\D", "", phone)
-
-
-def parse_city_state_zip(line: str):
-    m = CSZ_RE.match(line.strip())
-    if not m:
-        return None
-    return m.group("city"), m.group("state"), m.group("zip")
+# The EOIR roster this data is sourced from.
+SOURCE_URL = "https://www.justice.gov/eoir/recognition-and-accreditation-program"
+HEADER_ROW = "Recognized Organization Address"
 
 
-def _next_nonempty(lines: List[str], i: int) -> int:
-    while i < len(lines) and not lines[i].strip():
-        i += 1
-    return i
-
-
-def parse_cell(cell_text: str) -> Dict:
-    lines = [ln.rstrip() for ln in cell_text.splitlines()]
-    i = _next_nonempty(lines, 0)
-    if i >= len(lines):
-        raise ValueError("Empty cell")
-    organization_name = lines[i].strip()
-    i += 1
-
-    addresses = []
-    while True:
-        i = _next_nonempty(lines, i)
-        if i >= len(lines):
-            break
-
-        name_line = lines[i].strip()
-        i += 1
-        i = _next_nonempty(lines, i)
-        if i >= len(lines):
-            break
-        street_line = lines[i].strip()
-        i += 1
-
-        i = _next_nonempty(lines, i)
-        if i >= len(lines):
-            break
-        csz_line = lines[i].strip()
-        i += 1
-
-        csz = parse_city_state_zip(csz_line)
-        if not csz and i < len(lines):
-            # Try treating the previous 'csz_line' as a continuation of the street
-            maybe = parse_city_state_zip(lines[i].strip())
-            if maybe:
-                street_line = (street_line + " " + csz_line).strip()
-                csz = maybe
-                i += 1
-
-        if not csz:
-            # Couldn’t validate this block, skip
-            continue
-        city, state, postal_code = csz
-
-        i = _next_nonempty(lines, i)
-        if i >= len(lines):
-            break
-        phone_line = lines[i].strip()
-        i += 1
-
-        if not PHONE_RE.search(phone_line) and i < len(lines):
-            # Peek ahead one line for the phone
-            j = _next_nonempty(lines, i)
-            if j < len(lines) and PHONE_RE.search(lines[j].strip()):
-                phone_line = lines[j].strip()
-                i = j + 1
-            else:
-                continue
-
-        phone_number = normalize_phone(phone_line)
-        address_name_out = name_line if name_line.lower() != "principal office" else name_line.lower()
-
-        addresses.append({
-            "address_name": address_name_out,
-            "line1": street_line,
-            "city": city,
-            "state": state,
-            "postal_code": postal_code,
-            "phone_number": phone_number
-        })
-
-    return {
-        "organization_name": organization_name,
-        "addresses": addresses
-    }
-
-
-def extract_cells_from_pdf(path):
-    cells = []
-    with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
-            # Try table extraction first
-            tables = page.extract_tables()
-            if tables:
-                for table in tables:
-                    for row in table:
-                        # each 'row' is a list of cell strings; if a cell contains a full block, parse it:
-                        for cell in row:
-                            if cell and cell.strip():
-                                cells.append(cell.strip())
-            else:
-                # Fallback: page text. TODO: split page.extract_text() into cell
-                # strings per this PDF's layout, then cells.extend(...).
-                pass
-    return cells
-
-
-def parse_pdf_to_json(pdf_path, out_path) -> List[Dict]:
-    cell_texts = extract_cells_from_pdf(pdf_path)
-    parsed = []
-    for cell in cell_texts:
-        try:
-            parsed.append(parse_cell(cell))
-        except Exception:
-            # Skip or log problematic cells
-            pass
-    if out_path is not None:
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(parsed, f, indent=2, ensure_ascii=False)
-    return parsed
-
-
-def insert_to_db(data: List[Dict]):
-    for organization in data:
-        organization_name = organization.get("organization_name")
-        addresses = organization.get("addresses", [])
-
-        if organization_name == 'Recognized Organization Address':
-            continue
-
-        if len(addresses) == 0:
-            continue
-
-        organization = Organization.objects.filter(slug=slugify(organization_name[:50])).first()
-        if organization is None:
-            organization, _created = Organization.objects.get_or_create(
-                name=organization_name,
-                slug=slugify(organization_name[:50]),
-                organization_type="community-organization",
-                is_active=True
-            )
-
-        for (index, address) in enumerate(addresses):
-            is_primary = index == 0
-            subdivision_code = f"US-{address.get("state")}"
-            phone_number = address.get("phone_number")
-            address_name = address.get("address_name")
-            line1 = address.get("line1")
-            city = address.get("city")
-            postal_code = address.get("postal_code")
-            subdivision = Subdivision.objects.filter(code=subdivision_code).first()
-
-            address = Address.objects.create(
-                address_name=address_name,
-                line1=line1,
-                city=city,
-                postal_code=postal_code,
-                subdivision=subdivision,
-            )
-            OrganizationAddress.objects.get_or_create(
-                organization=organization,
-                address=address,
-                is_primary=is_primary,
-            )
-            org_phone_number = OrganizationPhoneNumber.objects.filter(organization=organization,
-                                                                      phone_number=phone_number).first()
-            if org_phone_number is None:
-                OrganizationPhoneNumber.objects.create(
-                    organization=organization,
-                    phone_number=phone_number,
-                    is_primary=is_primary,
-                )
+def _load_fixture() -> list:
+    path = Path(__file__).resolve().parent.parent.parent / "fixtures" / "ra-orgs.json"
+    if not path.exists():
+        raise CommandError(f"Fixture not found: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 class Command(BaseCommand):
+    help = "Seed DOJ-recognized organizations from ra-orgs.json into Organization."
 
     def add_arguments(self, parser):
-        parser.add_argument("pdf_path", type=str, help="Path to the PDF file")
-        parser.add_argument("--out_path", required=False, type=str, default="ra_orgs_clean.json",
-                            help="Output JSON path")
-        parser.add_argument('--insert_to_db', required=False, type=bool, default=False, help='Insert to DB')
+        parser.add_argument(
+            "--insert_to_db",
+            action="store_true",
+            help="Write to the DB (otherwise a dry-run count is printed).",
+        )
 
     def handle(self, *args, **options):
-        html_path = options["pdf_path"]
-        out_path = options["out_path"]
-        output = parse_pdf_to_json(html_path, out_path)
+        data = _load_fixture()
+        rows = [
+            r
+            for r in data
+            if r.get("organization_name")
+            and r["organization_name"] != HEADER_ROW
+            and r.get("addresses")
+        ]
 
-        if options["insert_to_db"]:
-            insert_to_db(output)
+        if not options["insert_to_db"]:
+            self.stdout.write(f"DRY RUN: would seed {len(rows)} DOJ-recognized organizations.")
+            return
+
+        created = updated = enriched = 0
+        index = build_org_index()
+        for row in rows:
+            name = row["organization_name"]
+            addresses = row.get("addresses", [])
+            slug = slugify(name[:50])
+            primary = addresses[0]
+            region = region_code_for(primary.get("state"))
+
+            phones = []
+            for addr in addresses:
+                phone = (addr.get("phone_number") or "").strip()
+                if phone and phone not in phones:
+                    phones.append(phone)
+
+            org, origin = resolve_org(name, slug, region, index)
+
+            if origin == "foreign":
+                # Matched a curated (or otherwise richer) row: add only the DOJ
+                # trust signals, never clobber its name/type/description/services.
+                org.accreditation = org.accreditation or "DOJ-recognized"
+                org.phones = union_list(org.phones, phones)
+                org.source_url = org.source_url or SOURCE_URL
+                org.is_active = True
+                org.save()
+                enriched += 1
+                continue
+
+            # Own or new row: fully (re)populate from the roster.
+            org.name = name
+            org.organization_type = OrganizationType.COMMUNITY_ORGANIZATION
+            org.accreditation = "DOJ-recognized"
+            org.fee_model = "low-cost"  # RA orgs may charge only nominal fees.
+            org.phones = phones
+            org.country = "US"
+            org.source_url = SOURCE_URL
+            org.is_active = True
+            org.address = upsert_address(
+                org.address,
+                line1=primary.get("line1", ""),
+                city=primary.get("city", ""),
+                region=primary.get("state"),
+                postal_code=primary.get("postal_code", ""),
+                address_name=primary.get("address_name") or "Primary Address",
+            )
+            org.save()
+            index_org(index, org, region)
+
+            created += origin == "new"
+            updated += origin == "own"
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"RA orgs: {created} created, {updated} updated, {enriched} enriched existing"
+            )
+        )

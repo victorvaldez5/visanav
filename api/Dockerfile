@@ -21,6 +21,10 @@ RUN poetry config virtualenvs.create false \
  && poetry install --only main --no-root --no-interaction --no-ansi
 # Now copy the application code
 COPY ./api /app
+# Bring in the curated resource corpus next to the app so the `load_resources`
+# management command can find data/ inside the container (see SEED_DIRECTORY in
+# entrypoint.sh). Tiny (~100K) and resolved via repo_data_dir()'s upward search.
+COPY ./data /app/data
 
 # Development stage: includes autoreload and dev server
 FROM base AS development

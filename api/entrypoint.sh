@@ -4,6 +4,21 @@ set -e
 # Apply database migrations
 python manage.py migrate --no-input
 
+# Optionally seed the public-resources directory. The seed commands are
+# idempotent (upsert + cross-source dedup), so this is safe to leave on, but it
+# is gated behind SEED_DIRECTORY=1 to keep normal boots fast. Order matters:
+# load_resources first so curated data/ rows win, then the DOJ org rosters enrich
+# them, and finally the accredited-rep roster links to the seeded orgs. Seeding
+# failure is non-fatal — the web process still starts.
+if [ "${SEED_DIRECTORY:-}" = "1" ]; then
+  echo "SEED_DIRECTORY=1: seeding public-resources directory..."
+  python manage.py load_resources "${SEED_COUNTRY:-us}" \
+    && python manage.py extract_ra_orgs --insert_to_db \
+    && python manage.py extract_probono --insert_to_db \
+    && python manage.py extract_ra_reps --insert_to_db \
+    || echo "WARNING: directory seeding failed; continuing boot."
+fi
+
 # Collect static files
 python manage.py collectstatic --no-input
 
