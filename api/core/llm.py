@@ -216,7 +216,10 @@ def _safe_url(url: Optional[str]) -> Optional[str]:
 
     A source_url flows to the UI as a clickable citation href. The corpus is
     curated, but defense-in-depth: never let a ``javascript:``/``data:`` (or any
-    other-scheme) URL from a chunk become something the user can click.
+    other-scheme) URL from a chunk become something the user can click. The
+    client mirrors this in SourcesList.vue (``safeHref``): both require an
+    absolute http(s) URL and reject everything else, so a non-http(s) value is
+    nulled here and independently refused there.
     """
     if not url:
         return None

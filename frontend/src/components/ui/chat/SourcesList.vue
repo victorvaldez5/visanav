@@ -13,7 +13,11 @@ const items = computed(() => (props.sources ?? []).filter((s) => s && (s.title |
 function safeHref(url?: string | null): string | null {
   if (!url) return null;
   try {
-    const parsed = new URL(url, window.location.origin);
+    // Parse as an ABSOLUTE URL (no origin base): a citation must carry its own
+    // http(s) scheme. This mirrors the server's _safe_url (api/core/llm.py) so
+    // the client is an independent gate — it never resolves a scheme-less or
+    // relative string into a same-origin link, even if one reached it unsanitized.
+    const parsed = new URL(url);
     return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : null;
   } catch {
     return null;
