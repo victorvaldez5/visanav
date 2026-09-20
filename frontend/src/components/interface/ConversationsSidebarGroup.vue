@@ -45,7 +45,9 @@ async function getConversations() {
 
 <template>
   <SidebarGroup v-if="conversations.length > 0">
-    <SidebarGroupLabel class="text-sm font-semibold leading-loose tracking-wide">Conversations</SidebarGroupLabel>
+    <SidebarGroupLabel class="text-sm font-semibold leading-loose tracking-wide">
+      Conversations
+    </SidebarGroupLabel>
     <SidebarGroupContent>
       <SidebarMenu>
         <SidebarMenuItem

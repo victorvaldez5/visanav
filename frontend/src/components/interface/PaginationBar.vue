@@ -17,11 +17,20 @@ defineProps<{
 </script>
 
 <template>
-  <Pagination v-slot="{ page }" :items-per-page="itemsPerPage || 50" :total="total" :default-page="currentPage" show-edges>
+  <Pagination
+    v-slot="{ page }"
+    :items-per-page="itemsPerPage || 50"
+    :total="total"
+    :default-page="currentPage"
+    show-edges
+  >
     <PaginationContent v-slot="{ items }">
       <PaginationPrevious @click="$emit('page-change', page - 1)" />
 
-      <template v-for="(item, index) in items" :key="index">
+      <template
+        v-for="(item, index) in items"
+        :key="index"
+      >
         <PaginationItem
           v-if="item.type === 'page'"
           :value="item.value"

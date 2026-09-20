@@ -56,7 +56,11 @@ const menuItems = [
 <template>
   <Sidebar>
     <SidebarHeader class="flex flex-row items-center justify-between py-6 px-4">
-      <img alt="Visanav logo" class="h-7 w-fit" :src="isDark ? logoDark : logoLight">
+      <img
+        alt="Visanav logo"
+        class="h-7 w-fit"
+        :src="isDark ? logoDark : logoLight"
+      >
       <ThemeToggle />
     </SidebarHeader>
     <SidebarContent class="py-2">
@@ -65,15 +69,18 @@ const menuItems = [
           <SidebarMenu>
             <SidebarMenuItem
               v-for="item in menuItems"
-              class="mb-2"
               :key="item.title"
+              class="mb-2"
             >
               <SidebarMenuButton
                 as-child
                 :is-active="item.href === route.path"
               >
                 <RouterLink :to="item.href">
-                  <Icon :name="item.icon" class="w-4 h-4"></Icon>
+                  <Icon
+                    :name="item.icon"
+                    class="w-4 h-4"
+                  />
                   <span class="text-base">{{ item.title }}</span>
                 </RouterLink>
               </SidebarMenuButton>
@@ -89,7 +96,10 @@ const menuItems = [
           <DropdownMenu v-if="isAuthenticated">
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton class="py-7 px-2 bg-background items-center gap-3">
-                <div v-if="isAuthenticated" class="flex items-center">
+                <div
+                  v-if="isAuthenticated"
+                  class="flex items-center"
+                >
                   <Avatar>
                     <AvatarImage
                       src="https://github.com/unovue.png"
@@ -98,8 +108,12 @@ const menuItems = [
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                   <div class="flex flex-col px-2">
-                    <div class="text-lg font-medium">{{ username }}</div>
-                    <div class="text-xs  font-normal">{{ userEmail }}</div>
+                    <div class="text-lg font-medium">
+                      {{ username }}
+                    </div>
+                    <div class="text-xs  font-normal">
+                      {{ userEmail }}
+                    </div>
                   </div>
                 </div>
                 <template v-else>
@@ -113,12 +127,18 @@ const menuItems = [
               side="top"
               class="w-3xs"
             >
-              <DropdownMenuItem as-child class="text-base">
+              <DropdownMenuItem
+                as-child
+                class="text-base"
+              >
                 <RouterLink :to="`/profile/${userId}`">
                   Account
                 </RouterLink>
               </DropdownMenuItem>
-              <DropdownMenuItem @click="logout()" class="text-base">
+              <DropdownMenuItem
+                class="text-base"
+                @click="logout()"
+              >
                 <span>Sign out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -130,7 +150,10 @@ const menuItems = [
               </RouterLink>
             </SidebarMenuButton>
             <SidebarMenuButton as-child>
-              <RouterLink to="login" class="sidebar-accent-foreground">
+              <RouterLink
+                to="login"
+                class="sidebar-accent-foreground"
+              >
                 Login
               </RouterLink>
             </SidebarMenuButton>

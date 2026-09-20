@@ -1,6 +1,14 @@
 <template>
-  <span v-if="svg" class="rfui-icon" v-html="svg" aria-hidden="true" />
-  <span v-else class="rfui-icon-missing">⚠️ Icon "{{ name }}" not found</span>
+  <span
+    v-if="svg"
+    class="rfui-icon"
+    aria-hidden="true"
+    v-html="svg"
+  />
+  <span
+    v-else
+    class="rfui-icon-missing"
+  >⚠️ Icon "{{ name }}" not found</span>
 </template>
 
 <script setup lang="ts">

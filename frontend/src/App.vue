@@ -6,7 +6,10 @@
       <BetaBanner />
       <header class="flex py-4 px-5 gap-3">
         <SidebarTrigger />
-        <Separator orientation="vertical" class="mr-2 h-5" />
+        <Separator
+          orientation="vertical"
+          class="mr-2 h-5"
+        />
       </header>
       <RouterView />
       <slot />
