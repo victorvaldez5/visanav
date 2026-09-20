@@ -17,7 +17,7 @@ from django.core.cache import cache
 from django.test import AsyncClient, override_settings
 from django.urls import reverse
 from pydantic_ai import Agent, models
-from pydantic_ai.models.function import FunctionModel
+from pydantic_ai.models.function import DeltaToolCall, FunctionModel
 from rest_framework_simplejwt.tokens import AccessToken
 
 from conversation import streaming
@@ -40,6 +40,27 @@ async def _stream_reply(messages, info):
 
 def _fake_agent():
     return Agent(FunctionModel(stream_function=_stream_reply), deps_type=Deps)
+
+
+async def _stream_tool_call(messages, info):
+    """A FunctionModel stream function that never stops calling a tool.
+
+    Every model turn streams one `ping` tool call, so the agent's tool-calling
+    loop never terminates on its own — the only thing that can end the run is a
+    usage limit.
+    """
+    yield {0: DeltaToolCall(name="ping", json_args="{}", tool_call_id=uuid.uuid4().hex)}
+
+
+def _tool_looping_agent():
+    """An agent whose model calls `ping` forever; bound it with a tool-calls limit."""
+    agent = Agent(FunctionModel(stream_function=_stream_tool_call), deps_type=Deps)
+
+    @agent.tool_plain
+    def ping() -> str:
+        return "pong"
+
+    return agent
 
 
 @pytest.fixture
@@ -239,3 +260,48 @@ async def test_streams_frames_and_persists_the_turn(anon_conv, use_fake_agent):
     assert count >= 1
     refreshed = await sync_to_async(Conversation.objects.get)(id=anon_conv.id)
     assert refreshed.expires_at is not None  # retention window was touched
+
+
+# --- per-turn agent budget ---------------------------------------------------
+
+
+async def test_tool_calls_limit_breach_ends_with_content_free_error(anon_conv, monkeypatch):
+    """A tool-calls-limit breach ends the turn with the generic error frame.
+
+    CHAT_TOOL_CALLS_LIMIT caps how many tools a single run may call; a runaway or
+    adversarial loop trips it and pydantic-ai raises UsageLimitExceeded from
+    inside the streaming graph. The view must turn that into the content-free
+    `error` frame — never a `done`, and never echoing the library's limit message
+    (which embeds the internal counters) to the client. This is a regression
+    guard: the breach reaches the error path through a pydantic-ai internal
+    (the tool-node error is re-raised on the next graph advance, past the view's
+    best-effort tool-status `except`), so a library bump could silently drop it.
+    """
+    agent = _tool_looping_agent()
+    monkeypatch.setattr(streaming, "get_agent", lambda: agent)
+    monkeypatch.setattr(models, "ALLOW_MODEL_REQUESTS", False)
+
+    # Isolate the tool-calls cap: disable the request/token caps so the ONLY
+    # thing that can stop the infinite ping loop is CHAT_TOOL_CALLS_LIMIT.
+    with override_settings(
+        CHAT_TOOL_CALLS_LIMIT=1, CHAT_REQUEST_LIMIT=0, CHAT_TOTAL_TOKENS_LIMIT=0
+    ):
+        resp = await AsyncClient().post(
+            CHAT_URL, data=body(anon_conv.uuid), content_type="application/json"
+        )
+        assert resp.status_code == 200
+        stream = await drain(resp)
+
+    # The turn ends with the generic, content-free error frame...
+    assert "event: error" in stream
+    assert '"detail": "The assistant failed to respond. Please try again."' in stream
+    # ...not a success, and without leaking the library's limit message/counters.
+    assert "event: done" not in stream
+    assert "tool_calls_limit" not in stream
+    assert "UsageLimitExceeded" not in stream
+
+    # A breached turn persists no partial/garbage assistant message.
+    count = await sync_to_async(
+        Message.objects.filter(conversation_id=anon_conv.id).count
+    )()
+    assert count == 0
