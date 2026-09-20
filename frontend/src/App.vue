@@ -4,9 +4,10 @@
     <AppSidebar />
     <SidebarInset>
       <BetaBanner />
-      <header class="flex py-4 px-5 gap-3">
+      <header class="flex items-center py-4 px-5 gap-3">
         <SidebarTrigger />
         <Separator orientation="vertical" class="mr-2 h-5" />
+        <ThemeToggle class="ml-auto" />
       </header>
       <RouterView />
       <slot />
@@ -20,6 +21,8 @@ import {Separator} from "@/components/ui/separator";
 import {RouterView} from 'vue-router'
 import AppSidebar from "@/components/interface/AppSidebar.vue";
 import BetaBanner from "@/components/interface/BetaBanner.vue";
+import ThemeToggle from "@/components/interface/ThemeToggle.vue";
+import "@/composables/useTheme";
 import {breakpointsTailwind, useBreakpoints} from "@vueuse/core";
 import {provide} from "vue";
 import {Toaster} from 'vue-sonner';

@@ -22,6 +22,11 @@ import { useAuthStore } from "@/stores/useAuthStore.ts";
 import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
+import { useTheme } from "@/composables/useTheme";
+import logoLight from "@/assets/VisaNav-Horizontal-Main.svg";
+import logoDark from "@/assets/VisaNav-Horizontal-OnDark.svg";
+
+const { isDark } = useTheme();
 
 const authStore = useAuthStore();
 const { isAuthenticated, username, userId,  userEmail} = storeToRefs(authStore);
@@ -50,7 +55,7 @@ const menuItems = [
 <template>
   <Sidebar>
     <SidebarHeader class="flex flex-row justify-between align-baseline py-6 px-4">
-      <img alt="Visanav logo" class="h-7 w-fit" src="@/assets/VisaNav-Horizontal-Main.svg">
+      <img alt="Visanav logo" class="h-7 w-fit" :src="isDark ? logoDark : logoLight">
     </SidebarHeader>
     <SidebarContent class="py-2">
       <SidebarGroup>
