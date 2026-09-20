@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import {computed} from "vue";
 import {useRoute, useRouter} from "vue-router";
+import {useI18n} from "vue-i18n";
 import AIResponse from "@/components/ui/chat/AIResponse.vue";
+import SourcesList from "@/components/ui/chat/SourcesList.vue";
+import ConversationDisclaimer from "@/components/interface/ConversationDisclaimer.vue";
 import UserPromptInput from "@/components/interface/UserPromptInput.vue";
 import {useConversation} from "@/composables/useConversations.ts";
+import {describeScrub} from "@/lib/pii";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
 import {storeToRefs} from "pinia";
 import {toast} from "vue-sonner";
 
 const router = useRouter();
 const route = useRoute();
+const {t, locale} = useI18n();
 const authStore = useAuthStore();
 const {userId} = storeToRefs(authStore);
 
@@ -19,17 +24,25 @@ const conversationUuid = computed<string | null>(() => {
   return param ? String(param) : null;
 });
 
-const {messageHistory, createConversation, postMessage, isStreaming, streamStatus} =
-    useConversation(conversationUuid);
+const {
+  messageHistory,
+  createConversation,
+  postMessage,
+  isStreaming,
+  streamStatus,
+  scrubNotices,
+} = useConversation(conversationUuid);
 
-const STATUS_LABELS: Record<string, string> = {
-  thinking: "Thinking for a good answer...",
-  researching: "Researching official sources...",
-  writing: "Writing your answer...",
-};
-const statusLabel = computed(
-    () => STATUS_LABELS[streamStatus.value ?? "thinking"] ?? "Thinking...",
-);
+// Server steps: "thinking" | "researching" | "writing" -> localized label.
+const statusLabel = computed(() => t(`chat.${streamStatus.value ?? "thinking"}`));
+
+// Per-message "we removed X before sending" notice, keyed on the (scrubbed)
+// content that is actually shown/persisted. Empty string when nothing was
+// scrubbed for that message.
+function scrubNoticeFor(content: string): string {
+  const summary = scrubNotices.value.get(content);
+  return summary ? describeScrub(summary, locale.value as "en" | "es") : "";
+}
 
 async function onSubmit(prompt: string) {
   try {
@@ -56,25 +69,32 @@ async function onSubmit(prompt: string) {
     class="max-w-3xl mx-auto flex flex-col h-screen"
   >
     <div class="flex-1 overflow-y-scroll my-4 mb-36 px-4">
+      <!-- Short disclaimer at the start of the conversation -->
+      <ConversationDisclaimer class="mb-4" />
       <!-- Render the chat history -->
       <div
         v-for="(message, i) in messageHistory"
         :key="i"
       >
-        <div
-          v-if="message.parts[0].part_kind === 'user-prompt'"
-          class="p-3 bg-blue-100 rounded-lg text-right my-2"
-        >
-          {{ message.parts[0].content }}
-        </div>
+        <template v-if="message.parts[0].part_kind === 'user-prompt'">
+          <div class="p-3 bg-blue-100 rounded-lg text-right my-2">
+            {{ message.parts[0].content }}
+          </div>
+          <p
+            v-if="scrubNoticeFor(message.parts[0].content)"
+            class="text-right text-xs text-gray-500 -mt-1 mb-2 px-1"
+          >
+            {{ scrubNoticeFor(message.parts[0].content) }}
+          </p>
+        </template>
         <div
           v-else-if="message.parts[0].part_kind === 'text'"
           class="p-3 text-left my-2"
         >
-          <AIResponse
-            v-if="message.parts[0].content"
-            :source="message.parts[0].content"
-          />
+          <template v-if="message.parts[0].content">
+            <AIResponse :source="message.parts[0].content" />
+            <SourcesList :sources="message.sources" />
+          </template>
           <div
             v-else-if="isStreaming"
             class="text-body font-semibold text-transparent bg-clip-text bg-gradient-to-r to-gray-300 via-gray-500 from-gray-800 bg-[length:200%_100%] animate-shimmer"
@@ -98,10 +118,10 @@ async function onSubmit(prompt: string) {
       v-if="messageHistory?.length === 0"
       class="mb-4 text-center text-2xl font-medium tracking-tight"
     >
-      Hello, I am here to answer all of your Visa and Immigration
-      questions!
+      {{ $t("chat.welcome") }}
     </h3>
     <UserPromptInput @submit-prompt="onSubmit($event)" />
+    <ConversationDisclaimer class="mt-4" />
   </div>
 </template>
 <style scoped>

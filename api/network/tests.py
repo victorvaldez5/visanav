@@ -49,10 +49,11 @@ def test_resource_lookup_filters_pro_bono_and_region():
     _make_org("paid-firm-tx", pro_bono=False, fee_model="paid")
 
     ctx = SimpleNamespace(deps=SimpleNamespace(namespace="us"))
-    results = asyncio.run(resource_lookup(ctx, region="Arizona", pro_bono_only=True))
+    result = asyncio.run(resource_lookup(ctx, region="Arizona", pro_bono_only=True))
 
-    assert len(results) == 1
-    match = results[0]
+    assert result["count"] == 1
+    assert result["note"] is None
+    match = result["matches"][0]
     assert match["name"] == "Florence Project"
     assert match["pro_bono"] is True
     assert match["region"] == "Arizona"
@@ -61,14 +62,60 @@ def test_resource_lookup_filters_pro_bono_and_region():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_resource_lookup_filters_by_service():
+def test_resource_lookup_region_accepts_postal_code():
+    """A 2-letter state code resolves the same as the spelled-out name."""
+    addr = _arizona_address()
+    _make_org("florence-project", pro_bono=True, address=addr)
+
+    ctx = SimpleNamespace(deps=SimpleNamespace(namespace="us"))
+    result = asyncio.run(resource_lookup(ctx, region="AZ"))
+
+    assert [m["name"] for m in result["matches"]] == ["Florence Project"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_filters_by_service_when_tagged():
+    """When some org IS tagged for the service, only tagged orgs come back."""
     _make_org("asylum-org", services=["asylum"])
     _make_org("family-org", services=["family-petitions"])
 
     ctx = SimpleNamespace(deps=SimpleNamespace(namespace="us"))
-    results = asyncio.run(resource_lookup(ctx, service="asylum"))
+    result = asyncio.run(resource_lookup(ctx, service="asylum"))
 
-    assert [m["name"] for m in results] == ["Asylum Org"]
+    assert [m["name"] for m in result["matches"]] == ["Asylum Org"]
+    assert result["note"] is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_broadens_when_service_untagged():
+    """Roster data carries no service tags: rather than return nothing, the
+    lookup broadens to general help and flags it in `note` (the fix for Javi
+    reciting provider contacts from memory when a service filter emptied out)."""
+    _make_org("general-help", pro_bono=True, phones=["+1-555-000-0000"])
+
+    ctx = SimpleNamespace(deps=SimpleNamespace(namespace="us"))
+    result = asyncio.run(resource_lookup(ctx, service="asylum"))
+
+    assert [m["name"] for m in result["matches"]] == ["General Help"]
+    assert result["note"] and "asylum" in result["note"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_orders_contactable_pro_bono_first():
+    """Entries that can actually be contacted, and pro-bono help, rank first."""
+    _make_org("no-contact-nonprofit", pro_bono=True)
+    _make_org("paid-with-phone", pro_bono=False, phones=["+1-555-111-2222"])
+    _make_org("probono-with-phone", pro_bono=True, phones=["+1-555-333-4444"])
+
+    ctx = SimpleNamespace(deps=SimpleNamespace(namespace="us"))
+    result = asyncio.run(resource_lookup(ctx))
+
+    # contactable+pro-bono, then contactable, then the no-contact org last.
+    assert [m["name"] for m in result["matches"]] == [
+        "Probono With Phone",
+        "Paid With Phone",
+        "No Contact Nonprofit",
+    ]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -76,9 +123,10 @@ def test_resource_lookup_excludes_inactive():
     _make_org("inactive-org", is_active=False)
 
     ctx = SimpleNamespace(deps=SimpleNamespace(namespace="us"))
-    results = asyncio.run(resource_lookup(ctx))
+    result = asyncio.run(resource_lookup(ctx))
 
-    assert results == []
+    assert result["matches"] == []
+    assert result["count"] == 0
 
 
 # --- load_resources command ----------------------------------------------

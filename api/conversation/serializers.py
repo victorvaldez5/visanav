@@ -4,9 +4,11 @@ from .models import Conversation, Message
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    # parts is an EncryptedJSONField (stored as text); declare it explicitly so
-    # DRF serializes the decrypted native JSON rather than a stringified column.
+    # parts/sources are EncryptedJSONField (stored as text); declare them
+    # explicitly so DRF serializes the decrypted native JSON rather than a
+    # stringified column.
     parts = serializers.JSONField()
+    sources = serializers.JSONField(required=False)
 
     class Meta:
         model = Message
@@ -18,6 +20,7 @@ class MessageSerializer(serializers.ModelSerializer):
             "instructions",
             "kind",
             "parts",
+            "sources",
         ]
 
 

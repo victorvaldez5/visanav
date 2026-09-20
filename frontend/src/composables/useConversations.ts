@@ -1,9 +1,12 @@
 // src/composables/useConversation.ts
 import {onUnmounted, type Ref, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
 import type {Conversation} from "@/services/conversationService";
 import {conversationService} from "@/services/conversationService";
 import type {MessagePayload} from "@/services/messageService";
 import {messageService} from "@/services/messageService";
+import {usePiiScrubber} from "@/composables/usePiiScrubber";
+import type {PiiSummary} from "@/lib/pii";
 import {useRouter} from "vue-router";
 import {toast} from "vue-sonner";
 
@@ -17,6 +20,14 @@ export function useConversation(
     const conversationKey = ref<string | null>(null);
     const messageHistory = ref<any[]>([]);
     const router = useRouter();
+
+    // Client-side PII scrubbing. Messages are scrubbed here, before anything
+    // leaves the browser. `scrubNotices` maps a sent (already-scrubbed) message
+    // to the counts of what was removed, so the UI can show a per-message notice
+    // (keyed by content so it survives the post-send history refresh).
+    const {locale} = useI18n();
+    const {scrub} = usePiiScrubber(locale);
+    const scrubNotices = ref(new Map<string, PiiSummary>());
 
     // --- streaming state ---
     const isStreaming = ref(false);
@@ -73,15 +84,20 @@ export function useConversation(
     async function postMessage(prompt: string) {
         if (!prompt.trim() || conversationKey.value == null) return;
 
+        // Scrub PII in the browser BEFORE the message leaves the client, and send
+        // ONLY the scrubbed text. The raw draft is never stored or transmitted.
+        const {text: scrubbed, summary, changed} = scrub(prompt);
+        if (changed) scrubNotices.value.set(scrubbed, summary);
+
         const payload: MessagePayload = {
-            user_message: prompt,
+            user_message: scrubbed,
             conversation: conversationKey.value,
         };
 
-        // optimistic render: user bubble + growing assistant bubble
-        messageHistory.value.push({parts: [{part_kind: "user-prompt", content: prompt}]});
+        // optimistic render: user bubble (scrubbed) + growing assistant bubble
+        messageHistory.value.push({parts: [{part_kind: "user-prompt", content: scrubbed}]});
         const assistantIndex =
-            messageHistory.value.push({parts: [{part_kind: "text", content: ""}]}) - 1;
+            messageHistory.value.push({parts: [{part_kind: "text", content: ""}], sources: []}) - 1;
 
         isStreaming.value = true;
         streamStatus.value = "thinking";
@@ -98,6 +114,10 @@ export function useConversation(
                     onDelta: (text) => {
                         // mutate through the reactive proxy so Vue tracks it
                         messageHistory.value[assistantIndex].parts[0].content += text;
+                    },
+                    onSources: (sources) => {
+                        // Official citations for this answer; rendered under it.
+                        messageHistory.value[assistantIndex].sources = sources;
                     },
                     onDone: () => {
                         succeeded = true;
@@ -142,6 +162,8 @@ export function useConversation(
         messageHistory,
         isStreaming,
         streamStatus,
+        // maps a sent (scrubbed) message's content -> counts of PII removed
+        scrubNotices,
 
         // actions
         createConversation,

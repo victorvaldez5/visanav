@@ -14,9 +14,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 MAILTRAP_API_KEY = os.environ.get("MAILTRAP_API_KEY")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "DEBUG"},
-}
+# Verbose app logs in dev, but keep base.py's third-party logger floors so even a
+# DEBUG root never dumps LLM request/response bodies (see base.py LOGGING).
+LOGGING["root"]["level"] = "DEBUG"

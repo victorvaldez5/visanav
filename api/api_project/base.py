@@ -107,6 +107,50 @@ CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("CHAT_RATE_LIMIT_PER_MINUTE") or
 # Hard cap on a single chat message so one request can't burn a huge prompt.
 CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS") or "4000")
 
+# ── Logging: privacy-first ───────────────────────────────────────────────────
+# VisaNav serves a vulnerable population, so logs must NEVER contain the text of
+# a user's question or the model's answer. Two rules enforce that:
+#   1. Application code logs only content-free diagnostics — request ids, latency,
+#      error codes, retrieval scores, retrieved document ids. It never logs
+#      message text, the (model-generated) search query, IP addresses, or user
+#      agents. (The chat endpoint uses the client IP only as an in-memory
+#      rate-limit key; abuse events log a salted hash of it, never the raw IP.)
+#   2. The Anthropic/OpenAI SDKs and the HTTP clients they use log the request
+#      body (which contains the user's message and the model's reply) at DEBUG.
+#      They are pinned to an INFO/WARNING floor below, so raising the root level
+#      to DEBUG to troubleshoot can never leak prompt/completion content through
+#      them. The one bypass is the SDKs' own ANTHROPIC_LOG / OPENAI_LOG=debug env
+#      vars, which force their own loggers to DEBUG at import — so never set those
+#      in any environment that handles real user data.
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+    },
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        # The LLM SDKs log the request body (user message + model reply) via
+        # `log.debug("Request options: ...")` under their own logger; pinning to
+        # INFO drops that DEBUG line regardless of the root level. The HTTP
+        # clients log request URLs/lifecycle (not bodies) — quieted for cleaner
+        # logs. NOTE: the Anthropic SDK vendors its HTTP stack and logs it under
+        # httpx2/httpcore2, not httpx/httpcore, so both spellings are pinned.
+        "anthropic": {"level": "INFO", "propagate": True},
+        "openai": {"level": "INFO", "propagate": True},
+        "httpx": {"level": "WARNING", "propagate": True},
+        "httpcore": {"level": "WARNING", "propagate": True},
+        "httpx2": {"level": "WARNING", "propagate": True},
+        "httpcore2": {"level": "WARNING", "propagate": True},
+        "urllib3": {"level": "WARNING", "propagate": True},
+    },
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
@@ -171,6 +215,13 @@ VOYAGE_API_KEY = os.environ.get("VOYAGE_API_KEY")
 # Country whose curated corpus the chat agent searches. Replaces the old Pinecone
 # namespace; matches KnowledgeChunk.country rows written by `manage.py ingest`.
 KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
+# Retrieval confidence floor. semantic_search scores matches as cosine similarity
+# in [0,1] (1 = identical). A match below this is treated as "not a confident
+# official source": its text is withheld from the model and Javi must fall back
+# to pointing at the official site / a representative rather than answering from
+# general knowledge. 0.5 is a conservative starting point for voyage-3; tune it
+# against the retrieval scores now logged by semantic_search (see core/llm.py).
+RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE") or "0.5")
 # Where the ingest command reads curated Markdown from. Defaults to the repo's
 # data/countries (reachable from a full checkout; ingestion is not run in the
 # slim prod web image).

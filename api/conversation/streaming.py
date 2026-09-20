@@ -5,8 +5,10 @@ chat turn is almost entirely I/O-bound (waiting on OpenAI / Pinecone), a single
 async view can hold many concurrent in-flight turns cheaply, and stream tokens
 back over Server-Sent Events (SSE) as they are produced.
 """
+import hashlib
 import json
 import logging
+import time
 import uuid
 
 from asgiref.sync import sync_to_async
@@ -43,6 +45,19 @@ def _client_ip(request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _abuse_fingerprint(identity: str) -> str:
+    """A salted, truncated hash of a rate-limit identity, safe to log.
+
+    We log rate-limit trips so repeated abuse from one client can be spotted, but
+    we never log the raw client IP (see base.py LOGGING). Salting with SECRET_KEY
+    keeps the value correlatable within this deployment while not being
+    reversible to an IP address.
+    """
+    return hashlib.sha256(
+        f"{settings.SECRET_KEY}:{identity}".encode()
+    ).hexdigest()[:12]
 
 
 @sync_to_async
@@ -90,12 +105,17 @@ def _load_history(conversation_id):
 
 
 @sync_to_async
-def _persist_messages(conversation_id, new_messages):
+def _persist_messages(conversation_id, new_messages, sources=None):
     """Persist the new messages produced by an agent run (user request +
-    tool calls + assistant response), mirroring the old task's shape."""
+    tool calls + assistant response), mirroring the old task's shape.
+
+    ``sources`` (the confident citations collected during the turn) is attached
+    to the final assistant response so the UI can render them on reload too.
+    """
+    last_response = None
     for message in new_messages:
         if message.get("kind") == "response":
-            Message.objects.create(
+            last_response = Message.objects.create(
                 conversation_id=conversation_id,
                 parts=message.get("parts"),
                 timestamp=message.get("timestamp"),
@@ -109,6 +129,9 @@ def _persist_messages(conversation_id, new_messages):
                 instructions=message.get("instructions"),
                 kind=message.get("kind"),
             )
+    if sources and last_response is not None:
+        last_response.sources = sources
+        last_response.save(update_fields=["sources"])
 
 
 @sync_to_async
@@ -194,8 +217,19 @@ async def chat_stream(request):
     except (InvalidToken, TokenError):
         return JsonResponse({"detail": "Invalid or expired token"}, status=401)
 
+    # A short, content-free id to correlate this turn across logs and with the
+    # client (returned as X-Request-ID). It identifies nothing about the user.
+    request_id = uuid.uuid4().hex[:12]
+
     identity = f"user:{user.id}" if user is not None else f"ip:{_client_ip(request)}"
     if not await _check_rate_limit(identity, settings.CHAT_RATE_LIMIT_PER_MINUTE):
+        # Abuse-prevention signal only: request id + a salted hash of the
+        # identity, never the raw IP or any message text.
+        logger.warning(
+            "chat rate limit exceeded req=%s client=%s",
+            request_id,
+            _abuse_fingerprint(identity),
+        )
         return JsonResponse(
             {"detail": "Rate limit exceeded. Please wait a moment and try again."},
             status=429,
@@ -220,6 +254,7 @@ async def chat_stream(request):
         # user's own country could be threaded through in future.
         deps = Deps(country=settings.KNOWLEDGE_COUNTRY)
         started_text = False
+        start = time.monotonic()
         try:
             async with get_agent().iter(
                 user_message, message_history=history, deps=deps
@@ -256,12 +291,30 @@ async def chat_stream(request):
                             )
 
             new_messages = json.loads(run.result.new_messages_json())
-            await _persist_messages(conversation_id, new_messages)
+            await _persist_messages(conversation_id, new_messages, deps.sources)
             await _touch_retention(conversation_id)
+            # Surface the official sources that grounded the answer as clickable
+            # citations. Metadata only (title/url/last_verified/score) — no text.
+            if deps.sources:
+                yield _sse("sources", {"sources": deps.sources})
+            logger.info(
+                "chat turn ok req=%s latency_ms=%d sources=%d",
+                request_id,
+                int((time.monotonic() - start) * 1000),
+                len(deps.sources),
+            )
             yield _sse("done", {"conversation": str(conversation_uuid)})
-        except Exception:  # noqa: BLE001 - surface a clean error, log the rest
+        except Exception as exc:  # noqa: BLE001 - surface a clean error, log the rest
+            # Content-free: request id, latency, and the error type. We do NOT log
+            # the conversation uuid (it is a bearer key for anonymous chats) or
+            # any message text. The traceback (exc_info) is code-level; a rare
+            # third-party error message could echo content — reduce this to
+            # error-type-only if that residual risk matters to you.
             logger.exception(
-                "chat stream failed for conversation %s", conversation_uuid
+                "chat turn failed req=%s latency_ms=%d error=%s",
+                request_id,
+                int((time.monotonic() - start) * 1000),
+                type(exc).__name__,
             )
             yield _sse(
                 "error",
@@ -273,4 +326,5 @@ async def chat_stream(request):
     )
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"  # disable proxy buffering (nginx, etc.)
+    response["X-Request-ID"] = request_id  # content-free correlation id
     return response

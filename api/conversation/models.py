@@ -80,6 +80,11 @@ class Message(models.Model):
     model_name = models.CharField(max_length=255, blank=True, null=True)
     instructions = models.TextField(blank=True, null=True)
     kind = models.CharField(max_length=100)
+    # Official sources cited for an assistant reply (title, url, last_verified,
+    # score) — the retrieval results that grounded the answer, shown in the UI as
+    # clickable citations. Encrypted at rest like `parts` since which sources a
+    # turn cited can hint at what the user asked; only response messages set it.
+    sources = EncryptedJSONField(blank=True, null=True)
 
     def __str__(self):
         return f"Message {self.pk} ({self.kind})"
