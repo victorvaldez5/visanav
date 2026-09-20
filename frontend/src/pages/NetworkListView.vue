@@ -72,7 +72,7 @@ async function handleLoadPage(newPage: number) {
   <div class="px-5 pb-5">
     <div class="md:flex md:items-center md:justify-between">
       <div class="min-w-0 flex-1">
-        <h2 class="text-2xl/7 font-normal text-gray-800 sm:truncate sm:text-3xl sm:tracking-tight">
+        <h2 class="text-2xl/7 font-normal text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
           Find free &amp; low-cost immigration help
         </h2>
         <p class="mt-1 text-sm text-muted-foreground">
