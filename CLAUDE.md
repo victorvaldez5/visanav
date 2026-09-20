@@ -92,6 +92,17 @@ and silently breaks env loading.** `config/.env.example` documents every variabl
 source of truth for what each service reads. (The `manage.py ingest` command reads env via
 Django settings; the standalone `data/scripts/ingest.py` is now dry-run-only and needs no env.)
 
+**Git-worktree footgun:** `config/.env` is gitignored, so it exists only in the checkout it was
+created in — a fresh `git worktree` starts with **no** env file, and every service then silently
+loads nothing (no error, just missing settings: a blank `DJANGO_SECRET_KEY`, absent API keys,
+etc.). Symlink it from the primary checkout before running anything in a worktree, from the
+worktree root:
+```bash
+ln -s "$(git worktree list --porcelain | sed -n 's/^worktree //p' | head -1)/config/.env" config/.env
+```
+(the primary checkout is the first `git worktree list` entry.) The symlink is itself gitignored,
+so it never shows in `git status` and must be recreated for each new worktree.
+
 ### Django settings are split by environment
 `api_project/base.py` holds shared settings; `dev.py` and `prod.py` import from it and override.
 `DJANGO_SETTINGS_MODULE` selects which (`manage.py` defaults to `api_project.dev`; production
