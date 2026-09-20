@@ -71,10 +71,6 @@
     --vn-rose-300: #ff8cba;
     --vn-rose-500: #e8368f;
 
-    /* Legacy Liberty Red — kept for legacy references only; do not use in new work */
-    --vn-orange-500: #ed4a21;
-
-
     --background: var(--vn-paper-100);
     --foreground: var(--vn-ocean-900);
     --card: var(--vn-paper-50);
@@ -117,6 +113,8 @@
     --reassure-foreground: var(--vn-sunflower-900);
     --status: var(--vn-sunflower-400);
     --status-foreground: var(--vn-ocean-950);
+    /* Link underline is always the sunflower line, in both themes. */
+    --link-decoration: var(--vn-sunflower-400);
     --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, sans-serif, system-ui;
     --font-serif: "Noto Serif", ui-serif, serif;
     --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
@@ -202,7 +200,7 @@
     --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
     --radius: 0.25rem;
 
-    /* Elevation (dark) — shadow plus a soft rim of light */
+    /* Elevation (dark) — shadow only; controls are flat at rest (no rim) */
     --elevation-1: 0 1px 2px rgba(0,0,0,0.3), 0 6px 16px -6px rgba(0,0,0,0.5);
     --elevation-1-control: 0 6px 14px -6px rgba(0,0,0,0.6);
     --elevation-2: 0 1px 1px rgba(0,0,0,0.4), 0 8px 16px -6px rgba(0,0,0,0.6);
@@ -266,8 +264,10 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-field: var(--field);
+    --color-field-placeholder: var(--field-placeholder);
     --color-field-invalid: var(--field-invalid);
     --color-raised: var(--raised);
+    --color-link-decoration: var(--link-decoration);
     --color-reassure: var(--reassure);
     --color-reassure-foreground: var(--reassure-foreground);
     --color-status: var(--status);

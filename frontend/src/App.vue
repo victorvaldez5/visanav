@@ -20,6 +20,8 @@ import {Separator} from "@/components/ui/separator";
 import {RouterView} from 'vue-router'
 import AppSidebar from "@/components/interface/AppSidebar.vue";
 import BetaBanner from "@/components/interface/BetaBanner.vue";
+// Eagerly initialize the app-wide light/dark theme at the root, so the
+// persisted/OS theme is applied to <html> regardless of which child renders.
 import "@/composables/useTheme";
 import {breakpointsTailwind, useBreakpoints} from "@vueuse/core";
 import {provide} from "vue";

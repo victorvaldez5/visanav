@@ -21,7 +21,7 @@ const forwardedProps = useForwardProps(delegatedProps)
     :data-size="size"
     v-bind="forwardedProps"
     :class="cn(
-      `border-transparent data-[placeholder]:text-[var(--field-placeholder)] [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:outline-none focus-visible:shadow-glow-focus aria-invalid:bg-field-invalid aria-invalid:shadow-glow-error flex w-fit items-center justify-between gap-2 rounded-lg border bg-field px-3 py-2 text-sm whitespace-nowrap shadow-elevation-1-control transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-55 data-[size=default]:h-10 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+      `border-transparent data-[placeholder]:text-field-placeholder [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:outline-none focus-visible:shadow-glow-focus aria-invalid:bg-field-invalid aria-invalid:shadow-glow-error flex w-fit items-center justify-between gap-2 rounded-lg border bg-field px-3 py-2 text-sm whitespace-nowrap shadow-elevation-1-control transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-55 data-[size=default]:h-10 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
       props.class,
     )"
   >
