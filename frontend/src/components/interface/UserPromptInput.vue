@@ -1,5 +1,5 @@
 <template>
-  <div class="border rounded-lg p-4">
+  <div class="rounded-lg p-4">
     <Textarea
       v-model="prompt"
       class="border-0"

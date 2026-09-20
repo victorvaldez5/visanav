@@ -14,7 +14,7 @@
   >
     <div class="space-y-12">
       <div
-        class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-800/10 pb-12 md:grid-cols-3 dark:border-white/10"
+        class="grid grid-cols-1 gap-x-8 gap-y-10 pb-12 md:grid-cols-3"
       >
         <div>
           <h2 class="text-base/7 font-semibold text-gray-800 dark:text-gray-200">
@@ -126,7 +126,7 @@
 
       <!-- Personal Information section -->
       <div
-        class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-800/10 pb-12 md:grid-cols-3 dark:border-white/10"
+        class="grid grid-cols-1 gap-x-8 gap-y-10 pb-12 md:grid-cols-3"
       >
         <div>
           <h2
@@ -338,7 +338,7 @@
       </div>
 
       <div
-        class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-800/10 pb-12 md:grid-cols-3 dark:border-white/10"
+        class="grid grid-cols-1 gap-x-8 gap-y-10 pb-12 md:grid-cols-3"
       >
         <div>
           <h2

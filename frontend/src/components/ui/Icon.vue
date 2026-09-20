@@ -23,6 +23,6 @@ const svg = icons[props.name]
 }
 
 /* Default fill colors — override per-component or globally */
-.rfui-icon :deep(.primary)   { fill: var(--vn-blue-600)}
-.rfui-icon :deep(.secondary) { fill: var(--vn-blue-400)}
+.rfui-icon :deep(.primary)   { fill: var(--icon-primary)}
+.rfui-icon :deep(.secondary) { fill: var(--icon-secondary)}
 </style>

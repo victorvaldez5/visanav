@@ -6,7 +6,7 @@ import { EOIR_ROSTER_URL } from "@/i18n";
 </script>
 
 <template>
-  <div class="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+  <div class="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
     <i18n-t
       keypath="disclaimer.short"
       tag="span"

@@ -106,7 +106,7 @@ async function onSubmit(prompt: string) {
     </div>
 
     <UserPromptInput
-      class="fixed bottom-3 w-full max-w-3xl bg-white p-4 shadow-lg z-10"
+      class="fixed bottom-3 w-full max-w-3xl bg-background p-4 z-10"
       @submit-prompt="onSubmit($event)"
     />
   </div>

@@ -17,7 +17,7 @@
           Go Home
         </RouterLink>
         <button
-          class="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 transition"
+          class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 transition"
           @click="goBack"
         >
           Go Back

@@ -9,7 +9,7 @@ const { locale } = useI18n();
 
 <template>
   <div
-    class="w-full border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900"
+    class="w-full bg-amber-50 px-4 py-2 text-sm text-amber-900"
     role="note"
   >
     <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-1">

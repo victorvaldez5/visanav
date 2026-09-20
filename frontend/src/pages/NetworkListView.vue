@@ -99,7 +99,7 @@ async function handleLoadPage(newPage: number) {
         <li
           v-for="organization in networkOrganizations"
           :key="organization.id"
-          class="col-span-1 divide-y divide-gray-300 rounded-lg bg-card text-card-foreground shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+          class="col-span-1 divide-y divide-border rounded-xl bg-card text-card-foreground shadow-elevation-1"
         >
           <div class="flex w-full items-center justify-between space-x-6 p-6">
             <div class="flex-1 truncate">
@@ -109,7 +109,7 @@ async function handleLoadPage(newPage: number) {
                 </h3>
                 <Badge
                   v-if="costLabel(organization)"
-                  variant="default"
+                  variant="info"
                 >
                   {{ costLabel(organization) }}
                 </Badge>
