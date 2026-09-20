@@ -1,6 +1,5 @@
 import {createRouter, createWebHistory} from "vue-router";
 import {authService} from "@/services/authService.ts";
-import apiClient from "@/plugins/axios.ts";
 
 const routes = [
     {
@@ -36,12 +35,9 @@ const routes = [
             }
 
             try {
-                // Adjust URL/method/payload to match your backend
-                // Example: Django endpoint that verifies email/activation
-                const {data} = await apiClient.post("/auth/verify", {uid, token});
-
-                // Expect backend to return the user's id to route to profile
-                const userId = data?.userId;
+                // Activates the account and signs the user in (stores the
+                // returned tokens), then routes to their profile.
+                const {userId} = await authService.verify(uid, token);
                 if (userId) {
                     return next({name: "Profile", params: {userId}});
                 }

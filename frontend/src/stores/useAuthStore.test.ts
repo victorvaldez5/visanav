@@ -8,6 +8,9 @@ import { setActivePinia, createPinia } from "pinia";
 const { push } = vi.hoisted(() => ({ push: vi.fn(() => Promise.resolve()) }));
 vi.mock("vue-router", () => ({ useRouter: () => ({ push }) }));
 
+// register() surfaces a "check your email" toast; mock it out.
+vi.mock("vue-sonner", () => ({ toast: vi.fn() }));
+
 // The store reads/writes apiClient.defaults.headers directly in setFromToken/clearAuth.
 vi.mock("@/plugins/axios", () => ({
   default: { defaults: { headers: {} as Record<string, string> } },
@@ -107,20 +110,22 @@ describe("useAuthStore.login", () => {
 });
 
 describe("useAuthStore.register", () => {
-  it("stores the token and routes home on success", async () => {
-    svc.register.mockResolvedValue({ access: jwt({ email: "new@example.com" }) });
+  it("does not sign the user in and routes to Login on success", async () => {
+    // Registration creates an inactive account (no session) — the user must
+    // verify their email before signing in.
+    svc.register.mockResolvedValue({ email: "new@example.com", detail: "Check your email." });
     const store = useAuthStore();
 
     await store.register("new@example.com", "pw", "pw", "ts");
 
     expect(svc.register).toHaveBeenCalledWith("new@example.com", "pw", "pw", "ts");
-    expect(store.isAuthenticated).toBe(true);
-    expect(store.userEmail).toBe("new@example.com");
-    expect(push).toHaveBeenCalledWith({ name: "Home" });
+    expect(store.isAuthenticated).toBe(false);
+    expect(push).toHaveBeenCalledWith({ name: "Login" });
+    expect(store.loading).toBe(false);
   });
 
-  // Regression guard for the `datail` -> `detail` typo: before the fix this
-  // asserted the fallback string; now it must surface the real server message.
+  // Regression guard for the `datail` -> `detail` typo: it must surface the
+  // real server message, not the generic fallback.
   it("surfaces the server's detail message on failure (not the generic fallback)", async () => {
     svc.register.mockRejectedValue({ response: { data: { detail: "Email already in use." } } });
     const store = useAuthStore();
@@ -136,7 +141,7 @@ describe("useAuthStore.register", () => {
     const store = useAuthStore();
 
     await expect(store.register("x@y.com", "pw", "pw")).rejects.toThrow();
-    expect(store.error).toBe("Invalid username or password.");
+    expect(store.error).toBe("Registration failed. Please try again.");
   });
 });
 

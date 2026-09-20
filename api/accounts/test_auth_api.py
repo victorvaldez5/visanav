@@ -12,7 +12,10 @@ Notes:
 """
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -26,10 +29,20 @@ User = get_user_model()
 PW = "Sup3r-Secret-Pw!"
 
 REGISTER_URL = reverse("register_view")
+VERIFY_URL = reverse("verify_email")
 TOKEN_URL = reverse("token_obtain_pair")
 REFRESH_URL = reverse("token_refresh")
 USERS_URL = reverse("user-list")
 PROFILES_URL = reverse("profile-list")
+
+
+def _verify_payload(user):
+    """The uid/token pair the emailed verification link carries (see
+    core/mail.send_verification_email)."""
+    return {
+        "uid": urlsafe_base64_encode(force_bytes(str(user.pk))),
+        "token": PasswordResetTokenGenerator().make_token(user),
+    }
 
 
 def _rows(resp):
@@ -78,10 +91,21 @@ def other_user(django_user_model):
     )
 
 
+@pytest.fixture
+def inactive_user(django_user_model):
+    """A freshly-registered, not-yet-verified account."""
+    user = django_user_model.objects.create_user(
+        username="pending@example.com", email="pending@example.com", password=PW
+    )
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+    return user
+
+
 # --- registration ------------------------------------------------------------
 
 
-def test_register_creates_user_with_profile_and_returns_tokens(api_client, stub_verification_email):
+def test_register_creates_inactive_user_and_sends_verification(api_client, stub_verification_email):
     resp = api_client.post(
         REGISTER_URL,
         {"email": "new@example.com", "password": PW, "password2": PW},
@@ -90,11 +114,13 @@ def test_register_creates_user_with_profile_and_returns_tokens(api_client, stub_
 
     assert resp.status_code == status.HTTP_201_CREATED
     assert resp.data["email"] == "new@example.com"
-    # The client needs to be logged in straight away, so tokens come back.
-    assert resp.data["access"]
-    assert resp.data["refresh"]
+    assert resp.data["detail"]  # "check your email" message
+    # No session is issued until the email is verified.
+    assert "access" not in resp.data
+    assert "refresh" not in resp.data
 
     created = User.objects.get(email="new@example.com")
+    assert created.is_active is False  # gated until verification
     assert created.check_password(PW)  # password is hashed, not stored raw
     assert Profile.objects.filter(user=created).exists()  # profile auto-created
     stub_verification_email.assert_called_once_with(created)
@@ -166,6 +192,53 @@ def test_refresh_issues_a_new_access_token(api_client, user):
 
     assert resp.status_code == status.HTTP_200_OK
     assert resp.data["access"]
+
+
+def test_inactive_user_cannot_log_in(api_client, inactive_user):
+    # SimpleJWT's default USER_AUTHENTICATION_RULE rejects inactive accounts.
+    resp = api_client.post(
+        TOKEN_URL, {"username": inactive_user.username, "password": PW}, format="json"
+    )
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# --- email verification ------------------------------------------------------
+
+
+def test_verify_activates_account_and_returns_session(api_client, inactive_user):
+    resp = api_client.post(VERIFY_URL, _verify_payload(inactive_user), format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.data["userId"] == inactive_user.id
+    assert resp.data["access"]
+    assert resp.data["refresh"]
+
+    inactive_user.refresh_from_db()
+    assert inactive_user.is_active is True
+    assert inactive_user.is_verified is True
+
+    # Verification unblocks login.
+    login = api_client.post(
+        TOKEN_URL, {"username": inactive_user.username, "password": PW}, format="json"
+    )
+    assert login.status_code == status.HTTP_200_OK
+
+
+def test_verify_rejects_a_bad_token(api_client, inactive_user):
+    payload = {
+        "uid": urlsafe_base64_encode(force_bytes(str(inactive_user.pk))),
+        "token": "not-a-valid-token",
+    }
+    resp = api_client.post(VERIFY_URL, payload, format="json")
+
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    inactive_user.refresh_from_db()
+    assert inactive_user.is_active is False  # nothing was activated
+
+
+def test_verify_rejects_a_malformed_uid(api_client):
+    resp = api_client.post(VERIFY_URL, {"uid": "!!not-base64!!", "token": "x"}, format="json")
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
 # --- UserViewSet (self-scoped) -----------------------------------------------

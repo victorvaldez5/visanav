@@ -69,12 +69,13 @@ describe("authService.login", () => {
 });
 
 describe("authService.register", () => {
-  it("hits the register endpoint and stores the returned tokens", async () => {
-    post.mockResolvedValueOnce({ data: { access: "acc2", refresh: "ref2" } });
+  it("posts to the register endpoint and returns the body without a session", async () => {
+    // Registration no longer issues tokens — the account is created inactive.
+    post.mockResolvedValueOnce({ data: { email: "new@example.com", detail: "Check your email." } });
 
     const result = await authService.register("new@example.com", "pw", "pw", "ts");
 
-    expect(result).toEqual({ access: "acc2", refresh: "ref2" });
+    expect(result).toEqual({ email: "new@example.com", detail: "Check your email." });
     const [url, body] = post.mock.calls[0];
     expect(url).toBe("/auth/register/");
     expect(body).toMatchObject({
@@ -83,8 +84,23 @@ describe("authService.register", () => {
       password2: "pw",
       turnstile_token: "ts",
     });
-    expect(localStorage.getItem("access_token")).toBe("acc2");
-    expect(apiClient.defaults.headers["Authorization"]).toBe("Bearer acc2");
+    // No tokens are stored and no auth header is set.
+    expect(localStorage.getItem("access_token")).toBe(null);
+    expect(apiClient.defaults.headers["Authorization"]).toBeUndefined();
+  });
+});
+
+describe("authService.verify", () => {
+  it("posts uid/token, stores the returned session, and sets the auth header", async () => {
+    post.mockResolvedValueOnce({ data: { userId: 7, access: "vacc", refresh: "vref" } });
+
+    const result = await authService.verify("uid-123", "tok-456");
+
+    expect(result).toEqual({ userId: 7, access: "vacc", refresh: "vref" });
+    expect(post).toHaveBeenCalledWith("/auth/verify", { uid: "uid-123", token: "tok-456" });
+    expect(localStorage.getItem("access_token")).toBe("vacc");
+    expect(localStorage.getItem("refresh_token")).toBe("vref");
+    expect(apiClient.defaults.headers["Authorization"]).toBe("Bearer vacc");
   });
 });
 
