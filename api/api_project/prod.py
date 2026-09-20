@@ -82,6 +82,16 @@ REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"] = (
     "rest_framework.permissions.IsAuthenticated",
 )
 
+# JSON only in production. DRF's browsable API renders an HTML page — a
+# script-executing browsing context — for every endpoint, so leaving it on means
+# api.visanav.org serves HTML views of decrypted conversation JSON with no CSP
+# (the frontend's CSP lives on the app origin, not here). Clients speak JSON, so
+# dropping the HTML renderer removes that surface entirely. Dev keeps the
+# browsable API for convenience.
+REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = (
+    "rest_framework.renderers.JSONRenderer",
+)
+
 # Conversation content is encrypted at rest (core/encryption.py). Require an
 # explicit key in production — base.py's dev fallback is derived from the public
 # dev SECRET_KEY and must never protect real data. Losing this key makes every
