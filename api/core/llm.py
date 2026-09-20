@@ -70,9 +70,13 @@ INSTRUCTIONS = """
     - When referring the user to a specific organization or representative, use
       resource_lookup and share ONLY the names and contact details it returns.
       Never state an organization's name, phone number, address, email, or other
-      contact details from memory. If resource_lookup returns nothing, do not
-      name any provider — point them to the official DOJ roster
+      contact details from memory — not even a well-known national hotline. If
+      you would name a provider, it must have come from a resource_lookup result
+      in this conversation. If resource_lookup returns an empty match list
+      (count 0), do not name any provider — point them to the official DOJ roster
       (justice.gov/eoir/recognition-accreditation-roster-reports) to find one.
+      Relay the result's `note` honestly (e.g. say the results are general help
+      for the area, not specific to the service they asked about).
 
     Fraud — never help, and warn when relevant:
     - Never help with anything fraudulent: using someone else's documents or
@@ -290,6 +294,15 @@ class ResourceMatch(BaseModel):
     region: Optional[str] = None
 
 
+class ResourceLookupResult(BaseModel):
+    matches: List[ResourceMatch]
+    count: int
+    # Set when the search had to be broadened (e.g. no org is tagged for the
+    # requested service, or a state has no directory entries). Javi should relay
+    # this honestly rather than implying every result specializes in the service.
+    note: Optional[str] = None
+
+
 async def resource_lookup(
     ctx: RunContext[Deps],
     region: Optional[str] = None,
@@ -298,33 +311,75 @@ async def resource_lookup(
 ):
     """
     Find free/low-cost nonprofit and pro-bono immigration help and
-    DOJ-recognized providers from the resource directory.
+    DOJ-recognized providers from the resource directory. This returns real rows
+    from the directory only — always source provider names and contact details
+    from here, never from memory.
 
     Args:
-        region: US state to filter by, spelled out in full (e.g. "Arizona").
+        region: US state to filter by. A full name ("Arizona") or the 2-letter
+            postal code ("AZ") both work.
         pro_bono_only: If true, only return organizations offering free pro-bono
             help.
-        service: A single area of help to filter by, e.g. "asylum",
-            "removal-defense", "family-petitions".
+        service: A preferred area of help, e.g. "asylum", "removal-defense",
+            "family-petitions". Treated as a SOFT preference: if no organization
+            is tagged for it, the search broadens to general help for the area
+            (reported in the result `note`) instead of returning nothing.
+
+    Returns a dict {"matches": [...], "count": N, "note": str|None}. An empty
+    match list means nothing in the directory fit — point the user to the DOJ
+    roster rather than naming any provider from memory.
     """
 
-    def _query() -> List[Dict[str, Any]]:
+    def _query() -> Dict[str, Any]:
         # Imported here so this module stays importable without a DB configured.
         from django.db import connection
+        from django.db.models import Q
         from network.models import Organization
 
+        def _contactable(org) -> bool:
+            return bool(org.phones or org.websites or org.emails)
+
         try:
-            qs = Organization.objects.filter(is_active=True)
+            base = Organization.objects.filter(is_active=True)
             if pro_bono_only:
-                qs = qs.filter(pro_bono=True)
+                base = base.filter(pro_bono=True)
             if region:
-                qs = qs.filter(address__subdivision__name__iexact=region)
+                # Match either the spelled-out state name or its US-XX code, so
+                # "Arizona" and "AZ" both resolve.
+                key = region.strip()
+                base = base.filter(
+                    Q(address__subdivision__name__iexact=key)
+                    | Q(address__subdivision__code__iexact=f"US-{key}")
+                )
+
+            note = None
+            qs = base
             if service:
-                qs = qs.filter(services__contains=[service])
-            qs = qs.select_related("address", "address__subdivision")[:5]
+                narrowed = base.filter(services__contains=[service])
+                if narrowed.exists():
+                    qs = narrowed
+                else:
+                    # Roster data (DOJ-recognized orgs, pro-bono list) carries no
+                    # service tags, so a service filter almost always empties the
+                    # result. Broaden rather than return nothing, and say so.
+                    note = (
+                        f"No organization is tagged for '{service}', so these are "
+                        "general immigration-help providers for the area."
+                    )
+                    qs = base
+
+            # Prefer entries that can actually be contacted, and pro-bono help,
+            # then order deterministically. Sort a bounded candidate pool in
+            # Python since contactability spans three array columns.
+            candidates = list(
+                qs.select_related("address", "address__subdivision").order_by(
+                    "-pro_bono", "name"
+                )[:60]
+            )
+            candidates.sort(key=lambda o: (not _contactable(o), not o.pro_bono))
 
             matches = []
-            for org in qs:
+            for org in candidates[:5]:
                 addr = org.address
                 subdivision = addr.subdivision if addr else None
                 matches.append(
@@ -339,9 +394,15 @@ async def resource_lookup(
                         phones=list(org.phones or []),
                         city=addr.city if addr else None,
                         region=subdivision.name if subdivision else None,
-                    ).model_dump()
+                    )
                 )
-            return matches
+
+            if not matches and region:
+                note = f"No organizations for {region} are in the directory yet."
+
+            return ResourceLookupResult(
+                matches=matches, count=len(matches), note=note
+            ).model_dump()
         finally:
             # Close the connection opened in this worker thread so the pooled
             # thread doesn't hold a DB connection open between calls.
