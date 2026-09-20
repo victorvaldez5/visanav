@@ -7,13 +7,14 @@ import SourcesList from "@/components/ui/chat/SourcesList.vue";
 import ConversationDisclaimer from "@/components/interface/ConversationDisclaimer.vue";
 import UserPromptInput from "@/components/interface/UserPromptInput.vue";
 import {useConversation} from "@/composables/useConversations.ts";
+import {describeScrub} from "@/lib/pii";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
 import {storeToRefs} from "pinia";
 import {toast} from "vue-sonner";
 
 const router = useRouter();
 const route = useRoute();
-const {t} = useI18n();
+const {t, locale} = useI18n();
 const authStore = useAuthStore();
 const {userId} = storeToRefs(authStore);
 
@@ -23,11 +24,25 @@ const conversationUuid = computed<string | null>(() => {
   return param ? String(param) : null;
 });
 
-const {messageHistory, createConversation, postMessage, isStreaming, streamStatus} =
-    useConversation(conversationUuid);
+const {
+  messageHistory,
+  createConversation,
+  postMessage,
+  isStreaming,
+  streamStatus,
+  scrubNotices,
+} = useConversation(conversationUuid);
 
 // Server steps: "thinking" | "researching" | "writing" -> localized label.
 const statusLabel = computed(() => t(`chat.${streamStatus.value ?? "thinking"}`));
+
+// Per-message "we removed X before sending" notice, keyed on the (scrubbed)
+// content that is actually shown/persisted. Empty string when nothing was
+// scrubbed for that message.
+function scrubNoticeFor(content: string): string {
+  const summary = scrubNotices.value.get(content);
+  return summary ? describeScrub(summary, locale.value as "en" | "es") : "";
+}
 
 async function onSubmit(prompt: string) {
   try {
@@ -61,12 +76,17 @@ async function onSubmit(prompt: string) {
         v-for="(message, i) in messageHistory"
         :key="i"
       >
-        <div
-          v-if="message.parts[0].part_kind === 'user-prompt'"
-          class="p-3 bg-blue-100 rounded-lg text-right my-2"
-        >
-          {{ message.parts[0].content }}
-        </div>
+        <template v-if="message.parts[0].part_kind === 'user-prompt'">
+          <div class="p-3 bg-blue-100 rounded-lg text-right my-2">
+            {{ message.parts[0].content }}
+          </div>
+          <p
+            v-if="scrubNoticeFor(message.parts[0].content)"
+            class="text-right text-xs text-gray-500 -mt-1 mb-2 px-1"
+          >
+            {{ scrubNoticeFor(message.parts[0].content) }}
+          </p>
+        </template>
         <div
           v-else-if="message.parts[0].part_kind === 'text'"
           class="p-3 text-left my-2"
