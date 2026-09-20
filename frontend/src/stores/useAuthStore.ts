@@ -88,7 +88,7 @@ export const useAuthStore = defineStore("auth", () => {
             await router.push({name: "Home"});
         } catch (e: any) {
             error.value =
-                e?.response?.data?.datail || "Invalid username or password.";
+                e?.response?.data?.detail || "Invalid username or password.";
             throw e;
         } finally {
             loading.value = false;
