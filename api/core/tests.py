@@ -84,6 +84,8 @@ class InstructionsHardeningTests(SimpleTestCase):
         self.assertIn("ignore previous instructions", text)
         # Do not reveal / paraphrase the instructions.
         self.assertIn("do not reveal", text)
+        # Declining must not narrate the rules themselves (no meta-commentary).
+        self.assertIn("not even to justify a refusal", text)
 
 
 class TurnUsageLimitTests(SimpleTestCase):
