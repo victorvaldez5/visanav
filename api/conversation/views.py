@@ -38,6 +38,19 @@ class ConversationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOwnerOrReadOnly]
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        # Conversation payloads are private, decrypted transcripts keyed by an
+        # unguessable uuid. Two guards on every response:
+        #   - no-store: keep the plaintext out of the browser disk cache and
+        #     bfcache, which would otherwise outlive the server-side retention
+        #     purge (a shared/borrowed device could replay a chat from cache).
+        #   - noindex: in case a bare /api/conversations/<uuid>/ url is ever
+        #     discovered and crawled directly, don't let it be indexed.
+        response["Cache-Control"] = "no-store"
+        response["X-Robots-Tag"] = "noindex, nofollow"
+        return response
+
     def list(self, request, *args, **kwargs):
         cache_key = per_user_cache_key("conversation-list", request.user)
         cached = cache.get(cache_key)
@@ -56,6 +69,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.save(update_fields=["expires_at"])
         cache_key = per_user_cache_key("conversation-list", user)
         cache.delete(cache_key)
+
+    def perform_destroy(self, instance):
+        # Invalidate the owner's cached conversation list so a deleted chat
+        # doesn't linger in their sidebar until the cache expires (mirrors
+        # perform_create). Anonymous conversations have no cached list.
+        user = instance.user
+        super().perform_destroy(instance)
+        cache.delete(per_user_cache_key("conversation-list", user))
 
     def get_queryset(self):
         if self.request.user.is_authenticated:

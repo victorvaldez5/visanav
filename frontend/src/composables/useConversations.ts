@@ -10,9 +10,49 @@ import type {PiiSummary} from "@/lib/pii";
 import {useRouter} from "vue-router";
 import {toast} from "vue-sonner";
 
+// Anonymous conversations are deliberately NOT reflected in the URL: a bearer
+// link in the address bar would otherwise persist in a shared device's history
+// and autocomplete. Instead the tab's current anonymous conversation uuid lives
+// in sessionStorage — scoped to the tab, so the chat resumes across reloads
+// within the session but disappears when the tab closes. Signed-in users use
+// normal /conversations/:uuid URLs (and their sidebar list), so this key is only
+// ever read/written for anonymous sessions. Every access is guarded because
+// storage can be unavailable (private mode, SSR, the node test env).
+const ANON_CONVERSATION_KEY = "visanav.anonConversationUuid";
+
+function readAnonKey(): string | null {
+    try {
+        return sessionStorage.getItem(ANON_CONVERSATION_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function writeAnonKey(uuid: string) {
+    try {
+        sessionStorage.setItem(ANON_CONVERSATION_KEY, uuid);
+    } catch {
+        /* non-fatal: the chat still works, it just can't resume after a reload */
+    }
+}
+
+function clearAnonKey() {
+    try {
+        sessionStorage.removeItem(ANON_CONVERSATION_KEY);
+    } catch {
+        /* ignore */
+    }
+}
+
 export function useConversation(
     conversationUuid: Ref<string | null> = ref(null),
+    // Auth is injected (not imported) so this composable — and its unit test —
+    // never pulls in the real authService/axios module graph. Anonymous is the
+    // safe default: it just means "use the sessionStorage-backed resume path".
+    opts: {isAuthenticated?: () => boolean} = {},
 ) {
+    const isAuthed = () => opts.isAuthenticated?.() ?? false;
+
     // state
     const conversationId = ref<number | null>(null);
     // the uuid the chat endpoint is keyed on; set on load and on create, so the
@@ -35,20 +75,43 @@ export function useConversation(
     const streamStatus = ref<string | null>(null);
     let streamAbort: AbortController | null = null;
 
+    function resetConversation() {
+        messageHistory.value = [];
+        conversationKey.value = null;
+        conversationId.value = null;
+    }
+
+    async function hydrate(uuid: string) {
+        const conv = await conversationService.getConversation(uuid);
+        conversationId.value = conv.id;
+        conversationKey.value = conv.uuid;
+        messageHistory.value = conv.messages;
+    }
+
     // when route params change, fetch that conversation
     watch(
         conversationUuid,
         async (uuid) => {
-            try {
-                if (uuid == null) {
-                    messageHistory.value = [];
-                    conversationKey.value = null;
+            // No uuid in the route. For a signed-in user this is a fresh chat;
+            // for an anonymous user, resume the tab's in-progress chat (whose
+            // uuid lives in sessionStorage, never the URL) if there is one.
+            if (uuid == null) {
+                const anon = isAuthed() ? null : readAnonKey();
+                if (!anon) {
+                    resetConversation();
                     return;
                 }
-                const conv = await conversationService.getConversation(uuid);
-                conversationId.value = conv.id;
-                conversationKey.value = conv.uuid;
-                messageHistory.value = conv.messages;
+                try {
+                    await hydrate(anon);
+                } catch {
+                    // The stored chat is gone (expired, purged, or deleted).
+                    clearAnonKey();
+                    resetConversation();
+                }
+                return;
+            }
+            try {
+                await hydrate(uuid);
             } catch (e) {
                 console.error("Error fetching conversation:", e);
                 toast("Oops, an error occurred", {
@@ -62,13 +125,25 @@ export function useConversation(
 
     // create a new conversation and navigate into it
     async function createConversation(
-        userId: number,
+        userId?: number,
         title = "New Conversation",
     ): Promise<Conversation> {
         const conv = await conversationService.createConversation(title, userId);
         conversationId.value = conv.id;
         conversationKey.value = conv.uuid;
+        // Anonymous chats aren't in the URL, so remember the tab's current one
+        // so a reload resumes it instead of silently starting over.
+        if (!isAuthed()) writeAnonKey(conv.uuid);
         return conv;
+    }
+
+    // delete the active conversation (owner or anonymous link-holder) and reset
+    async function deleteConversation() {
+        const key = conversationKey.value;
+        if (key == null) return;
+        await conversationService.deleteConversation(key);
+        clearAnonKey();
+        resetConversation();
     }
 
     function stopStreaming() {
@@ -159,6 +234,10 @@ export function useConversation(
     return {
         // state
         conversationId,
+        // the uuid the chat endpoint is keyed on (set on load/create); the
+        // source of truth for "is there an active conversation", since an
+        // anonymous chat's uuid is intentionally absent from the route.
+        conversationKey,
         messageHistory,
         isStreaming,
         streamStatus,
@@ -167,6 +246,7 @@ export function useConversation(
 
         // actions
         createConversation,
+        deleteConversation,
         postMessage,
     };
 }

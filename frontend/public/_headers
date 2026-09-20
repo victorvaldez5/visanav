@@ -1,0 +1,28 @@
+# Cloudflare static-assets headers, matched by REQUEST path (the SPA fallback
+# still serves index.html for these routes, but the header is attached to the
+# response for the matched request path). More specific rules win over /*.
+
+# Private conversation transcripts, keyed by an unguessable UUID. Never index,
+# and never send the UUID in an outbound Referer if the page links out.
+/conversations/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+
+# One-time email-verification links carry a token in the query string.
+/verify
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+
+# Authenticated account pages.
+/profile/*
+  X-Robots-Tag: noindex, nofollow
+
+# Baseline hardening for everything else. The Content-Security-Policy is NOT
+# set here — it's injected as a <meta> into the built index.html (see
+# frontend/vite.config.ts), because header support on Cloudflare's static-assets
+# Worker is unverified and a meta tag ships with the document regardless.
+# X-Frame-Options is header-only (no meta equivalent), so it lives here; it only
+# takes effect if the Worker honors _headers (verify post-deploy).
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY

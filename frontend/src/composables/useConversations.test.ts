@@ -23,7 +23,11 @@ vi.mock("vue-sonner", () => ({ toast }));
 const { scrub } = vi.hoisted(() => ({ scrub: vi.fn() }));
 vi.mock("@/composables/usePiiScrubber", () => ({ usePiiScrubber: () => ({ scrub }) }));
 
-const convSvc = vi.hoisted(() => ({ getConversation: vi.fn(), createConversation: vi.fn() }));
+const convSvc = vi.hoisted(() => ({
+  getConversation: vi.fn(),
+  createConversation: vi.fn(),
+  deleteConversation: vi.fn(),
+}));
 vi.mock("@/services/conversationService", () => ({ conversationService: convSvc }));
 
 // The SSE transport is covered by messageService.test.ts; here it's a seam we
@@ -32,6 +36,20 @@ const msgSvc = vi.hoisted(() => ({ streamMessage: vi.fn() }));
 vi.mock("@/services/messageService", () => ({ messageService: msgSvc }));
 
 import { useConversation } from "@/composables/useConversations";
+
+const ANON_KEY = "visanav.anonConversationUuid";
+
+// A minimal in-memory sessionStorage stub for the anonymous-resume tests (the
+// node test env has no sessionStorage; the composable guards every access).
+function stubSessionStorage(initial: Record<string, string> = {}) {
+  const store = new Map<string, string>(Object.entries(initial));
+  vi.stubGlobal("sessionStorage", {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => store.set(k, String(v)),
+    removeItem: (k: string) => store.delete(k),
+  });
+  return store;
+}
 
 // Flush pending micro/macrotasks (awaited service calls inside watch/postMessage).
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -196,5 +214,82 @@ describe("useConversation — postMessage streaming", () => {
     expect(toast).toHaveBeenCalledWith("Something went wrong", { description: "Please try again later" });
     expect(c.isStreaming.value).toBe(false);
     expect(convSvc.getConversation).not.toHaveBeenCalled();
+  });
+});
+
+describe("useConversation — deleteConversation", () => {
+  it("deletes the active conversation via the service and resets state", async () => {
+    convSvc.createConversation.mockResolvedValue({ id: 3, uuid: "kdel", title: "", messages: [] });
+    convSvc.deleteConversation.mockResolvedValue(undefined);
+
+    const c = setup(null);
+    await c.createConversation(1);
+    expect(c.conversationKey.value).toBe("kdel");
+
+    await c.deleteConversation();
+
+    expect(convSvc.deleteConversation).toHaveBeenCalledWith("kdel");
+    expect(c.conversationKey.value).toBe(null);
+    expect(c.conversationId.value).toBe(null);
+    expect(c.messageHistory.value).toEqual([]);
+  });
+
+  it("no-ops when there is no active conversation", async () => {
+    const c = setup(null);
+    await c.deleteConversation();
+    expect(convSvc.deleteConversation).not.toHaveBeenCalled();
+  });
+});
+
+describe("useConversation — anonymous resume (uuid never in the URL)", () => {
+  it("persists a created anonymous conversation and resumes it on reload", async () => {
+    const store = stubSessionStorage();
+    convSvc.createConversation.mockResolvedValue({ id: 7, uuid: "anon-uuid", title: "", messages: [] });
+
+    // Anonymous is the default (no isAuthenticated getter): creating writes the key.
+    const first = setup(null);
+    await first.createConversation();
+    expect(store.get(ANON_KEY)).toBe("anon-uuid");
+
+    // A "reload" — a fresh composable with no route uuid — resumes from storage.
+    convSvc.getConversation.mockResolvedValue({ id: 7, uuid: "anon-uuid", messages: [{ r: 1 }] });
+    const reloaded = setup(null);
+    await flush();
+
+    expect(convSvc.getConversation).toHaveBeenCalledWith("anon-uuid");
+    expect(reloaded.conversationKey.value).toBe("anon-uuid");
+    expect(reloaded.messageHistory.value).toEqual([{ r: 1 }]);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("clears the stored key and resets when the resumed chat is gone", async () => {
+    const store = stubSessionStorage({ [ANON_KEY]: "stale-uuid" });
+    convSvc.getConversation.mockRejectedValue(new Error("404"));
+
+    const c = setup(null);
+    await flush();
+
+    expect(convSvc.getConversation).toHaveBeenCalledWith("stale-uuid");
+    expect(store.get(ANON_KEY)).toBeUndefined(); // stale key cleared
+    expect(c.messageHistory.value).toEqual([]);
+    // A dead resume must NOT trigger the "not allowed" toast/redirect path.
+    expect(toast).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not resume from storage for a signed-in user", async () => {
+    stubSessionStorage({ [ANON_KEY]: "anon-uuid" });
+
+    const u = ref<string | null>(null);
+    const c = useConversation(u, { isAuthenticated: () => true });
+    await flush();
+
+    expect(convSvc.getConversation).not.toHaveBeenCalled();
+    expect(c.messageHistory.value).toEqual([]);
+
+    vi.unstubAllGlobals();
   });
 });

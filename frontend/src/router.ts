@@ -20,6 +20,7 @@ const routes = [
     {
         path: "/verify",
         name: "Verify",
+        meta: {noindex: true},
         // Lightweight inline component; page will immediately redirect in beforeEnter
         component: {template: "<div>Verifying your account...</div>"},
         beforeEnter: async (to: any, _from: any, next: any) => {
@@ -56,12 +57,13 @@ const routes = [
         path: `/profile/:userId`,
         component: () => import("@/pages/auth/UserProfile.vue"),
         name: 'Profile',
-        meta: {requiresAuth: true},
+        meta: {requiresAuth: true, noindex: true},
     },
     {
         path: `/conversations/:conversationUuid`,
         component: () => import("@/components/interface/ChatInterface.vue"),
         name: "Conversation",
+        meta: {noindex: true},
     },
 
     {
@@ -101,7 +103,25 @@ const router = createRouter({
     routes,
 });
 
+// Render-time backup for the `X-Robots-Tag: noindex` header we serve on private
+// routes (see public/_headers): Googlebot runs JS and will honor this tag even
+// if the edge header is ever missing. Toggled per navigation so only the
+// noindex-flagged routes carry it and the marketing pages stay indexable.
+function setRobotsMeta(noindex: boolean) {
+    if (typeof document === "undefined") return;
+    const existing = document.querySelector('meta[name="robots"]');
+    if (noindex) {
+        const tag = existing ?? document.createElement("meta");
+        tag.setAttribute("name", "robots");
+        tag.setAttribute("content", "noindex, nofollow");
+        if (!existing) document.head.appendChild(tag);
+    } else if (existing) {
+        existing.remove();
+    }
+}
+
 router.beforeEach((to, _, next) => {
+    setRobotsMeta(Boolean(to.meta.noindex));
     const isAuth = !!authService.getAccessToken();
     if (to.meta.requiresAuth && !isAuth) {
         return next({name: "Login"});

@@ -326,5 +326,6 @@ async def chat_stream(request):
     )
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"  # disable proxy buffering (nginx, etc.)
+    response["X-Robots-Tag"] = "noindex, nofollow"  # never index a chat reply
     response["X-Request-ID"] = request_id  # content-free correlation id
     return response

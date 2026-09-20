@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { marked } from "marked";
 import {computed} from "vue";
+import {renderMarkdown} from "@/lib/sanitize";
 
 const props = defineProps({
   source: {
@@ -28,11 +28,11 @@ const body = computed(() => {
   <div
     v-if="thinking !== ''"
     class="text-muted-foreground mb-6 prose"
-    v-html="marked.parse(thinking)"
+    v-html="renderMarkdown(thinking)"
   />
   <div
     class="prose"
-    v-html="marked.parse(body)"
+    v-html="renderMarkdown(body)"
   />
 </template>
 

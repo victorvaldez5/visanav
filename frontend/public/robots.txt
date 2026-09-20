@@ -1,0 +1,44 @@
+# Search crawlers are allowed to FETCH conversation and profile pages on
+# purpose: those responses carry `X-Robots-Tag: noindex` (see public/_headers),
+# and a crawler can only obey that header if it is allowed to fetch the page.
+# Disallowing the path here would hide the noindex and let any link that leaks
+# get indexed as a bare URL anyway. One-time email-verification links carry a
+# token in the query string, so keep every crawler out of those.
+User-agent: *
+Disallow: /verify
+
+# Chat transcripts are private, user-generated content. Keep AI scrapers out of
+# them entirely — for these bots robots.txt is the only lever (there is no
+# per-response opt-out they honor for training crawls).
+User-agent: GPTBot
+Disallow: /conversations/
+
+User-agent: OAI-SearchBot
+Disallow: /conversations/
+
+User-agent: ChatGPT-User
+Disallow: /conversations/
+
+User-agent: ClaudeBot
+Disallow: /conversations/
+
+User-agent: Claude-Web
+Disallow: /conversations/
+
+User-agent: anthropic-ai
+Disallow: /conversations/
+
+User-agent: Google-Extended
+Disallow: /conversations/
+
+User-agent: PerplexityBot
+Disallow: /conversations/
+
+User-agent: CCBot
+Disallow: /conversations/
+
+User-agent: Bytespider
+Disallow: /conversations/
+
+User-agent: meta-externalagent
+Disallow: /conversations/

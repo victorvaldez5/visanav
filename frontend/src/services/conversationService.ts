@@ -31,4 +31,8 @@ export const conversationService = {
         });
         return res.data;
     },
+
+    async deleteConversation(uuid: string): Promise<void> {
+        await apiClient.delete(`/conversations/${uuid}/`);
+    },
 };

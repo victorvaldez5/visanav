@@ -12,12 +12,16 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
+        # `instructions` (the agent's full system prompt) is deliberately NOT
+        # exposed: it's the same for every turn, the client never renders it, and
+        # shipping it to anyone holding a conversation link just hands a would-be
+        # prompt-injector the exact text to craft against. Keep the response to
+        # what the UI actually draws.
         fields = [
             "id",
             "conversation",
             "timestamp",
             "model_name",
-            "instructions",
             "kind",
             "parts",
             "sources",

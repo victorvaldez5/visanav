@@ -55,6 +55,16 @@ export const messages = {
       writing: "Writing your answer...",
       placeholder: "Type a message...",
       submit: "Submit",
+      deleteChat: "Delete chat",
+      deleteConfirm: "Delete permanently?",
+      cancel: "Cancel",
+      deleted: "Conversation deleted",
+      deleteFailed: "Couldn't delete the conversation. Please try again.",
+      copyLink: "Copy link to continue later",
+      linkCopied: "Link copied",
+      linkCopiedHint:
+        "Anyone with this link can read this conversation. Save it somewhere private.",
+      copyFailed: "Couldn't copy automatically — here's the link:",
     },
     lang: {
       label: "Language",
@@ -87,6 +97,16 @@ export const messages = {
       writing: "Escribiendo tu respuesta...",
       placeholder: "Escribe un mensaje...",
       submit: "Enviar",
+      deleteChat: "Eliminar chat",
+      deleteConfirm: "¿Eliminar permanentemente?",
+      cancel: "Cancelar",
+      deleted: "Conversación eliminada",
+      deleteFailed: "No se pudo eliminar la conversación. Inténtalo de nuevo.",
+      copyLink: "Copiar enlace para continuar después",
+      linkCopied: "Enlace copiado",
+      linkCopiedHint:
+        "Cualquiera que tenga este enlace puede leer esta conversación. Guárdalo en un lugar privado.",
+      copyFailed: "No se pudo copiar automáticamente; aquí está el enlace:",
     },
     lang: {
       label: "Idioma",
