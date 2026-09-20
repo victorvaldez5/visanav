@@ -16,7 +16,7 @@ on:
       - ".github/workflows/api-ci.yml"
 
 jobs:
-  test:
+  lint-test:
     runs-on: ubuntu-latest
 
     services:
