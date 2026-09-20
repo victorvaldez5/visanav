@@ -7,6 +7,19 @@ const props = defineProps<{ sources: Source[] | null | undefined }>();
 // Only real sources with something to show.
 const items = computed(() => (props.sources ?? []).filter((s) => s && (s.title || s.source_url)));
 
+// A citation URL is model/corpus-derived, so never bind it to href raw: Vue does
+// not strip javascript:/data: URLs. Only plain http(s) links become clickable;
+// anything else falls back to rendering the title as plain text.
+function safeHref(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 // Format an ISO date (YYYY-MM-DD) without timezone drift (Date parsing of a bare
 // ISO date is UTC, which can show the previous day in negative offsets).
 function formatVerified(iso?: string | null): string | null {
@@ -33,13 +46,13 @@ function formatVerified(iso?: string | null): string | null {
         class="flex flex-wrap items-baseline gap-x-2"
       >
         <a
-          v-if="source.source_url"
-          :href="source.source_url"
+          v-if="safeHref(source.source_url)"
+          :href="safeHref(source.source_url) ?? undefined"
           target="_blank"
           rel="noopener noreferrer nofollow"
           class="text-primary underline underline-offset-2 hover:no-underline break-words"
         >{{ source.title || source.source_url }}</a>
-        <span v-else>{{ source.title }}</span>
+        <span v-else>{{ source.title || source.source_url }}</span>
         <span
           v-if="formatVerified(source.last_verified)"
           class="text-xs text-muted-foreground"

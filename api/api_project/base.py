@@ -107,6 +107,19 @@ CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("CHAT_RATE_LIMIT_PER_MINUTE") or
 # Hard cap on a single chat message so one request can't burn a huge prompt.
 CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS") or "4000")
 
+# Per-turn agent budget. One chat turn drives an autonomous tool-calling loop, so
+# a crafted prompt (or a model that gets stuck re-calling a tool) could otherwise
+# spend unbounded model requests/tokens. These cap a SINGLE agent run; pair them
+# with CHAT_RATE_LIMIT_PER_MINUTE (across turns) and a hard monthly cap at the
+# provider. 0 disables a given limit. `... or "<default>"` guards a blank env var.
+CHAT_REQUEST_LIMIT = int(os.environ.get("CHAT_REQUEST_LIMIT") or "6")
+CHAT_TOOL_CALLS_LIMIT = int(os.environ.get("CHAT_TOOL_CALLS_LIMIT") or "8")
+CHAT_TOTAL_TOKENS_LIMIT = int(os.environ.get("CHAT_TOTAL_TOKENS_LIMIT") or "60000")
+# Cap the length of a model-generated tool argument (search query, region,
+# service) before it reaches Voyage or the ORM, so a runaway or adversarial tool
+# call can't embed a giant string or probe with absurd inputs.
+CHAT_TOOL_ARG_MAX_CHARS = int(os.environ.get("CHAT_TOOL_ARG_MAX_CHARS") or "512")
+
 # ── Logging: privacy-first ───────────────────────────────────────────────────
 # VisaNav serves a vulnerable population, so logs must NEVER contain the text of
 # a user's question or the model's answer. Two rules enforce that:

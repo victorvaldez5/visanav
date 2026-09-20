@@ -3,7 +3,8 @@ import json
 from cryptography.fernet import Fernet
 from django.test import SimpleTestCase, override_settings
 
-from core import encryption
+from conversation import streaming
+from core import encryption, llm
 from core.fields import EncryptedJSONField
 
 
@@ -43,3 +44,71 @@ class EncryptedJSONFieldTests(SimpleTestCase):
     def test_none_passes_through(self):
         self.assertIsNone(self.field.get_prep_value(None))
         self.assertIsNone(self.field.from_db_value(None, None, None))
+
+
+class ToolArgHardeningTests(SimpleTestCase):
+    """Model-generated tool arguments and citation URLs are untrusted input."""
+
+    def test_clip_arg_strips_and_caps_length(self):
+        with override_settings(CHAT_TOOL_ARG_MAX_CHARS=8):
+            self.assertEqual(llm._clip_arg("  hello world  "), "hello wo")
+        self.assertEqual(llm._clip_arg("  asylum  "), "asylum")
+
+    def test_clip_arg_explicit_max_len_and_none(self):
+        self.assertEqual(llm._clip_arg("arizona-state", 3), "ari")
+        self.assertIsNone(llm._clip_arg(None))
+
+    def test_safe_url_allows_only_http_https(self):
+        self.assertEqual(llm._safe_url("https://uscis.gov"), "https://uscis.gov")
+        self.assertEqual(llm._safe_url("  http://x.test  "), "http://x.test")
+
+    def test_safe_url_rejects_dangerous_schemes(self):
+        for bad in (
+            "javascript:alert(1)",
+            "JavaScript:alert(1)",
+            "data:text/html,<script>alert(1)</script>",
+            "vbscript:msgbox(1)",
+            "//evil.example",
+            None,
+            "",
+        ):
+            self.assertIsNone(llm._safe_url(bad), bad)
+
+
+class InstructionsHardeningTests(SimpleTestCase):
+    """The system prompt must keep its anti-prompt-injection frame."""
+
+    def test_instructions_carry_the_injection_defenses(self):
+        text = llm.INSTRUCTIONS.lower()
+        self.assertIn("untrusted content", text)
+        self.assertIn("ignore previous instructions", text)
+        # Do not reveal / paraphrase the instructions.
+        self.assertIn("do not reveal", text)
+        # Declining must not narrate the rules themselves (no meta-commentary).
+        self.assertIn("not even to justify a refusal", text)
+
+
+class TurnUsageLimitTests(SimpleTestCase):
+    """Every agent run is bounded so one turn can't spend unbounded LLM budget."""
+
+    @override_settings(
+        CHAT_REQUEST_LIMIT=6,
+        CHAT_TOOL_CALLS_LIMIT=8,
+        CHAT_TOTAL_TOKENS_LIMIT=60000,
+    )
+    def test_limits_map_from_settings(self):
+        limits = streaming._turn_usage_limits()
+        self.assertEqual(limits.request_limit, 6)
+        self.assertEqual(limits.tool_calls_limit, 8)
+        self.assertEqual(limits.total_tokens_limit, 60000)
+
+    @override_settings(
+        CHAT_REQUEST_LIMIT=0,
+        CHAT_TOOL_CALLS_LIMIT=0,
+        CHAT_TOTAL_TOKENS_LIMIT=0,
+    )
+    def test_zero_disables_a_limit(self):
+        limits = streaming._turn_usage_limits()
+        self.assertIsNone(limits.request_limit)
+        self.assertIsNone(limits.tool_calls_limit)
+        self.assertIsNone(limits.total_tokens_limit)
