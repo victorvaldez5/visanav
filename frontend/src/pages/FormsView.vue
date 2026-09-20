@@ -61,12 +61,23 @@ const filtered = computed(() => {
           aria-label="Filter by category"
           class="h-10 rounded-lg border border-transparent bg-field px-3 text-sm text-foreground shadow-elevation-1-control outline-none focus-visible:outline-none focus-visible:shadow-glow-focus sm:w-64"
         >
-          <option value="">All categories</option>
-          <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+          <option value="">
+            All categories
+          </option>
+          <option
+            v-for="c in categories"
+            :key="c"
+            :value="c"
+          >
+            {{ c }}
+          </option>
         </select>
       </div>
 
-      <p class="mt-4 text-sm text-muted-foreground" aria-live="polite">
+      <p
+        class="mt-4 text-sm text-muted-foreground"
+        aria-live="polite"
+      >
         {{ filtered.length }} form{{ filtered.length === 1 ? "" : "s" }}
       </p>
 
@@ -78,13 +89,25 @@ const filtered = computed(() => {
           class="flex flex-col rounded-xl bg-card p-5 text-card-foreground shadow-elevation-1"
         >
           <div class="flex items-center justify-between gap-2">
-            <Badge variant="info" class="text-sm font-medium">{{ form.number }}</Badge>
-            <Badge v-if="form.fileOnline" class="bg-primary font-medium text-primary-foreground">
+            <Badge
+              variant="info"
+              class="text-sm font-medium"
+            >
+              {{ form.number }}
+            </Badge>
+            <Badge
+              v-if="form.fileOnline"
+              class="bg-primary font-medium text-primary-foreground"
+            >
               File online
             </Badge>
           </div>
-          <h3 class="mt-3 font-semibold text-foreground">{{ form.title }}</h3>
-          <p class="mt-1 flex-1 text-sm text-muted-foreground">{{ form.summary }}</p>
+          <h3 class="mt-3 font-semibold text-foreground">
+            {{ form.title }}
+          </h3>
+          <p class="mt-1 flex-1 text-sm text-muted-foreground">
+            {{ form.summary }}
+          </p>
           <div class="mt-4 flex items-center justify-between gap-3">
             <span class="text-xs text-muted-foreground">{{ form.category }}</span>
             <a

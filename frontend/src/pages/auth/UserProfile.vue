@@ -1,7 +1,9 @@
 <template>
   <div class="my-6 px-6 sm:px-8 lg:px-12">
     <div class="min-w-0 flex-1">
-      <h2 class="text-2xl/7 font-semibold text-foreground sm:truncate sm:text-3xl sm:tracking-tight">Account Settings</h2>
+      <h2 class="text-2xl/7 font-semibold text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
+        Account Settings
+      </h2>
     </div>
   </div>
   <div v-if="loading">
