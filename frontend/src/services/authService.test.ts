@@ -97,7 +97,7 @@ describe("authService.verify", () => {
     const result = await authService.verify("uid-123", "tok-456");
 
     expect(result).toEqual({ userId: 7, access: "vacc", refresh: "vref" });
-    expect(post).toHaveBeenCalledWith("/auth/verify", { uid: "uid-123", token: "tok-456" });
+    expect(post).toHaveBeenCalledWith("/auth/verify/", { uid: "uid-123", token: "tok-456" });
     expect(localStorage.getItem("access_token")).toBe("vacc");
     expect(localStorage.getItem("refresh_token")).toBe("vref");
     expect(apiClient.defaults.headers["Authorization"]).toBe("Bearer vacc");

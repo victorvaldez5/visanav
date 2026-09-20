@@ -11,8 +11,7 @@ router.register(r"profiles", ProfileViewSet, basename="profile")
 
 urlpatterns = [
                   path("register/", RegisterView.as_view(), name="register_view"),
-                  # No trailing slash: matches the SPA's POST to /auth/verify.
-                  path("verify", VerifyEmailView.as_view(), name="verify_email"),
+                  path("verify/", VerifyEmailView.as_view(), name="verify_email"),
                   path("erase/", AccountErasureView.as_view(), name="account_erase"),
                   path(
                       "token/",

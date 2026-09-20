@@ -58,7 +58,7 @@ export const authService = {
 
     async verify(uid: string, token: string) {
         // Activates the account from the emailed link and signs the user in.
-        const resp = await apiClient.post<VerifyResponse>(`${API_BASE}/verify`, {uid, token});
+        const resp = await apiClient.post<VerifyResponse>(`${API_BASE}/verify/`, {uid, token});
         localStorage.setItem("access_token", resp.data.access);
         localStorage.setItem("refresh_token", resp.data.refresh);
         apiClient.defaults.headers["Authorization"] = `Bearer ${resp.data.access}`;
