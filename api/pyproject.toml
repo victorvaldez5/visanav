@@ -21,7 +21,7 @@ exclude = ["staticfiles"]
 [dependency-groups]
 # Pin ruff to a minor line so CI lint is deterministic — a newer minor can add
 # rules and turn CI red on unchanged code. Bump deliberately, not incidentally.
-dev = ["ruff>=0.16,<0.17", "pytest-django>=4.9"]
+dev = ["ruff>=0.16,<0.17", "pytest-django>=4.9", "pytest-cov>=6.0", "pytest-asyncio>=0.24"]
 
 [tool.poetry]
 package-mode = false
@@ -97,8 +97,39 @@ select = ["E4", "E7", "E9", "F"]
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "api_project.dev"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
+# Async views (the SSE chat endpoint) are tested with pytest-asyncio. Strict mode
+# only touches tests marked @pytest.mark.asyncio, leaving the existing sync and
+# asyncio.run(...) tests untouched.
+asyncio_mode = "strict"
 # Build the test schema straight from the models. The data migrations
 # pre-populate reference tables (all countries/subdivisions via pycountry, plus
 # org fixtures), which unit tests shouldn't fight; this also keeps the run fast.
+# Coverage is opt-in (`pytest --cov`, run by CI) rather than in addopts, so the
+# default local run and `pytest -k ...` stay fast and unadorned.
 addopts = "--no-migrations"
+
+[tool.coverage.run]
+# `pytest --cov` reads this (source + omit) so the flag needs no arguments.
+# Percentage reflects hand-written app code, not generated/boilerplate files.
+source = ["."]
+branch = true
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/tests.py",
+    "*/test_*.py",
+    "manage.py",
+    "*/apps.py",
+    "*/wsgi.py",
+    "*/asgi.py",
+    "api_project/settings.py",
+    "api_project/base.py",
+    "api_project/dev.py",
+    "api_project/prod.py",
+    "conftest.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
 

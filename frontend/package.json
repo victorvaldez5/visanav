@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -45,6 +46,7 @@
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^26.6.2",
     "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "^5.0.1",
     "@vue/tsconfig": "^0.9.1",
     "eslint": "^10.11.0",
     "eslint-plugin-vue": "^10.11.0",

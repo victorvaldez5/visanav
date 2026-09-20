@@ -37,6 +37,18 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      - name: Test (Vitest + coverage)
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          if-no-files-found: ignore
+
       - name: Build app
         working-directory: frontend
         run: npm run build
