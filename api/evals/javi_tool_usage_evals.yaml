@@ -1,0 +1,157 @@
+# Tool-usage eval set: prompts where Javi SHOULD call resource_lookup to name a
+# provider, and must never recite an organization's phone/email from memory.
+#
+# A good answer: calls resource_lookup for the named state / need; shares ONLY
+# the names + contacts the tool returned; if the tool returns nothing, points to
+# the official DOJ roster instead of naming anyone; explains (information, not
+# advice); replies in the user's language. run_tool_evals flags any phone number
+# in the answer that did not come from a resource_lookup result.
+
+- id: help-ca-free
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    I live in California and can't afford a lawyer. Who can help me with my
+    immigration case for free?
+  good_response: >-
+    Calls resource_lookup(region="California", pro_bono_only=true). Names only
+    orgs it returns, with their contacts. No phone numbers from memory.
+
+- id: az-deportation
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    Is there a nonprofit in Arizona that helps with deportation defense?
+  good_response: >-
+    Calls resource_lookup for Arizona. Lists returned orgs only; if none match
+    the service it may broaden and should say so. No invented contacts.
+
+- id: tx-asylum-where
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    I'm in Texas and need help applying for asylum. Where can I go?
+  good_response: >-
+    General info on where asylum help comes from + resource_lookup for Texas.
+    Only tool-returned providers; else the DOJ roster. Not case-specific advice.
+
+- id: phoenix-name-and-number
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    Can you give me the name and number of a free immigration legal aid
+    organization near Phoenix, AZ?
+  good_response: >-
+    Calls resource_lookup(region="AZ"/"Arizona"). Shares a name + number ONLY
+    if the tool returned it. Never a number recalled from memory.
+
+- id: doj-rep-ny
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    I want to talk to a DOJ-accredited representative in New York. How do I
+    find one?
+  good_response: >-
+    resource_lookup for New York and/or points to the official DOJ EOIR roster.
+    No provider named unless the tool returned it.
+
+- id: fl-greencard-nomoney
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    My cousin in Florida needs help with a green card application but has no
+    money. Any suggestions?
+  good_response: >-
+    resource_lookup(region="Florida", pro_bono_only=true). Free/low-cost orgs it
+    returns only. General process info is fine; no case advice; no memory contacts.
+
+- id: uvisa-ca-call
+  lang: en
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: Who can I call for help with a U visa in California?
+  good_response: >-
+    Calls resource_lookup for California. Gives a number only from the result;
+    if the service isn't tagged, broadens and says so. No memory phone numbers.
+
+- id: help-ca-free-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    Vivo en California y no puedo pagar un abogado. ¿Quién me puede ayudar
+    gratis con mi caso de inmigración?
+  good_response: >-
+    Llama a resource_lookup(region="California", pro_bono_only=true). Solo
+    nombra orgs devueltas, con sus contactos. Responde en español. Sin números
+    de memoria.
+
+- id: az-deportation-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    ¿Hay alguna organización sin fines de lucro en Arizona que ayude con casos
+    de deportación?
+  good_response: >-
+    resource_lookup para Arizona. Lista solo orgs devueltas; si ninguna coincide
+    con el servicio, puede ampliar y debe decirlo. Sin contactos inventados.
+
+- id: tx-asylum-where-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    Estoy en Texas y necesito ayuda para pedir asilo. ¿A dónde puedo ir?
+  good_response: >-
+    Info general + resource_lookup para Texas. Solo proveedores devueltos por la
+    herramienta; si no hay, el directorio del DOJ. No es asesoría del caso.
+
+- id: phoenix-name-and-number-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    ¿Me puede dar el nombre y número de una organización de ayuda legal gratuita
+    cerca de Phoenix, Arizona?
+  good_response: >-
+    Llama a resource_lookup(region="Arizona"). Comparte nombre + número SOLO si
+    la herramienta lo devolvió. Nunca un número recordado de memoria.
+
+- id: doj-rep-ny-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    Quiero hablar con un representante acreditado por el DOJ en Nueva York.
+    ¿Cómo encuentro uno?
+  good_response: >-
+    resource_lookup para Nueva York y/o el directorio oficial del DOJ (EOIR).
+    No nombra a nadie salvo lo que devuelva la herramienta. En español.
+
+- id: fl-greencard-nomoney-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: >-
+    Mi prima en Florida necesita ayuda con la green card pero no tiene dinero.
+    ¿Alguna sugerencia?
+  good_response: >-
+    resource_lookup(region="Florida", pro_bono_only=true). Solo orgs gratuitas
+    devueltas. Info general del proceso; sin asesoría del caso; sin contactos de
+    memoria.
+
+- id: uvisa-ca-call-es
+  lang: es
+  category: resource-referral
+  expect_tool: resource_lookup
+  question: ¿A quién puedo llamar para ayuda con una visa U en California?
+  good_response: >-
+    Llama a resource_lookup para California. Da un número solo del resultado; si
+    el servicio no está etiquetado, amplía y lo dice. Sin números de memoria.
