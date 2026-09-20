@@ -25,6 +25,7 @@ from pydantic_ai.messages import (
     TextPart,
     TextPartDelta,
 )
+from pydantic_ai.usage import UsageLimits
 from pydantic_core import to_jsonable_python
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -38,6 +39,26 @@ logger = logging.getLogger(__name__)
 def _sse(event: str, data: dict) -> str:
     """Format a single Server-Sent Event frame."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+def _turn_usage_limits() -> UsageLimits:
+    """Bound a single agent run so one turn can't spend unbounded LLM budget.
+
+    A chat turn drives an autonomous tool-calling loop; a crafted prompt or a
+    model stuck re-calling a tool could otherwise run away on model requests and
+    tokens. These caps stop the run and surface a clean error. 0 (or unset) in
+    settings disables a given limit. pydantic-ai's own default request_limit is
+    50 — far looser than we want as a cost guard, so we always pass our own.
+    """
+
+    def _opt(value: int):
+        return value if value and value > 0 else None
+
+    return UsageLimits(
+        request_limit=_opt(settings.CHAT_REQUEST_LIMIT),
+        tool_calls_limit=_opt(settings.CHAT_TOOL_CALLS_LIMIT),
+        total_tokens_limit=_opt(settings.CHAT_TOTAL_TOKENS_LIMIT),
+    )
 
 
 def _client_ip(request) -> str:
@@ -257,7 +278,10 @@ async def chat_stream(request):
         start = time.monotonic()
         try:
             async with get_agent().iter(
-                user_message, message_history=history, deps=deps
+                user_message,
+                message_history=history,
+                deps=deps,
+                usage_limits=_turn_usage_limits(),
             ) as run:
                 async for node in run:
                     if Agent.is_model_request_node(node):
