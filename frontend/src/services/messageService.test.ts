@@ -12,7 +12,7 @@ const svc = vi.hoisted(() => ({
 }));
 vi.mock("@/services/authService", () => ({ authService: svc }));
 
-import { messageService, type StreamHandlers } from "@/services/messageService";
+import { messageService, type Source } from "@/services/messageService";
 
 const fetchMock = vi.fn();
 
@@ -40,13 +40,16 @@ function errorResponse(status: number, json: () => Promise<unknown>) {
   return { status, ok: false, body: null, json };
 }
 
-function handlers(): Required<StreamHandlers> {
+// Each handler is a typed vi.fn: the signatures match StreamHandlers (so the
+// object is a valid StreamHandlers when passed to streamMessage) while keeping
+// `.mock` available in assertions.
+function handlers() {
   return {
-    onStatus: vi.fn(),
-    onDelta: vi.fn(),
-    onSources: vi.fn(),
-    onDone: vi.fn(),
-    onError: vi.fn(),
+    onStatus: vi.fn<(step: string) => void>(),
+    onDelta: vi.fn<(text: string) => void>(),
+    onSources: vi.fn<(sources: Source[]) => void>(),
+    onDone: vi.fn<(data: unknown) => void>(),
+    onError: vi.fn<(detail: string) => void>(),
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { InternalAxiosRequestConfig } from "axios";
+import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 // Stable mocks that survive vi.resetModules(), so the freshly-imported axios
 // module's interceptor sees the same authService we configure per test. Mocking
@@ -82,7 +82,7 @@ describe("response interceptor — refresh on 401", () => {
     });
     const client = await freshClient();
     const adapter = vi
-      .fn<(c: InternalAxiosRequestConfig) => Promise<unknown>>()
+      .fn<(c: InternalAxiosRequestConfig) => Promise<AxiosResponse>>()
       .mockImplementationOnce(async (c) => fail(c, 401))
       .mockImplementation(async (c) => ok(c, { ok: true }));
     client.defaults.adapter = adapter;

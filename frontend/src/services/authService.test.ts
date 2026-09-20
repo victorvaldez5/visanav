@@ -28,7 +28,7 @@ beforeEach(() => {
     clear: () => store.clear(),
   });
   post.mockReset();
-  apiClient.defaults.headers = {};
+  (apiClient as unknown as { defaults: { headers: Record<string, string> } }).defaults.headers = {};
 });
 
 afterEach(() => {

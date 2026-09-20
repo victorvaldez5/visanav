@@ -12,11 +12,11 @@ function page<T>(
 
 describe("usePagination — initial state", () => {
   it("starts empty and not loading", () => {
-    const { items, page, count, loading, error, hasNext, hasPrevious, totalPages } =
+    const { items, page: pageRef, count, loading, error, hasNext, hasPrevious, totalPages } =
       usePagination<number>({ fetchPage: async () => page([]) });
 
     expect(items.value).toEqual([]);
-    expect(page.value).toBe(1);
+    expect(pageRef.value).toBe(1);
     expect(count.value).toBe(0);
     expect(loading.value).toBe(false);
     expect(error.value).toBe(null);
@@ -26,8 +26,8 @@ describe("usePagination — initial state", () => {
   });
 
   it("honors initialPage", () => {
-    const { page } = usePagination<number>({ fetchPage: async () => page([]), initialPage: 3 });
-    expect(page.value).toBe(3);
+    const { page: pageRef } = usePagination<number>({ fetchPage: async () => page([]), initialPage: 3 });
+    expect(pageRef.value).toBe(3);
   });
 });
 
