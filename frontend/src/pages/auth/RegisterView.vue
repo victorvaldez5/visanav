@@ -3,7 +3,7 @@
     class="grow mx-auto w-3/5 lg:w-2/5 h-screen flex flex-col justify-center gap-4"
     @submit.prevent="onSubmit"
   >
-    <h3 class="mb-4 text-center text-2xl font-medium text-gray-800 tracking-tight">
+    <h3 class="mb-4 text-center text-2xl font-medium text-foreground tracking-tight">
       Register
     </h3>
     <FormField

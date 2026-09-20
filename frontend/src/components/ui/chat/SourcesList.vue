@@ -34,7 +34,7 @@ function formatVerified(iso?: string | null): string | null {
 <template>
   <div
     v-if="items.length"
-    class="mt-3 border-t pt-2 text-sm"
+    class="mt-4 pt-2 text-sm"
   >
     <p class="mb-1 font-medium text-muted-foreground">
       {{ $t("sources.title") }}

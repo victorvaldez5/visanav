@@ -1,7 +1,7 @@
 <template>
   <div class="my-6 px-6 sm:px-8 lg:px-12">
     <div class="min-w-0 flex-1">
-      <h2 class="text-2xl/7 font-semibold text-gray-800 sm:truncate sm:text-3xl sm:tracking-tight">Account Settings</h2>
+      <h2 class="text-2xl/7 font-semibold text-foreground sm:truncate sm:text-3xl sm:tracking-tight">Account Settings</h2>
     </div>
   </div>
   <div v-if="loading">
@@ -14,13 +14,13 @@
   >
     <div class="space-y-12">
       <div
-        class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-800/10 pb-12 md:grid-cols-3 dark:border-white/10"
+        class="grid grid-cols-1 gap-x-8 gap-y-10 pb-12 md:grid-cols-3"
       >
         <div>
-          <h2 class="text-base/7 font-semibold text-gray-800 dark:text-gray-200">
+          <h2 class="text-base/7 font-semibold text-foreground">
             Profile
           </h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+          <p class="mt-1 text-sm/6 text-muted-foreground">
             This information is used to communicate with you and to personalize the help and resources we surface for you.
           </p>
         </div>
@@ -126,15 +126,15 @@
 
       <!-- Personal Information section -->
       <div
-        class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-800/10 pb-12 md:grid-cols-3 dark:border-white/10"
+        class="grid grid-cols-1 gap-x-8 gap-y-10 pb-12 md:grid-cols-3"
       >
         <div>
           <h2
-            class="text-base/7 font-semibold text-gray-800 dark:text-white"
+            class="text-base/7 font-semibold text-foreground"
           >
             Personal Information
           </h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+          <p class="mt-1 text-sm/6 text-muted-foreground">
             Personal information that is used to personalize your AI experience and help us surface free and low-cost immigration resources near you
           </p>
         </div>
@@ -338,15 +338,15 @@
       </div>
 
       <div
-        class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-800/10 pb-12 md:grid-cols-3 dark:border-white/10"
+        class="grid grid-cols-1 gap-x-8 gap-y-10 pb-12 md:grid-cols-3"
       >
         <div>
           <h2
-            class="text-base/7 font-semibold text-gray-800 dark:text-white"
+            class="text-base/7 font-semibold text-foreground"
           >
             Notifications
           </h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+          <p class="mt-1 text-sm/6 text-muted-foreground">
             Customize types of notifications you receive from us and how you receive them
           </p>
         </div>

@@ -59,7 +59,7 @@ const filtered = computed(() => {
         <select
           v-model="category"
           aria-label="Filter by category"
-          class="h-10 border border-border bg-card px-3 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring sm:w-64"
+          class="h-10 rounded-lg border border-transparent bg-field px-3 text-sm text-foreground shadow-elevation-1-control outline-none focus-visible:outline-none focus-visible:shadow-glow-focus sm:w-64"
         >
           <option value="">All categories</option>
           <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
@@ -75,10 +75,10 @@ const filtered = computed(() => {
         <li
           v-for="form in filtered"
           :key="form.number"
-          class="flex flex-col border border-border bg-card p-5 text-card-foreground shadow-sm"
+          class="flex flex-col rounded-xl bg-card p-5 text-card-foreground shadow-elevation-1"
         >
           <div class="flex items-center justify-between gap-2">
-            <Badge variant="default" class="text-sm font-medium">{{ form.number }}</Badge>
+            <Badge variant="info" class="text-sm font-medium">{{ form.number }}</Badge>
             <Badge v-if="form.fileOnline" class="bg-primary font-medium text-primary-foreground">
               File online
             </Badge>
