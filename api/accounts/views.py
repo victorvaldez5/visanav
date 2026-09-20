@@ -2,7 +2,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -25,25 +24,59 @@ class RegisterView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         resp = super().create(request, *args, **kwargs)
-        user = self.serializer_class.Meta.model.objects.get(
-            email=resp.data["email"]
-        )
+        user = User.objects.get(email=resp.data["email"])
+        # New accounts are inactive until the user confirms their email via the
+        # link in the verification message. SimpleJWT rejects inactive users at
+        # login and on every authenticated request, so we issue no session here.
         user.is_active = False
+        user.save(update_fields=["is_active"])
         send_verification_email(user)
-        refresh = RefreshToken.for_user(user)
-        resp.data["refresh"] = str(refresh)
-        resp.data["access"] = str(refresh.access_token)
+        resp.data["detail"] = "Account created. Check your email to verify your account."
         return resp
 
-    @action(detail=False, methods=["POST"])
-    def verify(self, uid, token):
-        user = User.objects.get(pk=urlsafe_base64_decode(uid))
-        verified = PasswordResetTokenGenerator().check_token(user, token)
-        if verified:
-            user.is_active = True
-            user.save()
-            return Response({"message": "Email verified successfully."}, status=200)
-        return Response({"message": "Invalid token."}, status=400)
+
+class VerifyEmailView(APIView):
+    """Activate an account from the emailed verification link.
+
+    ``send_verification_email`` (core/mail.py) links to the SPA's ``/verify``
+    page, which POSTs the base64-encoded user id + token here. On success the
+    account is activated and a session is issued, so the user is signed in
+    straight away. Bad/expired links are rejected without activating anything.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        uid = request.data.get("uid") or ""
+        token = request.data.get("token") or ""
+        try:
+            pk = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=pk)
+        except (ValueError, TypeError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"detail": "Invalid verification link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not PasswordResetTokenGenerator().check_token(user, token):
+            return Response(
+                {"detail": "This verification link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.is_active = True
+        user.is_verified = True
+        user.save(update_fields=["is_active", "is_verified"])
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "userId": user.id,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AccountErasureView(APIView):

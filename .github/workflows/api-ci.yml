@@ -65,6 +65,14 @@ jobs:
         working-directory: api
         run: poetry run ruff check .
 
-      - name: Run tests
+      - name: Run tests (with coverage)
         working-directory: api
-        run: poetry run pytest
+        run: poetry run pytest --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: api/coverage.xml
+          if-no-files-found: ignore

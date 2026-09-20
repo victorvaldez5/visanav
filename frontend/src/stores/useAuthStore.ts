@@ -3,6 +3,7 @@ import {computed, ref} from "vue";
 import apiClient from "@/plugins/axios";
 import {authService} from "@/services/authService";
 import {useRouter} from "vue-router";
+import {toast} from "vue-sonner";
 
 interface JwtPayload {
     user_id?: number;
@@ -83,12 +84,16 @@ export const useAuthStore = defineStore("auth", () => {
         error.value = null;
 
         try {
-            const {access} = await authService.register(email, password, password2, turnstileToken);
-            setFromToken(access);
-            await router.push({name: "Home"});
+            // Registration creates an inactive account; the user must confirm
+            // their email before they can sign in, so we don't log them in here.
+            await authService.register(email, password, password2, turnstileToken);
+            toast("Account created", {
+                description: "Check your email to verify your account, then sign in.",
+            });
+            await router.push({name: "Login"});
         } catch (e: any) {
             error.value =
-                e?.response?.data?.datail || "Invalid username or password.";
+                e?.response?.data?.detail || "Registration failed. Please try again.";
             throw e;
         } finally {
             loading.value = false;

@@ -7,6 +7,17 @@ interface TokenResponse {
     refresh: string;
 }
 
+interface RegisterResponse {
+    email: string;
+    detail?: string;
+}
+
+interface VerifyResponse {
+    userId: number;
+    access: string;
+    refresh: string;
+}
+
 async function getToken(email: string, password: string, turnstileToken?: string) {
     const resp = await apiClient.post<TokenResponse>(`${API_BASE}/token/`, {
         username: email,
@@ -35,19 +46,23 @@ export const authService = {
     },
 
     async register(email: string, password: string, password2: string, turnstileToken?: string) {
-        // The register endpoint already returns access + refresh, so we use those
-        // rather than a second token/ call — that call would demand a fresh
-        // Turnstile token (the widget's is single-use and already spent here).
-        const resp = await apiClient.post<TokenResponse>(
+        // Registration no longer issues a session: the account is created
+        // inactive and must be confirmed via the emailed link (see verify()).
+        const resp = await apiClient.post<RegisterResponse>(
             `${API_BASE}/register/`,
             {email, password, password2, turnstile_token: turnstileToken ?? ""},
             {headers: {"Content-Type": "application/x-www-form-urlencoded"}},
         );
-        const {access, refresh} = resp.data;
-        localStorage.setItem("access_token", access);
-        localStorage.setItem("refresh_token", refresh);
-        apiClient.defaults.headers["Authorization"] = `Bearer ${access}`;
-        return {access, refresh};
+        return resp.data;
+    },
+
+    async verify(uid: string, token: string) {
+        // Activates the account from the emailed link and signs the user in.
+        const resp = await apiClient.post<VerifyResponse>(`${API_BASE}/verify/`, {uid, token});
+        localStorage.setItem("access_token", resp.data.access);
+        localStorage.setItem("refresh_token", resp.data.refresh);
+        apiClient.defaults.headers["Authorization"] = `Bearer ${resp.data.access}`;
+        return resp.data;
     },
     getAccessToken() {
         return localStorage.getItem("access_token");
