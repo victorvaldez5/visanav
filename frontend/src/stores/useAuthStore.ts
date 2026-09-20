@@ -62,11 +62,11 @@ export const useAuthStore = defineStore("auth", () => {
         username.value = null;
     }
 
-    async function login(loginOrEmail: string, password: string) {
+    async function login(loginOrEmail: string, password: string, turnstileToken?: string) {
         loading.value = true;
         error.value = null;
         try {
-            const {access} = await authService.login(loginOrEmail, password);
+            const {access} = await authService.login(loginOrEmail, password, turnstileToken);
             setFromToken(access);
             await router.push({name: "Home"}); // remove if you prefer to navigate in the component
         } catch (e: any) {
@@ -78,12 +78,12 @@ export const useAuthStore = defineStore("auth", () => {
         }
     }
 
-    async function register(email: string, password: string, password2: string) {
+    async function register(email: string, password: string, password2: string, turnstileToken?: string) {
         loading.value = true;
         error.value = null;
 
         try {
-            const {access} = await authService.register(email, password, password2);
+            const {access} = await authService.register(email, password, password2, turnstileToken);
             setFromToken(access);
             await router.push({name: "Home"});
         } catch (e: any) {

@@ -7,10 +7,11 @@ interface TokenResponse {
     refresh: string;
 }
 
-async function getToken(email: string, password: string) {
+async function getToken(email: string, password: string, turnstileToken?: string) {
     const resp = await apiClient.post<TokenResponse>(`${API_BASE}/token/`, {
         username: email,
-        password
+        password,
+        turnstile_token: turnstileToken ?? ""
     }, {headers: {"Content-Type": "application/x-www-form-urlencoded"}});
     localStorage.setItem("access_token", resp.data.access);
     localStorage.setItem("refresh_token", resp.data.refresh);
@@ -19,8 +20,8 @@ async function getToken(email: string, password: string) {
 
 
 export const authService = {
-    async login(email: string, password: string) {
-        const {access, refresh} = await getToken(email, password);
+    async login(email: string, password: string, turnstileToken?: string) {
+        const {access, refresh} = await getToken(email, password, turnstileToken);
         localStorage.setItem("access_token", access);
         localStorage.setItem("refresh_token", refresh);
         apiClient.defaults.headers["Authorization"] = `Bearer ${access}`;
@@ -33,13 +34,16 @@ export const authService = {
         delete apiClient.defaults.headers["Authorization"];
     },
 
-    async register(email: string, password: string, password2: string) {
-        await apiClient.post(
+    async register(email: string, password: string, password2: string, turnstileToken?: string) {
+        // The register endpoint already returns access + refresh, so we use those
+        // rather than a second token/ call — that call would demand a fresh
+        // Turnstile token (the widget's is single-use and already spent here).
+        const resp = await apiClient.post<TokenResponse>(
             `${API_BASE}/register/`,
-            {email: email, password: password, password2: password2},
+            {email, password, password2, turnstile_token: turnstileToken ?? ""},
             {headers: {"Content-Type": "application/x-www-form-urlencoded"}},
         );
-        const {access, refresh} = await getToken(email, password);
+        const {access, refresh} = resp.data;
         localStorage.setItem("access_token", access);
         localStorage.setItem("refresh_token", refresh);
         apiClient.defaults.headers["Authorization"] = `Bearer ${access}`;

@@ -1,0 +1,38 @@
+---
+// VisaNav lockup: the brand mark (Liberty Red diamond over a navy "N") plus the
+// wordmark. The navy half is drawn with `currentColor` so it inherits the
+// surrounding text color and stays legible in dark mode; the Liberty Red half is
+// fixed to the brand accent. Matches frontend/public/VisaNav-Mark-Main.svg.
+interface Props {
+  /** Extra classes for the wrapper (sizing, text color). */
+  class?: string;
+  /** Tailwind height class for the mark. Defaults to a header-sized mark. */
+  markClass?: string;
+  /** Render the "VisaNav" wordmark next to the mark. */
+  wordmark?: boolean;
+}
+const {
+  class: cls,
+  markClass = "h-7 w-auto",
+  wordmark = true,
+} = Astro.props;
+---
+
+<span class:list={["inline-flex items-center gap-2 font-semibold text-foreground", cls]}>
+  <svg
+    viewBox="0 0 1223.75 1264.94"
+    class:list={[markClass]}
+    role="img"
+    aria-label="VisaNav"
+  >
+    <polygon
+      points="611.88 0 328.37 275.09 328.37 275.21 611.88 517.33 895.39 275.21 895.39 275.09 611.88 0"
+      fill="var(--vn-orange-500)"
+    />
+    <polygon
+      points="895.51 275.09 895.39 275.09 895.39 275.21 611.88 992.46 328.37 275.21 328.37 275.09 328.24 275.09 0 57 469.75 1264.94 611.88 1264.94 754 1264.94 1223.75 57 895.51 275.09"
+      fill="currentColor"
+    />
+  </svg>
+  {wordmark && <span class="text-lg tracking-tight">VisaNav</span>}
+</span>

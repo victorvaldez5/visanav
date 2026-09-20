@@ -1,0 +1,37 @@
+---
+import Logo from "./Logo.astro";
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-border bg-surface-muted">
+  <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div class="flex flex-col gap-8 sm:flex-row sm:justify-between">
+      <div class="max-w-sm">
+        <Logo />
+        <p class="mt-3 text-sm text-muted-foreground">
+          A free, public-interest tool that helps immigrants understand their
+          options and find trustworthy, low-cost help.
+        </p>
+      </div>
+
+      <nav aria-label="Footer" class="grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
+        <a href="/" class="text-muted-foreground hover:text-foreground">Home</a>
+        <a href="/directory" class="text-muted-foreground hover:text-foreground">Find help</a>
+        <a href="/partners" class="text-muted-foreground hover:text-foreground">For organizations</a>
+        <a href="/directory" class="text-muted-foreground hover:text-foreground">Resource directory</a>
+      </nav>
+    </div>
+
+    <div class="mt-8 border-t border-border pt-6 text-xs leading-relaxed text-muted-foreground">
+      <p class="font-semibold text-foreground">
+        VisaNav is not a law firm and does not provide legal advice.
+      </p>
+      <p class="mt-1">
+        Information here is general and may not fit your situation. Always
+        confirm with a qualified, accredited representative or attorney before
+        acting. VisaNav is free — no one should ever ask you to pay to use it.
+      </p>
+      <p class="mt-3">&copy; {year} VisaNav. Built as a public good.</p>
+    </div>
+  </div>
+</footer>

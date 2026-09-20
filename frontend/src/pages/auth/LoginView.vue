@@ -15,6 +15,10 @@
       type="password"
       placeholder="Password"
     />
+    <div
+      ref="turnstileEl"
+      class="flex justify-center"
+    />
     <Button :disabled="loading">
       {{ loading ? "Logging in…" : "Log In" }}
     </Button>
@@ -31,20 +35,27 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from "vue";
+import {ref, useTemplateRef} from "vue";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
 import {storeToRefs} from "pinia";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
+import {useTurnstile} from "@/composables/useTurnstile";
 
 const authStore = useAuthStore();
 const {loading, error} = storeToRefs(authStore);
 const {login} = authStore;
 const email = ref("");
 const password = ref("");
+const turnstileEl = useTemplateRef<HTMLElement>("turnstileEl");
+const {token: turnstileToken, reset: resetTurnstile} = useTurnstile(turnstileEl);
 
-const onSubmit = () => {
-  login(email.value, password.value);
+const onSubmit = async () => {
+  try {
+    await login(email.value, password.value, turnstileToken.value);
+  } catch {
+    resetTurnstile(); // token is single-use; refresh it for a retry
+  }
 };
 </script>
