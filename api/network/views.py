@@ -1,7 +1,7 @@
 from datetime import date
 
 import django_filters
-from django.db.models import Q
+from django.db.models import F, Q
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from rest_framework import filters, generics, viewsets
 from rest_framework.permissions import AllowAny
@@ -13,6 +13,28 @@ from network.serializers import (
     RepresentativeSerializer,
     OrganizationSubmissionSerializer,
 )
+
+
+class NullsLastOrderingFilter(filters.OrderingFilter):
+    """OrderingFilter that always sorts NULLs last.
+
+    Postgres orders NULLs first under DESC, which would float reps with no
+    accreditation_expiration to the top of the "latest expiry" sort. Ordering by
+    F-expressions with nulls_last keeps undated rows at the end in either
+    direction.
+    """
+
+    def filter_queryset(self, request, queryset, view):
+        ordering = self.get_ordering(request, queryset, view)
+        if not ordering:
+            return queryset
+        fields = [
+            F(term[1:]).desc(nulls_last=True)
+            if term.startswith("-")
+            else F(term).asc(nulls_last=True)
+            for term in ordering
+        ]
+        return queryset.order_by(*fields)
 
 
 class OrganizationFilter(FilterSet):
@@ -89,7 +111,7 @@ class RepresentativeFilter(FilterSet):
 class RepresentativeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RepresentativeSerializer
     permission_classes = (AllowAny,)
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, NullsLastOrderingFilter]
     search_fields = ["name", "organization__name"]
     filterset_class = RepresentativeFilter
     ordering_fields = ["name", "accreditation_expiration", "organization__name"]

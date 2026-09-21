@@ -451,6 +451,27 @@ def test_representatives_filter_region_and_ordering():
     assert [r["name"] for r in resp.data["results"]] == ["Later AZ", "Soon AZ", "Soon TX"]
 
 
+@pytest.mark.django_db
+def test_representatives_ordering_sorts_undated_last():
+    today = date.today()
+    Representative.objects.create(
+        name="Dated", provider_type="doj-accredited-rep",
+        accreditation_expiration=today + timedelta(days=30), is_active=True,
+    )
+    Representative.objects.create(
+        name="Undated", provider_type="doj-accredited-rep", is_active=True,
+    )
+    client = APIClient()
+
+    # "latest" (descending) must not float the undated rep to the top.
+    resp = client.get(REPS_URL, {"ordering": "-accreditation_expiration"})
+    assert [r["name"] for r in resp.data["results"]] == ["Dated", "Undated"]
+
+    # ascending keeps it last too.
+    resp = client.get(REPS_URL, {"ordering": "accreditation_expiration"})
+    assert [r["name"] for r in resp.data["results"]] == ["Dated", "Undated"]
+
+
 # --- EOIR roster parser (build_ra_fixtures) -------------------------------
 # The parser works on pre-clustered rows (lists of {"x0", "text"} words), so its
 # wrapping / divider / malformed-data handling is testable without a real PDF.
