@@ -1,5 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
+import Eyebrow from "../components/Eyebrow.astro";
 import { APP_URL } from "../config";
 import orgs from "../data/organizations.json";
 
@@ -29,8 +30,6 @@ const trust = [
   "Not a law firm",
 ];
 
-const badges = ["Beta", "Free public tool", "Not affiliated with USCIS or ICE"];
-
 // The privacy promises below map to real features: anonymous chat (no account),
 // conversations encrypted at rest with retention limits, and account/data
 // erasure (right to delete). Keep the copy in step with what the app does.
@@ -38,21 +37,19 @@ const privacy = [
   {
     title: "Anonymous by default",
     body: "No account required. Ask your questions without signing up or telling us who you are.",
+    icon: "user",
   },
   {
     title: "Encrypted, and yours to delete",
     body: "Your conversations are encrypted and kept only as long as needed — and you can delete your account and data whenever you want.",
+    icon: "lock",
   },
   {
     title: "Never sold or shared",
     body: "We don't sell your information or use it for advertising. Your questions are used only to answer you — nothing else.",
+    icon: "shield",
   },
 ];
-
-const btnPrimary =
-  "inline-block bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90";
-const btnSecondary =
-  "inline-block border border-border bg-surface px-5 py-3 text-base font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted";
 ---
 
 <Base
@@ -60,32 +57,34 @@ const btnSecondary =
   description="A free public tool, now in beta, that explains your immigration options in plain language and connects you to recognized nonprofits and pro-bono legal help near you. Anonymous, encrypted, no account, no cost, no data sold."
 >
   <!-- Hero -->
-  <section class="relative overflow-hidden">
-    <div
-      class="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-surface-muted to-transparent"
-    >
-    </div>
-    <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-      <div class="max-w-2xl">
-        <h1 class="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+  <section id="top" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+    <div class="flex flex-col gap-14 lg:flex-row lg:items-start lg:gap-16">
+      <div class="lg:max-w-[620px] lg:shrink-0">
+        <Eyebrow
+          items={["BETA", "FREE PUBLIC TOOL", "NOT AFFILIATED WITH USCIS OR ICE"]}
+        />
+
+        <h1 class="mt-6 text-4xl font-bold leading-[1.08] text-foreground sm:text-5xl sm:leading-[1.04]">
           Immigration is confusing. Getting help shouldn't be.
         </h1>
-        <p class="mt-5 text-lg leading-relaxed text-muted-foreground">
+
+        <p class="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
           VisaNav answers your immigration questions in plain language, cites
           official sources, and points you to trustworthy free and low-cost help
           near you. Ask anonymously — no account, no cost, and your questions are
           encrypted and never sold.
         </p>
-        <div class="mt-8 flex flex-wrap gap-3">
-          <a href={APP_URL} class={btnPrimary}>Start a free chat</a>
-          <a href="/directory" class={btnSecondary}>Find help near you</a>
+
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <a href={APP_URL} class="vn-btn vn-btn-primary h-12 px-6 text-base">Start a free chat</a>
+          <a href="/directory" class="vn-btn vn-btn-raised h-12 px-6 text-base">Find help near you</a>
         </div>
 
-        <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <ul class="mt-8 flex flex-col gap-y-2.5 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-x-7">
           {
             trust.map((t) => (
               <li class="flex items-center gap-2">
-                <svg class="h-4 w-4 text-link" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg class="h-4 w-4 shrink-0 text-vn-ocean-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 011.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z" clip-rule="evenodd" />
                 </svg>
                 {t}
@@ -93,106 +92,181 @@ const btnSecondary =
             ))
           }
         </ul>
+      </div>
 
-        <ul class="mt-4 flex flex-wrap gap-2">
-          {
-            badges.map((b) => (
-              <li
-                class:list={[
-                  "border border-vn-orange-200 bg-vn-orange-50 px-2.5 py-1 text-xs font-semibold text-vn-orange-800",
-                  b === "Beta" && "uppercase tracking-wide",
-                ]}
-              >
-                {b}
-              </li>
-            ))
-          }
-        </ul>
+      <!-- Chat teaser card -->
+      <div class="vn-card w-full p-6 sm:p-8 lg:flex-1">
+        <div class="flex items-center gap-2">
+          <svg class="h-5 w-auto text-vn-ocean-700" viewBox="0 0 1223.75 1264.94" aria-hidden="true">
+            <polygon points="611.88 0 328.37 275.09 328.37 275.21 611.88 517.33 895.39 275.21 895.39 275.09 611.88 0" fill="var(--vn-sunflower-500)" />
+            <polygon points="895.51 275.09 895.39 275.09 895.39 275.21 611.88 992.46 328.37 275.21 328.37 275.09 328.24 275.09 0 57 469.75 1264.94 611.88 1264.94 754 1264.94 1223.75 57 895.51 275.09" fill="currentColor" />
+          </svg>
+          <span class="text-sm font-semibold tracking-tight text-foreground">VisaNav</span>
+        </div>
+
+        <h2 class="mt-5 text-2xl font-bold text-foreground">Ask in your own words</h2>
+        <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
+          No forms, no jargon, no account. Write the way you would tell a friend.
+        </p>
+
+        <form action={APP_URL} method="get" class="mt-6">
+          <label for="q" class="block text-sm font-medium text-foreground">Your question</label>
+          <input
+            id="q"
+            name="q"
+            type="text"
+            placeholder="My work permit expires in three months."
+            class="vn-field mt-2 h-11 px-3 text-base"
+          />
+          <button type="submit" class="vn-btn vn-btn-primary mt-4 h-11 w-full text-[15px]">
+            Ask anonymously
+          </button>
+        </form>
+
+        <div class="mt-6">
+          <Eyebrow
+            items={["ANONYMOUS", "ENCRYPTED", "YOURS TO DELETE"]}
+            class="!text-muted-foreground"
+          />
+        </div>
       </div>
     </div>
   </section>
 
   <!-- How it works -->
-  <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-    <h2 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-      How VisaNav helps
-    </h2>
+  <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+    <div class="flex flex-col gap-10 lg:flex-row lg:gap-24">
+      <div class="lg:w-[396px] lg:shrink-0">
+        <h2 class="text-3xl font-bold text-foreground">How VisaNav helps</h2>
+        <p class="mt-4 leading-relaxed text-muted-foreground">
+          Three steps, in plain language, from your first question to real help
+          near you.
+        </p>
+      </div>
+
+      <ol class="flex-1">
+        {
+          steps.map((s, i) => (
+            <li class="flex gap-5">
+              <div class="flex w-4 shrink-0 flex-col items-center">
+                <span
+                  aria-hidden="true"
+                  class:list={[
+                    "mt-2 h-3 w-3 shrink-0 rotate-45",
+                    i === 0 ? "bg-vn-sunflower-400" : "bg-vn-ocean-300",
+                  ]}
+                />
+                {i < steps.length - 1 && (
+                  <span aria-hidden="true" class="mt-2.5 w-0.5 flex-1 bg-vn-ocean-100" />
+                )}
+              </div>
+              <div class:list={[i < steps.length - 1 && "pb-8"]}>
+                <h3 class="text-lg font-bold text-foreground">{s.title}</h3>
+                <p class="mt-1 text-[15px] leading-relaxed text-muted-foreground">{s.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+    <h2 class="text-3xl font-bold text-foreground">Your privacy comes first</h2>
+    <p class="mt-3 max-w-xl leading-relaxed text-muted-foreground">
+      Immigration questions are personal. VisaNav is built so you can ask
+      freely — without an account, and without wondering where your information
+      goes.
+    </p>
     <div class="mt-10 grid gap-6 sm:grid-cols-3">
       {
-        steps.map((s, i) => (
-          <div class="border border-border bg-surface p-6 shadow-sm">
-            <div class="grid h-9 w-9 place-items-center bg-primary text-sm font-bold text-primary-foreground">
-              {i + 1}
-            </div>
-            <h3 class="mt-4 text-lg font-semibold text-foreground">{s.title}</h3>
-            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+        privacy.map((p) => (
+          <div class="vn-card p-7">
+            <svg class="h-6 w-6 text-vn-ocean-700" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              {p.icon === "user" && (
+                <>
+                  <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
+                  <path d="M12 14c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5Z" />
+                </>
+              )}
+              {p.icon === "lock" && (
+                <path fill-rule="evenodd" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1Zm2 0h6V7a3 3 0 0 0-6 0v3Z" clip-rule="evenodd" />
+              )}
+              {p.icon === "shield" && (
+                <path d="M12 2 4 5v6c0 4.97 3.4 9.44 8 10.75C16.6 20.44 20 15.97 20 11V5l-8-3Zm3.7 7.3a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4 0l-2-2a1 1 0 1 1 1.4-1.4l1.3 1.29 3.3-3.29a1 1 0 0 1 1.4 0Z" />
+              )}
+            </svg>
+            <h3 class="mt-4 text-lg font-bold text-foreground">{p.title}</h3>
+            <p class="mt-2 text-[15px] leading-relaxed text-muted-foreground">{p.body}</p>
           </div>
         ))
       }
     </div>
   </section>
 
-  <!-- Privacy -->
-  <section class="border-t border-border">
+  <!-- Directory band -->
+  <section class="bg-band text-band-foreground">
     <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-      <h2 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-        Your privacy comes first
-      </h2>
-      <p class="mt-3 max-w-2xl text-muted-foreground">
-        Immigration questions are personal. VisaNav is built so you can ask
-        freely — without an account, and without wondering where your
-        information goes.
-      </p>
-      <div class="mt-10 grid gap-6 sm:grid-cols-3">
-        {
-          privacy.map((p) => (
-            <div class="border border-border bg-surface p-6 shadow-sm">
-              <h3 class="text-lg font-semibold text-foreground">{p.title}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {p.body}
-              </p>
-            </div>
-          ))
-        }
-      </div>
-    </div>
-  </section>
-
-  <!-- Directory teaser -->
-  <section class="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-    <div class="border border-border bg-surface-muted p-8 shadow-sm sm:p-10">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div class="max-w-xl">
-          <h2 class="text-2xl font-bold tracking-tight text-foreground">
-            A directory of real, trustworthy help
-          </h2>
-          <p class="mt-3 text-muted-foreground">
-            Browse <strong class="text-foreground">{total.toLocaleString()}</strong> nonprofit and
-            pro-bono organizations — including <strong class="text-foreground">{proBono}</strong>{" "}
-            pro-bono legal providers — across <strong class="text-foreground">{states}</strong> states,
-            drawn from official DOJ/EOIR recognized-organization data.
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-12">
+        <div class="max-w-3xl">
+          <h2 class="text-3xl font-bold text-vn-white">A directory of real, trustworthy help</h2>
+          <p class="mt-3 leading-relaxed text-band-muted">
+            Browse <strong class="font-bold text-vn-white">{total.toLocaleString()}</strong> nonprofit
+            and pro-bono organizations — including
+            <strong class="font-bold text-vn-white">{proBono}</strong> pro-bono legal providers —
+            across <strong class="font-bold text-vn-white">{states}</strong> states, drawn from
+            official DOJ/EOIR recognized-organization data.
           </p>
         </div>
-        <a href="/directory" class:list={["shrink-0", btnPrimary]}>Browse the directory</a>
+        <a href="/directory" class="vn-btn vn-btn-secondary h-12 shrink-0 px-6 text-base">
+          Browse the directory
+        </a>
       </div>
     </div>
   </section>
 
   <!-- For organizations -->
-  <section class="border-y border-border bg-surface-muted">
-    <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div class="max-w-xl">
-          <h2 class="text-2xl font-bold tracking-tight text-foreground">
+  <section id="partners" class="bg-surface-muted">
+    <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+      <div class="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-24">
+        <div class="lg:w-[520px] lg:shrink-0">
+          <Eyebrow items={["FOR ORGANIZATIONS", "REVIEWED BEFORE LISTING"]} />
+          <h2 class="mt-5 text-3xl font-bold text-foreground">
             Do you run an organization that helps immigrants?
           </h2>
-          <p class="mt-3 text-muted-foreground">
+          <p class="mt-3 leading-relaxed text-muted-foreground">
             Ask to be listed as a trusted resource, or partner with us to offer
             VisaNav to the people you serve. Every request is reviewed before
             it's listed.
           </p>
+          <a href="/partners" class="vn-btn vn-btn-raised mt-7 h-12 px-6 text-base">
+            Request to be included
+          </a>
         </div>
-        <a href="/partners" class:list={["shrink-0", btnSecondary]}>Request to be included</a>
+
+        <ul class="flex flex-1 flex-col gap-4">
+          {
+            [
+              {
+                title: "Get listed in the directory",
+                body: "Ask to be added as a trusted resource, so people in your state can find your organization.",
+              },
+              {
+                title: "Partner with us",
+                body: "Offer VisaNav to the people you serve — free, anonymous and with no account to set up.",
+              },
+            ].map((c) => (
+              <li class="vn-card flex items-start gap-4 p-6">
+                <span aria-hidden="true" class="mt-[11px] h-2.5 w-2.5 shrink-0 rotate-45 bg-vn-sunflower-400" />
+                <div>
+                  <h3 class="text-lg font-bold text-foreground">{c.title}</h3>
+                  <p class="mt-1 text-[15px] leading-relaxed text-muted-foreground">{c.body}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
       </div>
     </div>
   </section>

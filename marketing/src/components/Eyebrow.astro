@@ -1,0 +1,24 @@
+---
+// The eyebrow line: short facts in spaced caps, separated by sunflower
+// diamonds, sitting above a headline. Write each item in the words you want
+// shown — they're uppercased by the caller's copy, not CSS, so screen readers
+// don't spell them out letter by letter.
+interface Props {
+  /** Short promises, e.g. ["BETA", "FREE PUBLIC TOOL"]. */
+  items: string[];
+  /** Extra classes for the wrapper. */
+  class?: string;
+}
+const { items, class: cls } = Astro.props;
+---
+
+<p class:list={["vn-eyebrow", cls]}>
+  {
+    items.map((item, i) => (
+      <>
+        {i > 0 && <span aria-hidden="true" class="vn-diamond">&#9670;</span>}
+        <span>{item}</span>
+      </>
+    ))
+  }
+</p>

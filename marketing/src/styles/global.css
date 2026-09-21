@@ -1,144 +1,201 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   VisaNav design system — mirrors frontend/src/style.css so the marketing
-   site, the chat app (app.visanav.org), and the API-served surfaces read as
-   one product: navy ("Moon Gray") + Liberty Red accent, flat/square (radius 0),
-   Open Sans.
+   VisaNav design system — Ocean blue + Sunflower.
 
-   Dark mode follows the visitor's OS preference — this is a static site with no
-   theme toggle, so `prefers-color-scheme` drives the same semantic tokens the
-   app flips with its `.dark` class. Tailwind's `dark:` variant resolves to the
-   same media query, for the few spots (gradients) semantic tokens can't cover.
+   Mirrors the shared VisaNav design system (frontend/src/style.css) so the
+   marketing site, the chat app (app.visanav.org), and API-served surfaces read
+   as one product: warm paper grounds, ocean-blue primary, one sunflower call to
+   action per page, Noto Serif headlines over an Open Sans body.
+
+   Two design moves define the look:
+   - Borderless. Cards, fields and buttons are separated by *elevation* (soft
+     contact shadows), never by 1px lines. Radius is softened, not rounded:
+     4px on controls, 8px on cards.
+   - Rationed glow. Only the primary action glows at rest. Every other control
+     is flat until hover or keyboard focus, where a blurred glow in the ring
+     colour marks it — never a hard outline.
+
+   Dark mode follows the visitor's OS preference (this is a static site with no
+   theme toggle), so `prefers-color-scheme` drives the same semantic tokens the
+   app flips with its `.dark` class.
 --------------------------------------------------------------------------- */
 
 :root {
-  /* Primary / neutral — "Moon Gray" */
-  --vn-blue-900: #0d2647;
-  --vn-blue-800: #253c59;
-  --vn-blue-700: #3d516c;
-  --vn-blue-600: #56677e;
-  --vn-blue-500: #6e7d91;
-  --vn-blue-400: #8693a3;
-  --vn-blue-300: #9ea8b5;
-  --vn-blue-200: #b6bec8;
-  --vn-blue-100: #cfd4da;
-  --vn-blue-50: #e7e9ed;
+  /* Ocean — the brand blue */
+  --vn-ocean-50: #eff6fe;
+  --vn-ocean-100: #dbe9fc;
+  --vn-ocean-200: #bbd3f2;
+  --vn-ocean-300: #8bb1e0;
+  --vn-ocean-500: #3b73b6;
+  --vn-ocean-600: #235b9c;
+  --vn-ocean-700: #1b4b82;
+  --vn-ocean-800: #0e3562;
+  --vn-ocean-900: #072445;
+  --vn-ocean-950: #05162c;
+
+  /* Sunflower — the warm light. One call to action per page. */
+  --vn-sunflower-50: #fffaed;
+  --vn-sunflower-100: #fff1ce;
+  --vn-sunflower-300: #ffda7b;
+  --vn-sunflower-400: #ffcd3c;
+  --vn-sunflower-500: #e8b716;
+  --vn-sunflower-700: #907000;
+  --vn-sunflower-800: #6d5400;
+  --vn-sunflower-900: #503d00;
+
+  /* Paper — warm off-white grounds */
+  --vn-paper-50: #fbfaf8;
+  --vn-paper-100: #f0eeea;
+  --vn-paper-200: #e9e6e0;
+  --vn-paper-300: #ddd8d0;
+
+  /* Ink — the warm neutrals of the dark theme */
+  --vn-ink-950: #151514;
+  --vn-ink-900: #1e1e1c;
+  --vn-ink-800: #2a2a27;
+  --vn-ink-750: #5b5a52;
+  --vn-ink-700: #333330;
+  --vn-ink-50: #f4f2ee;
+  --vn-ink-200: #d8d6d1;
+  --vn-ink-300: #b4b2ae;
+
+  /* State — red (destructive) */
+  --vn-red-50: #fdeeee;
+  --vn-red-300: #ff7c81;
+  --vn-red-600: #c81e1e;
+  --vn-red-700: #a51b1b;
+
   --vn-white: #fff;
-  --vn-black: #000;
 
-  /* Accent — "Liberty Red" */
-  --vn-orange-950: #180703;
-  --vn-orange-900: #2f0f07;
-  --vn-orange-800: #5f1e0d;
-  --vn-orange-700: #8e2c14;
-  --vn-orange-600: #be3b1a;
-  --vn-orange-500: #ed4a21;
-  --vn-orange-400: #f16e4d;
-  --vn-orange-300: #f4927a;
-  --vn-orange-200: #f8b7a6;
-  --vn-orange-100: #fbdbd3;
-  --vn-orange-50: #fdede9;
+  /* Semantic tokens (light) — same roles as the app */
+  --background: var(--vn-paper-100);
+  --foreground: var(--vn-ocean-900);
+  --card: var(--vn-paper-50);
+  --card-foreground: var(--vn-ocean-900);
+  --primary: var(--vn-ocean-700);
+  --primary-foreground: var(--vn-white);
+  --secondary: var(--vn-sunflower-400);
+  --secondary-foreground: var(--vn-ocean-900);
+  --muted: var(--vn-paper-200);
+  --muted-foreground: var(--vn-ocean-600);
+  --accent: var(--vn-ocean-100);
+  --accent-foreground: var(--vn-ocean-900);
+  --destructive: var(--vn-red-600);
+  --destructive-foreground: var(--vn-red-700);
+  --ring: var(--vn-ocean-500);
 
-  /* State — Green / success */
-  --vn-green-700: #199473;
-  --vn-green-500: #3ebd93;
-  --vn-green-100: #effcf6;
+  /* Reassurance pill ("Beta", "Pro bono", good news) */
+  --reassure: var(--vn-sunflower-100);
+  --reassure-foreground: var(--vn-sunflower-900);
 
-  /* State — Rose / destructive */
-  --vn-rose-950: #620042;
-  --vn-rose-700: #bc0a6f;
-  --vn-rose-500: #e8368f;
-  --vn-rose-100: #ffe3ec;
+  /* Fields */
+  --field: var(--vn-paper-50);
+  --field-placeholder: var(--vn-ocean-600);
 
-  /* Semantic tokens (light) — identical roles to the app */
-  --background: var(--vn-blue-50);
-  --foreground: var(--vn-blue-900);
-  --card: var(--vn-blue-50);
-  --card-foreground: var(--vn-blue-900);
-  --primary: var(--vn-blue-900);
-  --primary-foreground: var(--vn-blue-50);
-  --secondary: var(--vn-orange-500);
-  --secondary-foreground: var(--vn-orange-950);
-  --muted: var(--vn-blue-100);
-  --muted-foreground: var(--vn-blue-600);
-  --accent: var(--vn-blue-900);
-  --accent-foreground: var(--vn-blue-50);
-  --destructive: var(--vn-rose-500);
-  --destructive-foreground: var(--vn-rose-950);
-  --border: var(--vn-blue-100);
-  --input: var(--vn-blue-100);
-  --ring: var(--vn-orange-300);
+  /* Link ink sitting directly on a page/card surface */
+  --link: var(--vn-ocean-700);
+  --link-hover: var(--vn-ocean-800);
 
-  /* Liberty Red accent used as foreground (links, active nav, icons) sitting
-     directly on a page/card surface. Deep enough for AA on the light surfaces;
-     the dark theme swaps in a lighter tint (below) so it stays legible on the
-     dark surfaces — a fixed vn-orange-600/700 there only reaches ~2:1. */
-  --link: var(--vn-orange-700);
+  /* Surfaces (kept for continuity with the app's semantic names) */
+  --surface: var(--vn-paper-50);
+  --surface-muted: var(--vn-paper-200);
 
-  /* Surfaces that need to lift off the page (cards, header, footer bands). The
-     app's chat surface keeps card == background; on marketing we want white
-     cards on the gray-blue page for clean separation, still within the DS. */
-  --surface: var(--vn-white);
-  --surface-muted: var(--vn-blue-100);
+  /* The dark footer band, and its ink on that band */
+  --band: var(--vn-ocean-900);
+  --band-foreground: var(--vn-ocean-50);
+  --band-muted: var(--vn-ocean-200);
 
   --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Noto Serif", ui-serif, serif;
   --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
-  --radius: 0rem;
 
-  --shadow-2xs: 0 1px 6px 1px hsl(210 24.3902% 16.0784% / 0.05);
-  --shadow-xs: 0 1px 6px 1px hsl(210 24.3902% 16.0784% / 0.05);
-  --shadow-sm: 0 1px 6px 1px hsl(210 24.3902% 16.0784% / 0.1),
-    0 1px 2px 0px hsl(210 24.3902% 16.0784% / 0.1);
-  --shadow: 0 1px 6px 1px hsl(210 24.3902% 16.0784% / 0.1),
-    0 1px 2px 0px hsl(210 24.3902% 16.0784% / 0.1);
-  --shadow-md: 0 1px 6px 1px hsl(210 24.3902% 16.0784% / 0.1),
-    0 2px 4px 0px hsl(210 24.3902% 16.0784% / 0.1);
-  --shadow-lg: 0 1px 6px 1px hsl(210 24.3902% 16.0784% / 0.1),
-    0 4px 6px 0px hsl(210 24.3902% 16.0784% / 0.1);
+  --radius-control: 4px;
+  --radius-card: 8px;
+
+  /* Elevation — the borderless separation system. 0 page · 1 resting ·
+     2 raised (hover/focus) · 3 floating. Controls use a firmer contact
+     shadow than cards so their edge reads on a card. */
+  --elevation-1: 0 1px 2px rgba(7, 36, 69, 0.06), 0 4px 14px -6px rgba(7, 36, 69, 0.16);
+  --elevation-1-control: 0 1px 2px rgba(7, 36, 69, 0.62), 0 0 7px rgba(7, 36, 69, 0.3),
+    0 6px 14px -8px rgba(7, 36, 69, 0.3);
+  --elevation-2: 0 1px 1px rgba(7, 36, 69, 0.12), 0 2px 4px rgba(7, 36, 69, 0.08),
+    0 8px 16px -8px rgba(7, 36, 69, 0.32);
+  --elevation-3: 0 2px 6px rgba(7, 36, 69, 0.08), 0 24px 48px -16px rgba(7, 36, 69, 0.38);
+  /* Contact shadow for a control sitting on the dark ocean band */
+  --elevation-band-control: 0 1px 2px rgba(5, 22, 44, 0.5), 0 6px 14px -8px rgba(5, 22, 44, 0.6);
+
+  /* Glow — rationed. The primary action glows at rest; focus/hover glow the rest. */
+  --glow-primary: 0 0 10px 1px rgba(27, 75, 130, 0.25);
+  --glow-hover: 0 0 8px 2px rgba(59, 115, 182, 0.3);
+  --glow-focus: 0 0 5px 2px rgba(59, 115, 182, 0.95), 0 0 12px 2px rgba(59, 115, 182, 0.2);
+
+  /* Legacy Tailwind shadow scale, kept so `shadow-sm`/`shadow-md` still resolve */
+  --shadow-2xs: 0 1px 6px 1px hsl(212 82% 15% / 0.05);
+  --shadow-xs: 0 1px 6px 1px hsl(212 82% 15% / 0.05);
+  --shadow-sm: 0 1px 6px 1px hsl(212 82% 15% / 0.1), 0 1px 2px 0px hsl(212 82% 15% / 0.1);
+  --shadow: 0 1px 6px 1px hsl(212 82% 15% / 0.1), 0 1px 2px 0px hsl(212 82% 15% / 0.1);
+  --shadow-md: 0 1px 6px 1px hsl(212 82% 15% / 0.1), 0 2px 4px 0px hsl(212 82% 15% / 0.1);
+  --shadow-lg: 0 1px 6px 1px hsl(212 82% 15% / 0.1), 0 4px 6px 0px hsl(212 82% 15% / 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #1f2933;
-    --foreground: #f5f7fa;
-    --card: #1f2933;
-    --card-foreground: #f5f7fa;
-    --primary: #e0e8f9;
-    --primary-foreground: #19216c;
-    --secondary: #f86a6a;
-    --secondary-foreground: #610316;
-    --muted: #3e4c59;
-    --muted-foreground: #cbd2d9;
-    --accent: #19216c;
-    --accent-foreground: #e0e8f9;
-    --destructive: #f9703e;
-    --destructive-foreground: #820f03;
-    --border: #52606d;
-    --input: #616e7c;
-    --ring: #ef4e4e;
-    /* Lighter Liberty Red so accent text clears AA (~4.75:1) on the dark
-       surfaces, where the light-theme vn-orange-700 would fail. */
-    --link: var(--vn-orange-300);
+    --background: var(--vn-ink-950);
+    --foreground: var(--vn-ink-50);
+    --card: var(--vn-ink-900);
+    --card-foreground: var(--vn-ink-50);
+    /* Roles swap in the dark: sunflower leads, ocean is the quiet second button. */
+    --primary: var(--vn-sunflower-400);
+    --primary-foreground: var(--vn-ink-950);
+    --secondary: var(--vn-ocean-700);
+    --secondary-foreground: var(--vn-ink-50);
+    --muted: var(--vn-ink-900);
+    --muted-foreground: var(--vn-ink-300);
+    --accent: var(--vn-ink-800);
+    --accent-foreground: var(--vn-ink-50);
+    --destructive: var(--vn-red-600);
+    --destructive-foreground: var(--vn-red-300);
+    --ring: var(--vn-sunflower-400);
 
-    --surface: #323f4b;
-    --surface-muted: #2b3742;
+    --reassure: var(--vn-sunflower-900);
+    --reassure-foreground: var(--vn-sunflower-100);
+
+    --field: var(--vn-ink-750);
+    --field-placeholder: var(--vn-ink-200);
+
+    --link: var(--vn-sunflower-400);
+    --link-hover: var(--vn-sunflower-300);
+
+    --surface: var(--vn-ink-900);
+    --surface-muted: var(--vn-ink-900);
+
+    /* The footer band stays deep ocean in both themes. */
+    --band: var(--vn-ocean-950);
+    --band-foreground: var(--vn-ocean-50);
+    --band-muted: var(--vn-ocean-200);
+
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -6px rgba(0, 0, 0, 0.5);
+    --elevation-1-control: 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+    --elevation-2: 0 1px 1px rgba(0, 0, 0, 0.4), 0 8px 16px -6px rgba(0, 0, 0, 0.6);
+    --elevation-3: 0 24px 48px -12px rgba(0, 0, 0, 0.75);
+    --elevation-band-control: 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+
+    --glow-primary: 0 0 12px 2px rgba(255, 205, 60, 0.35);
+    --glow-hover: 0 0 10px 2px rgba(255, 205, 60, 0.28);
+    --glow-focus: 0 0 5px 2px rgba(255, 205, 60, 0.9), 0 0 12px 2px rgba(255, 205, 60, 0.2);
 
     --shadow-2xs: 0 1px 6px 1px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 6px 1px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 6px 1px hsl(0 0% 0% / 0.1),
-      0 1px 2px 0px hsl(0 0% 0% / 0.1);
+    --shadow-sm: 0 1px 6px 1px hsl(0 0% 0% / 0.1), 0 1px 2px 0px hsl(0 0% 0% / 0.1);
     --shadow: 0 1px 6px 1px hsl(0 0% 0% / 0.1), 0 1px 2px 0px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 6px 1px hsl(0 0% 0% / 0.1),
-      0 2px 4px 0px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 6px 1px hsl(0 0% 0% / 0.1),
-      0 4px 6px 0px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 6px 1px hsl(0 0% 0% / 0.1), 0 2px 4px 0px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 6px 1px hsl(0 0% 0% / 0.1), 0 4px 6px 0px hsl(0 0% 0% / 0.1);
   }
 }
 
-/* Expose tokens as Tailwind utilities: bg-primary, text-foreground,
-   bg-secondary, border-border, text-vn-orange-600, shadow-sm, rounded-*, etc. */
+/* Expose tokens as Tailwind utilities: bg-primary, text-muted-foreground,
+   bg-vn-ocean-700, text-vn-sunflower-500, bg-reassure, font-serif, etc. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -154,45 +211,51 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
   --color-ring: var(--ring);
   --color-link: var(--link);
+  --color-reassure: var(--reassure);
+  --color-reassure-foreground: var(--reassure-foreground);
+  --color-field: var(--field);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-band: var(--band);
+  --color-band-foreground: var(--band-foreground);
+  --color-band-muted: var(--band-muted);
 
-  --color-vn-blue-900: var(--vn-blue-900);
-  --color-vn-blue-800: var(--vn-blue-800);
-  --color-vn-blue-700: var(--vn-blue-700);
-  --color-vn-blue-600: var(--vn-blue-600);
-  --color-vn-blue-500: var(--vn-blue-500);
-  --color-vn-blue-400: var(--vn-blue-400);
-  --color-vn-blue-300: var(--vn-blue-300);
-  --color-vn-blue-200: var(--vn-blue-200);
-  --color-vn-blue-100: var(--vn-blue-100);
-  --color-vn-blue-50: var(--vn-blue-50);
+  --color-vn-ocean-50: var(--vn-ocean-50);
+  --color-vn-ocean-100: var(--vn-ocean-100);
+  --color-vn-ocean-200: var(--vn-ocean-200);
+  --color-vn-ocean-300: var(--vn-ocean-300);
+  --color-vn-ocean-500: var(--vn-ocean-500);
+  --color-vn-ocean-600: var(--vn-ocean-600);
+  --color-vn-ocean-700: var(--vn-ocean-700);
+  --color-vn-ocean-800: var(--vn-ocean-800);
+  --color-vn-ocean-900: var(--vn-ocean-900);
+  --color-vn-ocean-950: var(--vn-ocean-950);
 
-  --color-vn-orange-900: var(--vn-orange-900);
-  --color-vn-orange-800: var(--vn-orange-800);
-  --color-vn-orange-700: var(--vn-orange-700);
-  --color-vn-orange-600: var(--vn-orange-600);
-  --color-vn-orange-500: var(--vn-orange-500);
-  --color-vn-orange-400: var(--vn-orange-400);
-  --color-vn-orange-300: var(--vn-orange-300);
-  --color-vn-orange-200: var(--vn-orange-200);
-  --color-vn-orange-100: var(--vn-orange-100);
-  --color-vn-orange-50: var(--vn-orange-50);
+  --color-vn-sunflower-50: var(--vn-sunflower-50);
+  --color-vn-sunflower-100: var(--vn-sunflower-100);
+  --color-vn-sunflower-300: var(--vn-sunflower-300);
+  --color-vn-sunflower-400: var(--vn-sunflower-400);
+  --color-vn-sunflower-500: var(--vn-sunflower-500);
+  --color-vn-sunflower-700: var(--vn-sunflower-700);
+  --color-vn-sunflower-800: var(--vn-sunflower-800);
+  --color-vn-sunflower-900: var(--vn-sunflower-900);
+
+  --color-vn-paper-50: var(--vn-paper-50);
+  --color-vn-paper-100: var(--vn-paper-100);
+  --color-vn-paper-200: var(--vn-paper-200);
+  --color-vn-paper-300: var(--vn-paper-300);
 
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
 
-  --radius-sm: var(--radius);
-  --radius-md: var(--radius);
-  --radius-lg: var(--radius);
-  --radius-xl: var(--radius);
-  --radius-2xl: var(--radius);
-  --radius-3xl: var(--radius);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: var(--radius-card);
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -203,10 +266,6 @@
 }
 
 @layer base {
-  * {
-    border-color: var(--border);
-  }
-
   html {
     scroll-behavior: smooth;
   }
@@ -219,9 +278,166 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Serif, tracked open a touch, for every headline. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    letter-spacing: 0.01em;
+  }
+
+  /* Keyboard focus is a blurred glow in the ring colour — never a hard line. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: none;
+    box-shadow: var(--glow-focus);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
     }
+  }
+}
+
+@layer components {
+  /* Cards, list rows, panels: lifted off the page by elevation, no border. */
+  .vn-card {
+    background: var(--card);
+    color: var(--card-foreground);
+    border-radius: var(--radius-card);
+    box-shadow: var(--elevation-1);
+  }
+
+  /* --- Buttons --------------------------------------------------------- */
+  .vn-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    font-family: inherit;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  /* The one primary action — the only thing that glows at rest. */
+  .vn-btn-primary {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: var(--elevation-1-control), var(--glow-primary);
+  }
+  .vn-btn-primary:hover {
+    color: var(--primary-foreground);
+    transform: translateY(-1px);
+    box-shadow: var(--elevation-2), var(--glow-hover);
+  }
+
+  /* The single sunflower call to action (the directory band button). */
+  .vn-btn-secondary {
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    box-shadow: var(--elevation-band-control);
+    font-weight: 700;
+  }
+  .vn-btn-secondary:hover {
+    color: var(--secondary-foreground);
+    transform: translateY(-1px);
+    box-shadow: var(--elevation-2);
+  }
+
+  /* Neutral raised button — flat off-white, no glow. */
+  .vn-btn-raised {
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: var(--elevation-1-control);
+  }
+  .vn-btn-raised:hover {
+    color: var(--foreground);
+    transform: translateY(-1px);
+    box-shadow: var(--elevation-2);
+  }
+
+  .vn-btn:disabled,
+  .vn-btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+  }
+
+  /* --- Fields ---------------------------------------------------------- */
+  /* Flat at rest: a contact shadow gives the edge, no drawn border. */
+  .vn-field {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--field);
+    color: var(--foreground);
+    font-family: inherit;
+    box-shadow: var(--elevation-1-control);
+    outline: none;
+  }
+  .vn-field::placeholder {
+    color: var(--field-placeholder);
+    opacity: 1;
+  }
+  .vn-field:focus,
+  .vn-field:focus-visible {
+    box-shadow: var(--glow-focus);
+  }
+
+  /* --- Eyebrow --------------------------------------------------------- */
+  /* Short facts in spaced caps, separated by sunflower diamonds. */
+  .vn-eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.625rem;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--link);
+  }
+  .vn-eyebrow .vn-diamond {
+    color: var(--vn-sunflower-500);
+  }
+
+  /* --- Reassurance pill / diamond badge -------------------------------- */
+  .vn-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--reassure);
+    color: var(--reassure-foreground);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  /* The chevron-cut BETA / diamond badge shape. */
+  .vn-badge-diamond {
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  }
+
+  /* Links inside prose / cards. */
+  .vn-link {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-color: var(--vn-sunflower-400);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .vn-link:hover {
+    color: var(--link-hover);
   }
 }

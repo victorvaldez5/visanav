@@ -1,5 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
+import Eyebrow from "../components/Eyebrow.astro";
 import { TURNSTILE_SITE_KEY } from "../config";
 
 const US_STATES = [
@@ -9,9 +10,8 @@ const US_STATES = [
   "VT","VA","WA","WV","WI","WY","PR","GU","VI",
 ];
 
-const inputClass =
-  "mt-1 w-full border border-input bg-surface px-3 py-2 text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
-const labelClass = "block text-sm font-medium text-foreground";
+const inputClass = "vn-field mt-2 h-10 px-3 text-sm";
+const labelClass = "block text-sm font-medium leading-none text-foreground";
 ---
 
 <Base
@@ -19,11 +19,13 @@ const labelClass = "block text-sm font-medium text-foreground";
   description="Nonprofits and pro-bono immigration providers can request to be listed in the VisaNav directory or partner to offer VisaNav to the people they serve. Every request is reviewed."
   canonicalPath="/partners"
 >
-  <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-    <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+  <section class="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+    <Eyebrow items={["FOR ORGANIZATIONS", "REVIEWED BEFORE LISTING"]} />
+
+    <h1 class="mt-5 text-4xl font-bold text-foreground">
       For organizations that help immigrants
     </h1>
-    <p class="mt-3 text-muted-foreground">
+    <p class="mt-3 leading-relaxed text-muted-foreground">
       VisaNav is a free public tool, currently in beta. If your organization
       provides immigration help, you can ask to be listed as a trusted resource,
       or partner with us to offer VisaNav to the people you serve. We review every
@@ -31,19 +33,20 @@ const labelClass = "block text-sm font-medium text-foreground";
     </p>
 
     <!-- Success panel (revealed after submit) -->
-    <div
-      id="success"
-      hidden
-      class="mt-8 border border-vn-orange-200 bg-vn-orange-50 p-6"
-    >
-      <h2 class="text-lg font-semibold text-vn-orange-900">Thank you — we've got your request</h2>
-      <p class="mt-2 text-sm text-vn-orange-800">
-        A person will review it before anything is published. We'll reach out at
-        the email you provided if we need anything else.
-      </p>
+    <div id="success" hidden class="vn-card mt-8 p-6">
+      <div class="flex items-start gap-3">
+        <span aria-hidden="true" class="mt-1.5 h-2.5 w-2.5 shrink-0 rotate-45 bg-vn-sunflower-400"></span>
+        <div>
+          <h2 class="text-lg font-bold text-foreground">Thank you — we've got your request</h2>
+          <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
+            A person will review it before anything is published. We'll reach out
+            at the email you provided if we need anything else.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <form id="partner-form" class="mt-8 space-y-6" novalidate>
+    <form id="partner-form" class="vn-card mt-8 space-y-6 p-6 sm:p-8" novalidate>
       <!-- Honeypot: hidden from people, catnip for bots. Do not remove. -->
       <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;">
         <label>Website (leave blank)
@@ -94,48 +97,48 @@ const labelClass = "block text-sm font-medium text-foreground";
 
       <fieldset>
         <legend class={labelClass}>What are you asking for?</legend>
-        <div class="mt-2 space-y-2">
-          <label class="flex items-start gap-3 border border-border p-3">
-            <input type="radio" name="intent" value="listing" checked class="mt-1 accent-vn-orange-500" />
-            <span class="text-sm text-muted-foreground">
-              <strong class="font-semibold text-foreground">List us as a public resource</strong><br />
+        <div class="mt-3 space-y-3">
+          <label class="flex items-start gap-3.5 rounded-[8px] bg-background p-4">
+            <input type="radio" name="intent" value="listing" checked class="mt-1 h-[18px] w-[18px] accent-vn-ocean-700" />
+            <span class="text-sm leading-relaxed text-muted-foreground">
+              <strong class="block font-serif text-base font-bold text-foreground">List us as a public resource</strong>
               Add our organization to the VisaNav directory so people can find us.
             </span>
           </label>
-          <label class="flex items-start gap-3 border border-border p-3">
-            <input type="radio" name="intent" value="partner" class="mt-1 accent-vn-orange-500" />
-            <span class="text-sm text-muted-foreground">
-              <strong class="font-semibold text-foreground">Partner with us</strong><br />
+          <label class="flex items-start gap-3.5 rounded-[8px] bg-background p-4">
+            <input type="radio" name="intent" value="partner" class="mt-1 h-[18px] w-[18px] accent-vn-ocean-700" />
+            <span class="text-sm leading-relaxed text-muted-foreground">
+              <strong class="block font-serif text-base font-bold text-foreground">Partner with us</strong>
               We'd like to offer VisaNav to the people we serve (a pilot).
             </span>
           </label>
         </div>
       </fieldset>
 
-      <label class="flex items-center gap-2 text-sm font-medium text-foreground">
-        <input type="checkbox" name="offers_pro_bono" class="h-4 w-4 accent-vn-orange-500" />
+      <label class="flex items-center gap-2.5 text-sm font-medium text-foreground">
+        <input type="checkbox" name="offers_pro_bono" class="h-[18px] w-[18px] accent-vn-ocean-700" />
         We provide free (pro-bono) legal help
       </label>
 
       <div>
         <label for="message" class={labelClass}>Anything else we should know?</label>
-        <textarea id="message" name="message" rows="4" class={inputClass}></textarea>
+        <textarea id="message" name="message" rows="4" class="vn-field mt-2 px-3 py-2.5 text-sm leading-5"></textarea>
       </div>
 
       <!-- Cloudflare Turnstile: a privacy-friendly CAPTCHA. It drops a hidden
            `cf-turnstile-response` input into this form; the API verifies it. -->
       <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-theme="auto"></div>
 
-      <div id="error" hidden role="alert" class="border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"></div>
+      <div id="error" hidden role="alert" class="rounded-[4px] bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground"></div>
 
       <button
         id="submit"
         type="submit"
-        class="bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        class="vn-btn vn-btn-primary h-12 px-6 text-base"
       >
         Submit request
       </button>
-      <p class="text-xs text-muted-foreground">
+      <p class="text-xs leading-relaxed text-muted-foreground">
         By submitting you confirm the information is accurate. Submissions are
         reviewed before listing.
       </p>

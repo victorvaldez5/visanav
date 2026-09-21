@@ -1,14 +1,12 @@
 ---
 import Base from "../layouts/Base.astro";
+import Eyebrow from "../components/Eyebrow.astro";
 import { orgAppLink } from "../config";
 import orgs from "../data/organizations.json";
 
 const total = orgs.length;
 const proBono = orgs.filter((o) => o.proBono).length;
 const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sort();
-
-const controlClass =
-  "mt-1 w-full border border-input bg-surface px-3 py-2 text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
 ---
 
 <Base
@@ -16,11 +14,13 @@ const controlClass =
   description="Search a directory of nonprofit and pro-bono immigration organizations across the U.S., drawn from official DOJ/EOIR recognized-organization data. Free to browse, no account needed."
   canonicalPath="/directory"
 >
-  <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-    <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+  <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+    <Eyebrow items={["FREE TO BROWSE", "NO ACCOUNT NEEDED", "DOJ/EOIR DATA"]} />
+
+    <h1 class="mt-5 text-4xl font-bold text-foreground">
       Find trustworthy immigration help
     </h1>
-    <p class="mt-3 max-w-2xl text-muted-foreground">
+    <p class="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
       {total.toLocaleString()} nonprofit and pro-bono organizations — including
       {proBono} pro-bono legal providers — from official DOJ/EOIR recognized-organization
       data. Free to browse. Being listed here is not an endorsement; always
@@ -28,31 +28,37 @@ const controlClass =
     </p>
 
     <!-- Filters -->
-    <div class="mt-8 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+    <div class="mt-8 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
       <div>
         <label for="q" class="block text-sm font-medium text-foreground">Search by name or city</label>
-        <input
-          id="q"
-          type="search"
-          autocomplete="off"
-          placeholder="e.g. Catholic Charities, Houston…"
-          class={controlClass}
-        />
+        <div class="vn-field mt-2 flex h-10 items-center px-3">
+          <svg class="h-4 w-4 shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            id="q"
+            type="search"
+            autocomplete="off"
+            placeholder="e.g. Catholic Charities, Houston…"
+            class="ml-2 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-field-placeholder"
+          />
+        </div>
       </div>
       <div>
         <label for="state" class="block text-sm font-medium text-foreground">State</label>
-        <select id="state" class:list={["sm:w-40", controlClass]}>
+        <select id="state" class="vn-field mt-2 h-10 px-3 text-sm sm:w-44">
           <option value="">All states</option>
           {states.map((s) => <option value={s}>{s}</option>)}
         </select>
       </div>
-      <label class="flex items-center gap-2 pb-2 text-sm font-medium text-foreground">
-        <input id="probono" type="checkbox" class="h-4 w-4 accent-vn-orange-500" />
+      <label class="flex items-center gap-2.5 pb-2 text-sm font-medium text-foreground">
+        <input id="probono" type="checkbox" class="h-[18px] w-[18px] accent-vn-ocean-700" />
         Pro-bono only
       </label>
     </div>
 
-    <p id="count" class="mt-6 scroll-mt-24 text-sm text-muted-foreground" aria-live="polite">
+    <p id="count" class="mt-7 scroll-mt-24 text-sm text-muted-foreground" aria-live="polite">
       Showing {total.toLocaleString()} organizations
     </p>
 
@@ -61,16 +67,16 @@ const controlClass =
       {
         orgs.map((o) => (
           <li
-            class="org-card border border-border bg-surface p-5 shadow-sm"
+            class="org-card vn-card p-5"
             data-name={o.name.toLowerCase()}
             data-city={(o.city || "").toLowerCase()}
             data-state={o.state}
             data-probono={o.proBono ? "1" : "0"}
           >
             <div class="flex items-start justify-between gap-3">
-              <h2 class="font-semibold text-foreground">{o.name}</h2>
+              <h2 class="text-lg font-bold leading-tight text-foreground">{o.name}</h2>
               {o.proBono && (
-                <span class="shrink-0 bg-vn-orange-100 px-2 py-0.5 text-xs font-semibold text-vn-orange-800">
+                <span class="vn-badge vn-badge-diamond h-[22px] shrink-0 px-4 text-xs">
                   Pro bono
                 </span>
               )}
@@ -82,18 +88,26 @@ const controlClass =
               </p>
             )}
 
-            <dl class="mt-3 space-y-1 text-sm text-muted-foreground">
+            <dl class="mt-3 flex flex-col gap-1.5 text-sm text-muted-foreground">
               {o.phone && (
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
                   <dt class="sr-only">Phone</dt>
-                  <dd><a href={`tel:${o.phone.replace(/[^\d+]/g, "")}`} class="hover:text-link">{o.phone}</a></dd>
+                  <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="6" y="2" width="12" height="20" rx="2" fill="var(--vn-ocean-700)" />
+                    <rect x="10" y="18" width="4" height="1.5" rx="0.75" fill="var(--vn-sunflower-500)" />
+                  </svg>
+                  <dd><a href={`tel:${o.phone.replace(/[^\d+]/g, "")}`} class="text-muted-foreground hover:text-link">{o.phone}</a></dd>
                 </div>
               )}
               {o.website && (
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
                   <dt class="sr-only">Website</dt>
-                  <dd class="truncate">
-                    <a href={o.website} target="_blank" rel="noopener noreferrer nofollow" class="text-link hover:underline">
+                  <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" fill="var(--vn-ocean-700)" />
+                    <ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="var(--vn-sunflower-500)" stroke-width="1.5" />
+                  </svg>
+                  <dd class="min-w-0 truncate">
+                    <a href={o.website} target="_blank" rel="noopener noreferrer nofollow" class="vn-link">
                       Visit website
                     </a>
                   </dd>
@@ -103,7 +117,7 @@ const controlClass =
 
             <a
               href={orgAppLink(o.id)}
-              class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-link hover:gap-2"
+              class="vn-link mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold"
             >
               Ask VisaNav about this org
               <span aria-hidden="true">→</span>
@@ -123,12 +137,12 @@ const controlClass =
       id="pager"
       hidden
       aria-label="Directory pages"
-      class="mt-8 flex items-center justify-center gap-2 sm:gap-3"
+      class="mt-8 flex items-center justify-center gap-3"
     >
       <button
         id="prev"
         type="button"
-        class="border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
+        class="vn-btn vn-btn-raised h-9 px-4 text-sm"
       >
         <span aria-hidden="true">←</span> Prev
       </button>
@@ -136,7 +150,7 @@ const controlClass =
       <button
         id="next"
         type="button"
-        class="border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
+        class="vn-btn vn-btn-raised h-9 px-4 text-sm"
       >
         Next <span aria-hidden="true">→</span>
       </button>
