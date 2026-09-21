@@ -22,9 +22,6 @@ export interface OrganizationFilters {
     cost?: string[] | null;
     // DRF OrderingFilter value, e.g. "name", "-last_verified".
     ordering?: string | null;
-    proBono?: boolean | null;
-    service?: string | null;
-    language?: string | null;
 }
 
 export interface Organization {
@@ -49,8 +46,9 @@ export interface Organization {
 }
 
 // A DOJ-accredited representative. The roster gives a rep no contact details or
-// location of their own, so the API fills organization_name/phone and city/state
-// in from the linked organization, and computes days_left from the expiry.
+// location of their own, so the API fills organization_name/phone and
+// organization_city/state in from the linked organization, and computes
+// days_left from the expiry.
 export interface Representative {
     id: number;
     name: string;
@@ -63,8 +61,8 @@ export interface Representative {
     phone: string;
     website: string;
     address: OrganizationAddress | null;
-    city: string | null;
-    state: string | null;
+    organization_city: string | null;
+    organization_state: string | null;
     dhs_only: boolean;
     accreditation_expiration: string | null;
     days_left: number | null;
@@ -79,8 +77,6 @@ export interface RepresentativeFilters {
     // Organization's state (subdivision name, e.g. "Arizona").
     region?: string | null;
     dhsOnly?: boolean | null;
-    // Accreditation lapses within N days (backs the "expiring soon" chip).
-    expiresWithin?: number | null;
     ordering?: string | null;
     providerType?: string | null;
 }

@@ -38,13 +38,13 @@ class OrganizationSerializer(serializers.ModelSerializer):
 class RepresentativeSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
     # The EOIR roster gives a rep no contact details or location of their own —
-    # you reach them through their recognized organization. Surface that
-    # organization's name, phone and place so the directory can list and
-    # contact them without an extra round-trip per card.
-    organization_name = serializers.SerializerMethodField()
-    organization_phone = serializers.SerializerMethodField()
-    city = serializers.SerializerMethodField()
-    state = serializers.SerializerMethodField()
+    # you reach them through their recognized organization. These read that
+    # organization's name, phone and place off model properties, and are named
+    # organization_* so they can't be mistaken for the rep's own address.
+    organization_name = serializers.ReadOnlyField()
+    organization_phone = serializers.ReadOnlyField()
+    organization_city = serializers.ReadOnlyField()
+    organization_state = serializers.ReadOnlyField()
     # Days until accreditation lapses: negative once expired, null when the
     # roster listed no date. Lets the UI flag soon-to-expire accreditations.
     days_left = serializers.SerializerMethodField()
@@ -63,8 +63,8 @@ class RepresentativeSerializer(serializers.ModelSerializer):
             "phone",
             "website",
             "address",
-            "city",
-            "state",
+            "organization_city",
+            "organization_state",
             "dhs_only",
             "accreditation_expiration",
             "days_left",
@@ -72,28 +72,6 @@ class RepresentativeSerializer(serializers.ModelSerializer):
             "source_url",
             "last_verified",
         )
-
-    def get_organization_name(self, obj):
-        return obj.organization.name if obj.organization_id else None
-
-    def get_organization_phone(self, obj):
-        if obj.organization_id and obj.organization.phones:
-            return obj.organization.phones[0]
-        return None
-
-    @staticmethod
-    def _org_address(obj):
-        return obj.organization.address if obj.organization_id else None
-
-    def get_city(self, obj):
-        address = self._org_address(obj)
-        return address.city if address else None
-
-    def get_state(self, obj):
-        address = self._org_address(obj)
-        if address and address.subdivision_id:
-            return address.subdivision.name
-        return None
 
     def get_days_left(self, obj):
         if not obj.accreditation_expiration:

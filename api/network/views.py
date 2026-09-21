@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 import django_filters
 from django.db.models import Q
@@ -80,24 +80,10 @@ class RepresentativeFilter(FilterSet):
     region = django_filters.CharFilter(
         field_name="organization__address__subdivision__name", lookup_expr="iexact"
     )
-    # Reps whose accreditation lapses within N days (and hasn't already);
-    # backs the "expiring soon" chip. Excludes undated rows (unknown != soon).
-    expires_within = django_filters.NumberFilter(method="filter_expires_within")
 
     class Meta:
         model = Representative
         fields = ["provider_type", "organization", "dhs_only"]
-
-    def filter_expires_within(self, queryset, name, value):
-        try:
-            days = int(value)
-        except (TypeError, ValueError):
-            return queryset
-        today = date.today()
-        return queryset.filter(
-            accreditation_expiration__gte=today,
-            accreditation_expiration__lte=today + timedelta(days=days),
-        )
 
 
 class RepresentativeViewSet(viewsets.ReadOnlyModelViewSet):

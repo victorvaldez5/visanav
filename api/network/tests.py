@@ -390,8 +390,8 @@ def test_representative_serializer_surfaces_org_details_and_days_left():
     row = APIClient().get(REPS_URL).data["results"][0]
     assert row["organization_name"] == "Arizona Immigration Help"
     assert row["organization_phone"] == "+1-602-555-0100"
-    assert row["city"] == "Phoenix"
-    assert row["state"] == "Arizona"
+    assert row["organization_city"] == "Phoenix"
+    assert row["organization_state"] == "Arizona"
     assert row["days_left"] == 30
 
 
@@ -414,7 +414,7 @@ def test_representatives_hide_expired_but_keep_undated():
 
 
 @pytest.mark.django_db
-def test_representatives_filter_region_expires_within_and_ordering():
+def test_representatives_filter_region_and_ordering():
     az = _arizona_address()
     az_org = _make_org("az-org", name="AZ Org", address=az)
     country = Country.objects.get(country_code="US")
@@ -441,10 +441,6 @@ def test_representatives_filter_region_expires_within_and_ordering():
     # region filters by the organization's state.
     resp = client.get(REPS_URL, {"region": "Arizona"})
     assert {r["name"] for r in resp.data["results"]} == {"Soon AZ", "Later AZ"}
-
-    # expires_within drops the one outside the 90-day window.
-    resp = client.get(REPS_URL, {"expires_within": "90"})
-    assert {r["name"] for r in resp.data["results"]} == {"Soon AZ", "Soon TX"}
 
     # default ordering is soonest-to-expire first.
     resp = client.get(REPS_URL)

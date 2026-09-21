@@ -33,11 +33,6 @@ const SCOPE_ITEMS = [
     label: "USCIS only",
     hint: "Can file with USCIS — applications, petitions, renewals — but not appear in immigration court or before the BIA.",
   },
-  {
-    id: "soon",
-    label: "Expiring within 90 days",
-    hint: "Shows only reps whose accreditation lapses within the next 90 days.",
-  },
 ];
 const route = useRoute();
 const router = useRouter();
@@ -56,7 +51,6 @@ function buildFilters(): RepresentativeFilters {
     search: search.value || null,
     region: region.value || null,
     dhsOnly,
-    expiresWithin: s.soon ? 90 : null,
     ordering: REP_ORDERING[sort.value] ?? "accreditation_expiration",
   };
 }
@@ -74,8 +68,9 @@ const {items, page, count, loading, reload} = useDirectoryFilters<Representative
 });
 
 function repLocation(rep: Representative): string | null {
-  if (rep.city && rep.state) return `${rep.city}, ${rep.state}`;
-  return rep.state || rep.city || null;
+  if (rep.organization_city && rep.organization_state)
+    return `${rep.organization_city}, ${rep.organization_state}`;
+  return rep.organization_state || rep.organization_city || null;
 }
 function expiryLabel(days: number): string {
   if (days <= 0) return "Expires today";
