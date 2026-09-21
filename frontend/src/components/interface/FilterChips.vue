@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import LineIcon from "@/components/interface/LineIcon.vue";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 
 // Multi-select toggle chips (cost / scope filters). An item may carry a `hint`,
 // shown as a tooltip on hover/focus — used to explain the accreditation scopes
-// without a separate block of explainer cards. The tick keeps its space when
-// hidden, so a chip doesn't jump width as it's pressed.
+// without a separate block of explainer cards. The pressed state is shown by the
+// filled (primary) background.
 const props = defineProps<{
   items: {id: string; label: string; hint?: string}[];
   modelValue: Record<string, boolean>;
@@ -39,11 +38,6 @@ const chipClass =
             :class="chipClass"
             @click="toggle(item.id)"
           >
-            <LineIcon
-              name="check"
-              class="h-[13px] w-[13px] transition-opacity"
-              :class="modelValue[item.id] ? 'opacity-100' : 'opacity-0'"
-            />
             {{ item.label }}
           </button>
         </TooltipTrigger>
