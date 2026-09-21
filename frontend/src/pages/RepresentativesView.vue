@@ -89,7 +89,7 @@ function clearFilters() {
 </script>
 
 <template>
-  <div class="w-full max-w-[1180px] px-5 pb-10">
+  <div class="mx-auto w-full max-w-[1180px] px-5 pb-10">
     <!-- Page head -->
     <header class="pb-[22px] pt-4">
       <Eyebrow :parts="['DOJ accredited', 'Not attorneys', 'Reached through their organization']" />

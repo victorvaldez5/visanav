@@ -66,7 +66,7 @@ async function onSubmit(prompt: string) {
 <template>
   <div
     v-if="messageHistory.length > 0 || isStreaming"
-    class="max-w-3xl mx-auto flex flex-col h-screen"
+    class="max-w-3xl mx-auto flex flex-col flex-1 min-h-0"
   >
     <div class="flex-1 overflow-y-scroll my-4 mb-36 px-4">
       <!-- Short disclaimer at the start of the conversation -->
@@ -112,7 +112,7 @@ async function onSubmit(prompt: string) {
   </div>
   <div
     v-else
-    class="md:max-w-3xl p-4 md:p-0 mx-auto h-screen flex flex-col justify-center"
+    class="md:max-w-3xl p-4 md:p-0 mx-auto flex-1 min-h-0 flex flex-col justify-center"
   >
     <h3
       v-if="messageHistory?.length === 0"
