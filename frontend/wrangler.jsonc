@@ -11,5 +11,12 @@
     "directory": "./dist",
     // Serve index.html for unknown paths so Vue Router (history mode) works.
     "not_found_handling": "single-page-application"
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "persist": true
+    }
   }
 }
