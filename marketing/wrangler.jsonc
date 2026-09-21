@@ -9,6 +9,13 @@
   // The zone's stale `www` A records (a domain-parking lander) must be removed
   // for this to bind; Cloudflare offers to replace them on the first deploy.
   "routes": [{ "pattern": "www.visanav.org", "custom_domain": true }],
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "persist": true
+    }
+  },
   "assets": {
     "directory": "./dist",
     // Multi-page static site: serve the generated 404.html for unknown paths.
