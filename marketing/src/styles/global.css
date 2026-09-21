@@ -168,7 +168,10 @@
     --link-hover: var(--vn-sunflower-300);
 
     --surface: var(--vn-ink-900);
-    --surface-muted: var(--vn-ink-900);
+    /* Drop the muted band to the page tone in dark so the ink-900 cards sitting
+       on it read as the lighter, raised surface (in light the band is the darker
+       paper-200 and the cards are the lighter paper-50). */
+    --surface-muted: var(--vn-ink-950);
 
     /* The footer band stays deep ocean in both themes. */
     --band: var(--vn-ocean-950);

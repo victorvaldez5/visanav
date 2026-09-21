@@ -21,7 +21,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
       Find trustworthy immigration help
     </h1>
     <p class="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
-      {total.toLocaleString()} nonprofit and pro-bono organizations — including
+      {total.toLocaleString()} nonprofit and pro-bono organizations — including{" "}
       {proBono} pro-bono legal providers — from official DOJ/EOIR recognized-organization
       data. Free to browse. Being listed here is not an endorsement; always
       verify an organization before sharing personal details.
@@ -104,6 +104,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
                   <dt class="sr-only">Website</dt>
                   <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" fill="var(--vn-ocean-700)" />
+                    <line x1="3" y1="12" x2="21" y2="12" stroke="var(--vn-sunflower-500)" stroke-width="1.5" />
                     <ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="var(--vn-sunflower-500)" stroke-width="1.5" />
                   </svg>
                   <dd class="min-w-0 truncate">
