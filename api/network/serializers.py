@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import serializers
 
 from core.utils import assert_turnstile
@@ -35,6 +37,17 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 class RepresentativeSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
+    # The EOIR roster gives a rep no contact details or location of their own —
+    # you reach them through their recognized organization. Surface that
+    # organization's name, phone and place so the directory can list and
+    # contact them without an extra round-trip per card.
+    organization_name = serializers.SerializerMethodField()
+    organization_phone = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    state = serializers.SerializerMethodField()
+    # Days until accreditation lapses: negative once expired, null when the
+    # roster listed no date. Lets the UI flag soon-to-expire accreditations.
+    days_left = serializers.SerializerMethodField()
 
     class Meta:
         model = Representative
@@ -44,16 +57,48 @@ class RepresentativeSerializer(serializers.ModelSerializer):
             "provider_type",
             "credential",
             "organization",
+            "organization_name",
+            "organization_phone",
             "email",
             "phone",
             "website",
             "address",
+            "city",
+            "state",
             "dhs_only",
             "accreditation_expiration",
+            "days_left",
             "is_active",
             "source_url",
             "last_verified",
         )
+
+    def get_organization_name(self, obj):
+        return obj.organization.name if obj.organization_id else None
+
+    def get_organization_phone(self, obj):
+        if obj.organization_id and obj.organization.phones:
+            return obj.organization.phones[0]
+        return None
+
+    @staticmethod
+    def _org_address(obj):
+        return obj.organization.address if obj.organization_id else None
+
+    def get_city(self, obj):
+        address = self._org_address(obj)
+        return address.city if address else None
+
+    def get_state(self, obj):
+        address = self._org_address(obj)
+        if address and address.subdivision_id:
+            return address.subdivision.name
+        return None
+
+    def get_days_left(self, obj):
+        if not obj.accreditation_expiration:
+            return None
+        return (obj.accreditation_expiration - date.today()).days
 
 
 class OrganizationSubmissionSerializer(serializers.ModelSerializer):

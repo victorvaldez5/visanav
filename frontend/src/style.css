@@ -115,6 +115,18 @@
     --status-foreground: var(--vn-ocean-950);
     /* Link underline is always the sunflower line, in both themes. */
     --link-decoration: var(--vn-sunflower-400);
+    /* Eyebrows — the small uppercase kicker above a heading. */
+    --eyebrow-ink: var(--vn-ocean-700);
+    /* Notice — the persistent beta/legal banner. */
+    --notice-bg: var(--vn-sunflower-50);
+    --notice-ink: var(--vn-sunflower-900);
+    /* Band — the full-width ocean CTA block. */
+    --band: var(--vn-ocean-700);
+    --band-ink: var(--vn-white);
+    --band-quiet: var(--vn-ocean-200);
+    /* Warn — the inline caution alert (notario / expired-roster notes). */
+    --warn-bg: var(--vn-sunflower-100);
+    --warn-ink: var(--vn-sunflower-900);
     --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, sans-serif, system-ui;
     --font-serif: "Noto Serif", ui-serif, serif;
     --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
@@ -195,6 +207,14 @@
     --reassure-foreground: var(--vn-sunflower-100);
     --status: var(--vn-sunflower-400);
     --status-foreground: var(--vn-ink-950);
+    --eyebrow-ink: var(--vn-sunflower-300);
+    --notice-bg: var(--vn-ink-900);
+    --notice-ink: var(--vn-sunflower-300);
+    --band: var(--vn-ocean-800);
+    --band-ink: var(--vn-ink-50);
+    --band-quiet: var(--vn-ocean-200);
+    --warn-bg: var(--vn-sunflower-900);
+    --warn-ink: var(--vn-sunflower-100);
     --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, sans-serif, system-ui;
     --font-serif: "Noto Serif", ui-serif, serif;
     --font-mono: "Ubuntu Sans Mono", ui-monospace, monospace;
@@ -272,6 +292,14 @@
     --color-reassure-foreground: var(--reassure-foreground);
     --color-status: var(--status);
     --color-status-foreground: var(--status-foreground);
+    --color-eyebrow: var(--eyebrow-ink);
+    --color-notice: var(--notice-bg);
+    --color-notice-foreground: var(--notice-ink);
+    --color-band: var(--band);
+    --color-band-foreground: var(--band-ink);
+    --color-band-quiet: var(--band-quiet);
+    --color-warn: var(--warn-bg);
+    --color-warn-foreground: var(--warn-ink);
 
     --font-sans: var(--font-sans);
     --font-mono: var(--font-mono);
