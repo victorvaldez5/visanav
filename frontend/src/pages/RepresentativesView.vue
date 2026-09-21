@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from "vue";
-import {watchDebounced} from "@vueuse/core";
+import {computed, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
-import {networkService, type Representative} from "@/services/networkService.ts";
+import {networkService, type Representative, type RepresentativeFilters} from "@/services/networkService.ts";
 import {US_STATES} from "@/lib/usStates.ts";
-import {usePagination} from "@/composables/usePagination.ts";
+import {useDirectoryFilters} from "@/composables/useDirectoryFilters.ts";
+import {fmtDate, telHref} from "@/lib/format.ts";
+import {selectClass, crossLinkClass} from "@/lib/directoryStyles.ts";
 import {EOIR_ROSTER_URL} from "@/i18n";
-import {toast} from "vue-sonner";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {Badge} from "@/components/ui/badge";
@@ -39,8 +39,6 @@ const SCOPE_ITEMS = [
     hint: "Shows only reps whose accreditation lapses within the next 90 days.",
   },
 ];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 const route = useRoute();
 const router = useRouter();
 
@@ -49,7 +47,7 @@ const region = ref("");
 const scope = ref<Record<string, boolean>>({});
 const sort = ref("expiry");
 
-function buildFilters() {
+function buildFilters(): RepresentativeFilters {
   const s = scope.value;
   let dhsOnly: boolean | null = null;
   if (s.full && !s.dhs) dhsOnly = false;
@@ -69,30 +67,12 @@ const activeFilterCount = computed(() => {
   return (region.value ? 1 : 0) + scopeCount;
 });
 
-const {items, load, page, count, loading} = usePagination<Representative>({
-  fetchPage: (p) => networkService.getRepresentatives(p, buildFilters()),
+const {items, page, count, loading, reload} = useDirectoryFilters<Representative, RepresentativeFilters>({
+  buildFilters,
+  fetchPage: (p, f) => networkService.getRepresentatives(p, f),
+  errorMessage: "Couldn't load representatives. Please try again.",
 });
 
-function reload(p = 1) {
-  load(p).catch((e) => {
-    console.error(e);
-    toast.error("Couldn't load representatives. Please try again.");
-  });
-}
-
-const filterKey = computed(() => JSON.stringify(buildFilters()));
-watchDebounced(filterKey, () => reload(1), {debounce: 250});
-
-onMounted(() => reload(1));
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return `${MONTHS[+m - 1]} ${+d}, ${y}`;
-}
-function telHref(phone: string): string {
-  return "tel:" + phone.replace(/[^0-9+]/g, "");
-}
 function repLocation(rep: Representative): string | null {
   if (rep.city && rep.state) return `${rep.city}, ${rep.state}`;
   return rep.state || rep.city || null;
@@ -111,9 +91,6 @@ function clearFilters() {
   scope.value = {};
   sort.value = "expiry";
 }
-
-const selectClass =
-  "h-[38px] w-full rounded-[4px] border border-transparent bg-field px-3 text-[15px] text-foreground shadow-elevation-1-control outline-none transition-[box-shadow] focus-visible:shadow-glow-focus max-md:h-[46px] max-md:text-base";
 </script>
 
 <template>
@@ -286,7 +263,7 @@ const selectClass =
           <button
             v-if="rep.organization_name"
             type="button"
-            class="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded border-0 bg-transparent p-0 font-sans text-sm font-semibold text-foreground underline decoration-[color:var(--vn-sunflower-400)] decoration-2 underline-offset-4 outline-none hover:decoration-[3px] focus-visible:shadow-glow-focus max-md:ml-0 max-md:w-full max-md:justify-center max-md:pt-1"
+            :class="crossLinkClass"
             @click="viewOrg(rep)"
           >
             View organization <span aria-hidden="true">→</span>

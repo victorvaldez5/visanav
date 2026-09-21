@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from "vue";
-import {watchDebounced} from "@vueuse/core";
+import {computed, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
-import {networkService, type Organization} from "@/services/networkService.ts";
+import {networkService, type Organization, type OrganizationFilters} from "@/services/networkService.ts";
 import {US_STATES} from "@/lib/usStates.ts";
-import {usePagination} from "@/composables/usePagination.ts";
-import {toast} from "vue-sonner";
+import {useDirectoryFilters} from "@/composables/useDirectoryFilters.ts";
+import {fmtDate, telHref} from "@/lib/format.ts";
+import {selectClass, crossLinkClass} from "@/lib/directoryStyles.ts";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {Badge} from "@/components/ui/badge";
@@ -44,8 +44,6 @@ const COST_ITEMS = [
   {id: "low-cost", label: "Low cost"},
   {id: "sliding-scale", label: "Sliding scale"},
 ];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 const route = useRoute();
 const router = useRouter();
 
@@ -59,7 +57,7 @@ function activeCost(): string[] {
   return Object.keys(cost.value).filter((k) => cost.value[k]);
 }
 
-function buildFilters() {
+function buildFilters(): OrganizationFilters {
   return {
     search: search.value || null,
     region: region.value || null,
@@ -74,22 +72,11 @@ const activeFilterCount = computed(
   () => (region.value ? 1 : 0) + (orgType.value ? 1 : 0) + activeCost().length,
 );
 
-const {items, load, page, count, loading} = usePagination<Organization>({
-  fetchPage: (p) => networkService.getOrganizations(p, buildFilters()),
+const {items, page, count, loading, reload} = useDirectoryFilters<Organization, OrganizationFilters>({
+  buildFilters,
+  fetchPage: (p, f) => networkService.getOrganizations(p, f),
+  errorMessage: "Couldn't load organizations. Please try again.",
 });
-
-function reload(p = 1) {
-  load(p).catch((e) => {
-    console.error(e);
-    toast.error("Couldn't load organizations. Please try again.");
-  });
-}
-
-// Collapse every filter change into a single (debounced) reload from page 1.
-const filterKey = computed(() => JSON.stringify(buildFilters()));
-watchDebounced(filterKey, () => reload(1), {debounce: 250});
-
-onMounted(() => reload(1));
 
 function costLabel(org: Organization): string | null {
   if (org.pro_bono) return "Pro bono";
@@ -97,14 +84,6 @@ function costLabel(org: Organization): string | null {
 }
 function typeLabel(org: Organization): string {
   return TYPE_LABEL[org.organization_type] ?? org.organization_type;
-}
-function fmtDate(iso: string | null): string {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return `${MONTHS[+m - 1]} ${+d}, ${y}`;
-}
-function telHref(phone: string): string {
-  return "tel:" + phone.replace(/[^0-9+]/g, "");
 }
 function websiteHref(url: string): string {
   return /^https?:/.test(url) ? url : "https://" + url;
@@ -127,9 +106,6 @@ function clearFilters() {
   cost.value = {};
   sort.value = "name";
 }
-
-const selectClass =
-  "h-[38px] w-full rounded-[4px] border border-transparent bg-field px-3 text-[15px] text-foreground shadow-elevation-1-control outline-none transition-[box-shadow] focus-visible:shadow-glow-focus max-md:h-[46px] max-md:text-base";
 </script>
 
 <template>
@@ -334,7 +310,7 @@ const selectClass =
           </Button>
           <button
             type="button"
-            class="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded border-0 bg-transparent p-0 font-sans text-sm font-semibold text-foreground underline decoration-[color:var(--vn-sunflower-400)] decoration-2 underline-offset-4 outline-none hover:decoration-[3px] focus-visible:shadow-glow-focus max-md:ml-0 max-md:w-full max-md:justify-center max-md:pt-1"
+            :class="crossLinkClass"
             @click="viewReps(org)"
           >
             Representatives here <span aria-hidden="true">→</span>
