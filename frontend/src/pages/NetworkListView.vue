@@ -111,16 +111,36 @@ function clearFilters() {
 <template>
   <div class="w-full max-w-[1180px] px-5 pb-10">
     <!-- Page head -->
-    <header class="pb-[22px] pt-[30px]">
+    <header class="pb-[22px] pt-4">
       <Eyebrow :parts="['Free', 'Private', 'Not a law firm']" />
       <h1 class="mt-2.5 font-serif text-[30px] font-bold leading-[38px] max-sm:text-2xl max-sm:leading-8">
-        Find free &amp; low-cost immigration help
+        Find Free &amp; Low-Cost Immigration Help
       </h1>
       <p class="mt-2.5 max-w-[66ch] text-base leading-[25px] text-muted-foreground">
-        Nonprofits, pro-bono providers and DOJ-recognized organizations. Every listing links back to
-        the government roster it came from.
+        Nonprofits, pro-bono providers and DOJ-recognized organizations — each one links back to the
+        official government roster it came from.
       </p>
     </header>
+
+    <!-- Notario caution — surfaced up top: the key "who can actually help you" note. -->
+    <div
+      class="mb-4 flex items-start gap-3 rounded-xl bg-warn p-[15px] text-warn-foreground shadow-elevation-1"
+      role="note"
+    >
+      <LineIcon
+        name="alert"
+        class="mt-0.5 h-[19px] w-[19px] shrink-0"
+      />
+      <div>
+        <h4 class="font-serif text-[14.5px] font-bold leading-[21px]">
+          Heads up — a notario is not a lawyer
+        </h4>
+        <p class="mt-0.5 text-[13.5px] leading-5">
+          Only a licensed attorney or a DOJ-accredited representative at a recognized organization can
+          give legal advice or represent you.
+        </p>
+      </div>
+    </div>
 
     <!-- Filters -->
     <FilterPanel :active-count="activeFilterCount">
@@ -198,7 +218,7 @@ function clearFilters() {
     </FilterPanel>
 
     <!-- Toolbar -->
-    <div class="flex flex-wrap items-baseline justify-between gap-4 pb-1.5 pt-[26px] max-md:pt-4">
+    <div class="flex flex-wrap items-baseline justify-between gap-4 pb-4 pt-[26px] max-md:pt-4">
       <h2 class="font-serif text-[22px] font-bold leading-[30px] max-md:text-[20px] max-md:leading-[28px]">
         {{ count }} organization{{ count === 1 ? "" : "s" }}<template v-if="region">
           in {{ region }}
@@ -287,7 +307,7 @@ function clearFilters() {
           />
         </div>
 
-        <div class="mt-auto flex flex-wrap items-center gap-[9px] border-t border-muted pt-3.5">
+        <div class="mt-auto flex flex-wrap items-center gap-[9px] pt-3.5">
           <Button
             v-for="(a, i) in orgActions(org)"
             :key="a.icon"
@@ -378,26 +398,6 @@ function clearFilters() {
             Start a free chat
           </RouterLink>
         </Button>
-      </div>
-    </div>
-
-    <!-- Notario caution -->
-    <div
-      class="mt-4 flex items-start gap-3 rounded-xl bg-warn p-[15px] text-warn-foreground shadow-elevation-1"
-      role="note"
-    >
-      <LineIcon
-        name="alert"
-        class="mt-0.5 h-[19px] w-[19px] shrink-0"
-      />
-      <div>
-        <h4 class="font-serif text-[14.5px] font-bold leading-[21px]">
-          Heads up — a notario is not a lawyer
-        </h4>
-        <p class="mt-0.5 text-[13.5px] leading-5">
-          Only a licensed attorney or a DOJ-accredited representative at a recognized organization can
-          give legal advice or represent you.
-        </p>
       </div>
     </div>
 

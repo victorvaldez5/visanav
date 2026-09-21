@@ -18,7 +18,7 @@ import InfoHint from "@/components/interface/InfoHint.vue";
 import FilterPanel from "@/components/interface/FilterPanel.vue";
 
 const REP_ORDERING: Record<string, string> = {
-  expiry: "accreditation_expiration",
+  expiry: "-accreditation_expiration",
   name: "name",
   org: "organization__name,name",
 };
@@ -51,7 +51,7 @@ function buildFilters(): RepresentativeFilters {
     search: search.value || null,
     region: region.value || null,
     dhsOnly,
-    ordering: REP_ORDERING[sort.value] ?? "accreditation_expiration",
+    ordering: REP_ORDERING[sort.value] ?? "-accreditation_expiration",
   };
 }
 
@@ -91,14 +91,14 @@ function clearFilters() {
 <template>
   <div class="w-full max-w-[1180px] px-5 pb-10">
     <!-- Page head -->
-    <header class="pb-[22px] pt-[30px]">
+    <header class="pb-[22px] pt-4">
       <Eyebrow :parts="['DOJ accredited', 'Not attorneys', 'Reached through their organization']" />
       <h1 class="mt-2.5 font-serif text-[30px] font-bold leading-[38px] max-sm:text-2xl max-sm:leading-8">
-        DOJ-accredited representatives
+        DOJ-Accredited Representatives
       </h1>
       <p class="mt-2.5 max-w-[66ch] text-base leading-[25px] text-muted-foreground">
-        Accredited representatives aren't lawyers, but the Department of Justice authorizes them to
-        represent you. Each one works through a recognized organization — that's who you contact.
+        Not lawyers, but the Department of Justice authorizes them to represent you. Reach each one
+        through their recognized organization.
       </p>
     </header>
 
@@ -160,7 +160,7 @@ function clearFilters() {
     </FilterPanel>
 
     <!-- Toolbar -->
-    <div class="flex flex-wrap items-baseline justify-between gap-4 pb-1.5 pt-[26px] max-md:pt-4">
+    <div class="flex flex-wrap items-baseline justify-between gap-4 pb-4 pt-[26px] max-md:pt-4">
       <h2 class="font-serif text-[22px] font-bold leading-[30px] max-md:text-[20px] max-md:leading-[28px]">
         {{ count }} representative{{ count === 1 ? "" : "s" }}<template v-if="region">
           in {{ region }}
@@ -174,7 +174,7 @@ function clearFilters() {
           :class="[selectClass, 'md:h-[34px] md:w-auto md:text-sm']"
         >
           <option value="expiry">
-            Accreditation expiry (soonest)
+            Accreditation expiry (latest)
           </option>
           <option value="name">
             Name (A–Z)
@@ -239,7 +239,7 @@ function clearFilters() {
           </template>
         </p>
 
-        <div class="mt-auto flex flex-wrap items-center gap-[9px] border-t border-muted pt-3.5">
+        <div class="mt-auto flex flex-wrap items-center gap-[9px] pt-3.5">
           <Button
             v-if="rep.organization_phone"
             as-child
