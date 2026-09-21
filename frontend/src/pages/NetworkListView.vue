@@ -1,200 +1,409 @@
 <script setup lang="ts">
-import {onMounted, ref, watch} from "vue";
-import {networkService, type Organization} from "@/services/networkService.ts";
+import {computed, ref} from "vue";
+import {useRoute, useRouter} from "vue-router";
+import {networkService, type Organization, type OrganizationFilters} from "@/services/networkService.ts";
+import {US_STATES} from "@/lib/usStates.ts";
+import {useDirectoryFilters} from "@/composables/useDirectoryFilters.ts";
+import {fmtDate, telHref} from "@/lib/format.ts";
+import {selectClass, crossLinkClass} from "@/lib/directoryStyles.ts";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {Badge} from "@/components/ui/badge";
-import {toast} from "vue-sonner";
-import {usePagination} from "@/composables/usePagination.ts";
 import PaginationBar from "@/components/interface/PaginationBar.vue";
-import Icon from "@/components/ui/Icon.vue";
+import Eyebrow from "@/components/interface/Eyebrow.vue";
+import LineIcon from "@/components/interface/LineIcon.vue";
+import FilterChips from "@/components/interface/FilterChips.vue";
+import FilterPanel from "@/components/interface/FilterPanel.vue";
 
-const {items, load, page, count, setPageData} = usePagination({
-  initialPage: 1,
-  accumulate: false,
-  fetchPage: networkService.getOrganizations
-});
-const networkOrganizations = ref<Organization[]>([]);
-const searchText = ref("");
-const loading = ref(false);
+// org_type → label, from OrganizationType.choices in api/network/models.py.
+const TYPE_LABEL: Record<string, string> = {
+  "self-owned": "Self owned",
+  "public-company": "Public company",
+  "private-company": "Private company",
+  "partnership": "Partnership",
+  "educational": "Educational",
+  "referral-service": "Referral service",
+  "community-organization": "Community organization",
+  "non-profit": "Nonprofit",
+};
+const FEE_LABEL: Record<string, string> = {
+  free: "Free",
+  "sliding-scale": "Sliding scale",
+  "low-cost": "Low cost",
+  paid: "Paid",
+};
+// Server ordering behind each sort option (DRF OrderingFilter).
+const ORDERING: Record<string, string> = {
+  name: "name",
+  verified: "-last_verified",
+  state: "address__subdivision__name,name",
+};
+const COST_ITEMS = [
+  {id: "pro_bono", label: "Pro bono"},
+  {id: "free", label: "Free"},
+  {id: "low-cost", label: "Low cost"},
+  {id: "sliding-scale", label: "Sliding scale"},
+];
+const route = useRoute();
+const router = useRouter();
 
-// A short, friendly label for the org's cost to the user.
-function costLabel(organization: Organization): string | null {
-  if (organization.pro_bono) return "Pro bono";
-  const map: Record<string, string> = {
-    free: "Free",
-    "sliding-scale": "Sliding scale",
-    "low-cost": "Low cost",
-  };
-  return map[organization.fee_model] ?? null;
+const search = ref(typeof route.query.q === "string" ? route.query.q : "");
+const region = ref("");
+const orgType = ref("");
+const cost = ref<Record<string, boolean>>({});
+const sort = ref("name");
+
+function activeCost(): string[] {
+  return Object.keys(cost.value).filter((k) => cost.value[k]);
 }
 
-watch(searchText, async (newVal) => {
-  loading.value = true;
-  if (newVal === "") {
-    await load(1)
-    loading.value = false;
-    return
-  }
-  if (newVal.length > 3) {
-    const data = await networkService.getOrganizations(page.value, {search: searchText.value});
-    setPageData(data, false);
-    networkOrganizations.value = items.value;
-    loading.value = false;
-  }
-})
-onMounted(async () => {
-  try {
-    loading.value = true;
-    await load(1)
-    networkOrganizations.value = items.value;
-    loading.value = false;
-  } catch (e) {
-    console.error(e);
-    toast.error("Oops, an error occurred")
-  }
-})
+function buildFilters(): OrganizationFilters {
+  return {
+    search: search.value || null,
+    region: region.value || null,
+    organizationType: orgType.value || null,
+    cost: activeCost(),
+    ordering: ORDERING[sort.value] ?? "name",
+  };
+}
 
-async function handleLoadPage(newPage: number) {
-  try {
-    loading.value = true;
-    await load(newPage)
-    networkOrganizations.value = items.value;
-    loading.value = false;
-  } catch (e) {
-    console.error(e);
-    toast.error("Oops, an error occurred")
-  }
+// Filters shown in the mobile sheet (search stays visible, so it isn't counted).
+const activeFilterCount = computed(
+  () => (region.value ? 1 : 0) + (orgType.value ? 1 : 0) + activeCost().length,
+);
+
+const {items, page, count, loading, reload} = useDirectoryFilters<Organization, OrganizationFilters>({
+  buildFilters,
+  fetchPage: (p, f) => networkService.getOrganizations(p, f),
+  errorMessage: "Couldn't load organizations. Please try again.",
+});
+
+function costLabel(org: Organization): string | null {
+  if (org.pro_bono) return "Pro bono";
+  return FEE_LABEL[org.fee_model] ?? null;
+}
+function typeLabel(org: Organization): string {
+  return TYPE_LABEL[org.organization_type] ?? org.organization_type;
+}
+function websiteHref(url: string): string {
+  return /^https?:/.test(url) ? url : "https://" + url;
+}
+function orgActions(org: Organization) {
+  const acts: {icon: string; label: string; href: string; external?: boolean; tabular?: boolean}[] = [];
+  if (org.phones.length) acts.push({icon: "phone", label: org.phones[0], href: telHref(org.phones[0]), tabular: true});
+  if (org.emails.length) acts.push({icon: "mail", label: "Email", href: "mailto:" + org.emails[0]});
+  if (org.websites.length) acts.push({icon: "globe", label: "Website", href: websiteHref(org.websites[0]), external: true});
+  return acts;
+}
+
+function viewReps(org: Organization) {
+  router.push({name: "Representatives", query: {q: org.name}});
+}
+function clearFilters() {
+  search.value = "";
+  region.value = "";
+  orgType.value = "";
+  cost.value = {};
+  sort.value = "name";
 }
 </script>
 
 <template>
-  <div class="px-5 pb-5">
-    <div class="md:flex md:items-center md:justify-between">
-      <div class="min-w-0 flex-1">
-        <h2 class="text-2xl/7 font-normal text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-          Find free &amp; low-cost immigration help
-        </h2>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Nonprofit, pro-bono, and DOJ-recognized organizations near you.
+  <div class="w-full max-w-[1180px] px-5 pb-10">
+    <!-- Page head -->
+    <header class="pb-[22px] pt-4">
+      <Eyebrow :parts="['Free', 'Private', 'Not a law firm']" />
+      <h1 class="mt-2.5 font-serif text-[30px] font-bold leading-[38px] max-sm:text-2xl max-sm:leading-8">
+        Find Free &amp; Low-Cost Immigration Help
+      </h1>
+      <p class="mt-2.5 max-w-[66ch] text-base leading-[25px] text-muted-foreground">
+        Nonprofits, pro-bono providers and DOJ-recognized organizations — each one links back to the
+        official government roster it came from.
+      </p>
+    </header>
+
+    <!-- Notario caution — surfaced up top: the key "who can actually help you" note. -->
+    <div
+      class="mb-4 flex items-start gap-3 rounded-xl bg-warn p-[15px] text-warn-foreground shadow-elevation-1"
+      role="note"
+    >
+      <LineIcon
+        name="alert"
+        class="mt-0.5 h-[19px] w-[19px] shrink-0"
+      />
+      <div>
+        <h4 class="font-serif text-[14.5px] font-bold leading-[21px]">
+          Heads up — a notario is not a lawyer
+        </h4>
+        <p class="mt-0.5 text-[13.5px] leading-5">
+          Only a licensed attorney or a DOJ-accredited representative at a recognized organization can
+          give legal advice or represent you.
         </p>
       </div>
     </div>
 
-    <div class="flex gap-2 mb-4 sm:mb-6 lg:mb-8 mt-4">
-      <Input
-        v-model="searchText"
-        placeholder="Search for an organization"
-      />
-      <Button>Filter</Button>
-    </div>
-    <div
-      v-if="networkOrganizations.length > 0 && !loading"
-      class="divide-y divide-gray-200 dark:divide-white/10"
-    >
-      <ul
-        role="list"
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-4"
-      >
-        <li
-          v-for="organization in networkOrganizations"
-          :key="organization.id"
-          class="col-span-1 divide-y divide-border rounded-xl bg-card text-card-foreground shadow-elevation-1"
+    <!-- Filters -->
+    <FilterPanel :active-count="activeFilterCount">
+      <template #search>
+        <div class="grid min-w-0 gap-1.5">
+          <label
+            for="o-search"
+            class="text-sm font-medium leading-none"
+          >Search by name</label>
+          <Input
+            id="o-search"
+            v-model="search"
+            type="search"
+            autocomplete="off"
+            placeholder="e.g. Catholic Charities"
+            class="h-[38px] max-md:h-[46px]"
+          />
+        </div>
+      </template>
+
+      <div class="grid items-end gap-3 sm:grid-cols-2">
+        <div class="grid min-w-0 gap-1.5">
+          <label
+            for="o-region"
+            class="text-sm font-medium leading-none"
+          >State</label>
+          <select
+            id="o-region"
+            v-model="region"
+            :class="selectClass"
+          >
+            <option value="">
+              All states
+            </option>
+            <option
+              v-for="s in US_STATES"
+              :key="s.code"
+              :value="s.name"
+            >
+              {{ s.name }}
+            </option>
+          </select>
+        </div>
+        <div class="grid min-w-0 gap-1.5">
+          <label
+            for="o-type"
+            class="text-sm font-medium leading-none"
+          >Organization type</label>
+          <select
+            id="o-type"
+            v-model="orgType"
+            :class="selectClass"
+          >
+            <option value="">
+              All types
+            </option>
+            <option
+              v-for="(label, value) in TYPE_LABEL"
+              :key="value"
+              :value="value"
+            >
+              {{ label }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="grid gap-[9px]">
+        <span class="text-xs font-bold uppercase tracking-[0.06em] text-muted-foreground">Cost</span>
+        <FilterChips
+          v-model="cost"
+          :items="COST_ITEMS"
+          aria-label="Cost"
+        />
+      </div>
+    </FilterPanel>
+
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-baseline justify-between gap-4 pb-4 pt-[26px] max-md:pt-4">
+      <h2 class="font-serif text-[22px] font-bold leading-[30px] max-md:text-[20px] max-md:leading-[28px]">
+        {{ count }} organization{{ count === 1 ? "" : "s" }}<template v-if="region">
+          in {{ region }}
+        </template>
+      </h2>
+      <div class="flex items-center gap-2 text-sm text-muted-foreground max-md:grid max-md:w-full max-md:grid-cols-[auto_1fr]">
+        <label for="o-sort">Sort by</label>
+        <select
+          id="o-sort"
+          v-model="sort"
+          :class="[selectClass, 'md:h-[34px] md:w-auto md:text-sm']"
         >
-          <div class="flex w-full items-center justify-between space-x-6 p-6">
-            <div class="flex-1 truncate">
-              <div class="flex items-center space-x-3">
-                <h3 class="truncate text-base font-medium text-gray-900 dark:text-white">
-                  {{ organization.name }}
-                </h3>
-                <Badge
-                  v-if="costLabel(organization)"
-                  variant="info"
-                >
-                  {{ costLabel(organization) }}
-                </Badge>
-              </div>
-              <p class="mt-1 truncate text-sm text-muted-foreground">
-                {{ organization.organization_type }}
-              </p>
-            </div>
-          </div>
-          <div class="p-6">
-            <div class="flex flex-col items-start space-y-1">
-              <template v-if="organization.address">
-                <h5 class="font-medium">
-                  {{ organization.address.subdivision?.name || organization.address.city }}
-                </h5>
-                <p>{{ organization.address.line1 }}</p>
-                <span>
-                  {{ organization.address.city }}<template v-if="organization.address.subdivision">, {{ organization.address.subdivision.name }}</template>
-                  {{ organization.address.postal_code }}
-                </span>
-              </template>
-              <p
-                v-else-if="organization.description"
-                class="text-sm text-muted-foreground line-clamp-3"
-              >
-                {{ organization.description }}
-              </p>
-            </div>
-          </div>
-          <div>
-            <div class="-mt-px flex divide-x divide-gray-300 dark:divide-white/10">
-              <div class="flex w-0 flex-1">
-                <a
-                  v-if="organization.emails.length"
-                  :href="`mailto:${organization.emails[0]}`"
-                  class="relative -mr-px inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-bl-lg border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
-                >
-                  <Icon
-                    name="icon-mail"
-                    class="size-5 text-gray-400 dark:text-gray-500"
-                  />
-                  Email
-                </a>
-              </div>
-              <div class="-ml-px flex w-0 flex-1">
-                <a
-                  v-if="organization.phones.length"
-                  :href="`tel:${organization.phones[0]}`"
-                  class="relative inline-flex w-0 flex-1 items-center justify-center gap-x-3 border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
-                >
-                  <Icon
-                    name="icon-device-smartphone"
-                    class="size-5 text-gray-400 dark:text-gray-500"
-                  />
-                  Call
-                </a>
-              </div>
-              <div class="-ml-px flex w-0 flex-1">
-                <a
-                  v-if="organization.websites.length"
-                  :href="organization.websites[0]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="relative inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-br-lg border border-transparent py-4 text-sm font-semibold text-gray-900 dark:text-white"
-                >
-                  <Icon
-                    name="icon-globe"
-                    class="size-5 text-gray-400 dark:text-gray-500"
-                  />
-                  Website
-                </a>
-              </div>
-            </div>
-          </div>
-        </li>
-      </ul>
-      <PaginationBar
-        :current-page="page"
-        :total="count || 1"
-        @page-change="handleLoadPage"
-      />
+          <option value="name">
+            Name (A–Z)
+          </option>
+          <option value="verified">
+            Recently verified
+          </option>
+          <option value="state">
+            State
+          </option>
+        </select>
+      </div>
     </div>
+
+    <!-- Results -->
+    <div
+      v-if="items.length"
+      class="grid gap-3.5 transition-opacity [grid-template-columns:repeat(auto-fill,minmax(min(100%,390px),1fr))]"
+      :class="{'opacity-60': loading}"
+    >
+      <article
+        v-for="org in items"
+        :key="org.id"
+        class="flex flex-col rounded-xl bg-card p-[18px] text-card-foreground shadow-elevation-1 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-elevation-2"
+      >
+        <div class="flex items-start justify-between gap-3 max-md:flex-col max-md:gap-2.5">
+          <div class="min-w-0">
+            <h3 class="font-serif text-[17px] font-bold leading-[25px] max-md:text-[18px] max-md:leading-[26px]">
+              {{ org.name }}
+            </h3>
+            <p class="mt-0.5 text-[13px] leading-[18px] text-muted-foreground">
+              {{ typeLabel(org) }}
+            </p>
+          </div>
+          <div class="flex max-w-[52%] flex-none flex-wrap justify-end gap-1.5 max-md:max-w-full max-md:justify-start">
+            <Badge
+              v-if="costLabel(org)"
+              variant="reassure"
+            >
+              {{ costLabel(org) }}
+            </Badge>
+            <Badge
+              v-if="org.accreditation"
+              variant="info"
+            >
+              {{ org.accreditation }}
+            </Badge>
+          </div>
+        </div>
+
+        <address
+          v-if="org.address && (org.address.line1 || org.address.city)"
+          class="mt-3 text-sm not-italic leading-[21px]"
+        >
+          <template v-if="org.address.line1">
+            {{ org.address.line1 }}<br>
+          </template>
+          {{ org.address.city }}<template v-if="org.address.subdivision">
+            , {{ org.address.subdivision.code }}
+          </template>
+          {{ org.address.postal_code }}
+        </address>
+
+        <p
+          v-if="org.description"
+          class="mt-2.5 line-clamp-3 text-[13.5px] leading-5 text-muted-foreground"
+        >
+          {{ org.description }}
+        </p>
+
+        <div class="mt-3">
+          <Eyebrow
+            variant="muted"
+            :parts="[org.address?.subdivision?.code, org.last_verified ? 'Verified ' + fmtDate(org.last_verified) : null]"
+          />
+        </div>
+
+        <div class="mt-auto flex flex-wrap items-center gap-[9px] pt-3.5">
+          <Button
+            v-for="(a, i) in orgActions(org)"
+            :key="a.icon"
+            as-child
+            :variant="i === 0 ? 'default' : 'outline'"
+            size="sm"
+            :class="['max-md:h-11', i === 0 ? 'max-md:w-full' : 'max-md:flex-1 max-md:basis-[140px]']"
+          >
+            <a
+              :href="a.href"
+              :target="a.external ? '_blank' : undefined"
+              :rel="a.external ? 'noopener noreferrer' : undefined"
+            >
+              <LineIcon
+                :name="a.icon"
+                class="h-[15px] w-[15px]"
+              />
+              <span :class="{'tabular-nums': a.tabular}">{{ a.label }}</span>
+            </a>
+          </Button>
+          <button
+            type="button"
+            :class="crossLinkClass"
+            @click="viewReps(org)"
+          >
+            Representatives here <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <!-- Empty -->
+    <div
+      v-else-if="!loading"
+      class="mt-3.5 rounded-xl bg-card p-10 text-center shadow-elevation-1"
+    >
+      <h3 class="font-serif text-[17px] font-bold leading-[25px]">
+        No organizations match those filters
+      </h3>
+      <p class="mx-auto mt-2 max-w-[44ch] text-sm leading-[21px] text-muted-foreground">
+        Try clearing the state or cost filter. Search matches the organization's name only.
+      </p>
+      <Button
+        variant="outline"
+        class="mt-3.5"
+        @click="clearFilters"
+      >
+        Clear filters
+      </Button>
+    </div>
+    <p
+      v-if="loading && !items.length"
+      class="mt-6 text-center text-sm text-muted-foreground"
+    >
+      Loading…
+    </p>
+
+    <PaginationBar
+      v-if="count > 50"
+      class="pt-6"
+      :current-page="page"
+      :total="count"
+      @page-change="reload"
+    />
+
+    <!-- Chat CTA band -->
+    <div class="mt-7 rounded-xl bg-band p-6 text-band-foreground">
+      <div class="flex flex-wrap items-center justify-between gap-6">
+        <div>
+          <Eyebrow
+            variant="onband"
+            :parts="['Not sure who to call?']"
+          />
+          <h3 class="mt-2 max-w-[28ch] font-serif text-xl font-bold leading-7">
+            Describe your situation and Javi will point you to the right kind of help
+          </h3>
+          <p class="mt-2 max-w-[62ch] text-sm leading-6 text-band-quiet">
+            No account, nothing saved unless you ask.
+          </p>
+        </div>
+        <Button
+          as-child
+          variant="secondary"
+          size="lg"
+          class="bg-status text-status-foreground shadow-[var(--elevation-1-control),0_0_12px_2px_rgba(255,205,60,0.38)] max-md:w-full"
+        >
+          <RouterLink to="/">
+            Start a free chat
+          </RouterLink>
+        </Button>
+      </div>
+    </div>
+
+    <p class="mt-[22px] max-w-[80ch] text-xs leading-[18px] text-muted-foreground">
+      Listings are drawn from the DOJ EOIR pro-bono and Recognition &amp; Accreditation rosters. Contact
+      an organization directly to confirm current availability — a listing here isn't an endorsement.
+    </p>
   </div>
 </template>
-
-<style scoped>
-
-</style>

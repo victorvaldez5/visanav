@@ -116,6 +116,32 @@ class Representative(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # A rep has no contact details or location of their own — the roster lists
+    # them through their recognized organization. These read that organization's
+    # details so callers don't walk the organization → address → subdivision
+    # relations themselves.
+    @property
+    def organization_name(self):
+        return self.organization.name if self.organization_id else None
+
+    @property
+    def organization_phone(self):
+        if self.organization_id and self.organization.phones:
+            return self.organization.phones[0]
+        return None
+
+    @property
+    def organization_city(self):
+        address = self.organization.address if self.organization_id else None
+        return address.city if address else None
+
+    @property
+    def organization_state(self):
+        address = self.organization.address if self.organization_id else None
+        if address and address.subdivision_id:
+            return address.subdivision.name
+        return None
+
     class Meta:
         ordering = ["name"]
 

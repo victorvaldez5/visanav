@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import serializers
 
 from core.utils import assert_turnstile
@@ -35,6 +37,17 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 class RepresentativeSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
+    # The EOIR roster gives a rep no contact details or location of their own —
+    # you reach them through their recognized organization. These read that
+    # organization's name, phone and place off model properties, and are named
+    # organization_* so they can't be mistaken for the rep's own address.
+    organization_name = serializers.ReadOnlyField()
+    organization_phone = serializers.ReadOnlyField()
+    organization_city = serializers.ReadOnlyField()
+    organization_state = serializers.ReadOnlyField()
+    # Days until accreditation lapses: negative once expired, null when the
+    # roster listed no date. Lets the UI flag soon-to-expire accreditations.
+    days_left = serializers.SerializerMethodField()
 
     class Meta:
         model = Representative
@@ -44,16 +57,26 @@ class RepresentativeSerializer(serializers.ModelSerializer):
             "provider_type",
             "credential",
             "organization",
+            "organization_name",
+            "organization_phone",
             "email",
             "phone",
             "website",
             "address",
+            "organization_city",
+            "organization_state",
             "dhs_only",
             "accreditation_expiration",
+            "days_left",
             "is_active",
             "source_url",
             "last_verified",
         )
+
+    def get_days_left(self, obj):
+        if not obj.accreditation_expiration:
+            return None
+        return (obj.accreditation_expiration - date.today()).days
 
 
 class OrganizationSubmissionSerializer(serializers.ModelSerializer):

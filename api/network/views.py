@@ -1,4 +1,7 @@
+from datetime import date
+
 import django_filters
+from django.db.models import F, Q
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from rest_framework import filters, generics, viewsets
 from rest_framework.permissions import AllowAny
@@ -12,6 +15,28 @@ from network.serializers import (
 )
 
 
+class NullsLastOrderingFilter(filters.OrderingFilter):
+    """OrderingFilter that always sorts NULLs last.
+
+    Postgres orders NULLs first under DESC, which would float reps with no
+    accreditation_expiration to the top of the "latest expiry" sort. Ordering by
+    F-expressions with nulls_last keeps undated rows at the end in either
+    direction.
+    """
+
+    def filter_queryset(self, request, queryset, view):
+        ordering = self.get_ordering(request, queryset, view)
+        if not ordering:
+            return queryset
+        fields = [
+            F(term[1:]).desc(nulls_last=True)
+            if term.startswith("-")
+            else F(term).asc(nulls_last=True)
+            for term in ordering
+        ]
+        return queryset.order_by(*fields)
+
+
 class OrganizationFilter(FilterSet):
     # Region matches the address's subdivision name (e.g. "Arizona").
     region = django_filters.CharFilter(
@@ -20,6 +45,18 @@ class OrganizationFilter(FilterSet):
     # services/languages are arrays; match rows that contain the given value.
     service = django_filters.CharFilter(method="filter_service")
     language = django_filters.CharFilter(method="filter_language")
+    # Cost chips OR together across the pro-bono flag and one or more fee
+    # models, so picking "Pro bono" + "Free" widens the list instead of
+    # emptying it (a single fee_model= would only match one exact value).
+    cost = django_filters.MultipleChoiceFilter(
+        method="filter_cost",
+        choices=[
+            ("pro_bono", "Pro bono"),
+            ("free", "Free"),
+            ("low-cost", "Low cost"),
+            ("sliding-scale", "Sliding scale"),
+        ],
+    )
 
     class Meta:
         model = Organization
@@ -31,13 +68,26 @@ class OrganizationFilter(FilterSet):
     def filter_language(self, queryset, name, value):
         return queryset.filter(languages__contains=[value])
 
+    def filter_cost(self, queryset, name, values):
+        if not values:
+            return queryset
+        fee_models = [v for v in values if v != "pro_bono"]
+        query = Q()
+        if "pro_bono" in values:
+            query |= Q(pro_bono=True)
+        if fee_models:
+            query |= Q(fee_model__in=fee_models)
+        return queryset.filter(query)
+
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = OrganizationSerializer
     permission_classes = (AllowAny,)
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "slug"]
     filterset_class = OrganizationFilter
+    ordering_fields = ["name", "last_verified", "address__subdivision__name"]
+    ordering = ["name"]
 
     def get_queryset(self):
         # Contact details are on the row now; only the address is a join.
@@ -47,6 +97,12 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RepresentativeFilter(FilterSet):
+    # A rep has no location of their own; filter by their organization's state
+    # (subdivision name, e.g. "Arizona") to match the OrganizationFilter.region.
+    region = django_filters.CharFilter(
+        field_name="organization__address__subdivision__name", lookup_expr="iexact"
+    )
+
     class Meta:
         model = Representative
         fields = ["provider_type", "organization", "dhs_only"]
@@ -55,13 +111,27 @@ class RepresentativeFilter(FilterSet):
 class RepresentativeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RepresentativeSerializer
     permission_classes = (AllowAny,)
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ["name"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = ["name", "organization__name"]
     filterset_class = RepresentativeFilter
+    ordering_fields = ["name", "accreditation_expiration", "organization__name"]
+    # Soonest-to-expire first by default (nulls sort last in Postgres).
+    ordering = ["accreditation_expiration", "name"]
 
     def get_queryset(self):
-        return Representative.objects.filter(is_active=True).select_related(
-            "organization", "address", "address__subdivision"
+        # A lapsed accreditation can't represent anyone, so keep expired reps
+        # out of the public directory — but keep undated rows (roster gave no
+        # expiration) visible rather than guessing they're expired.
+        return (
+            Representative.objects.filter(is_active=True)
+            .exclude(accreditation_expiration__lt=date.today())
+            .select_related(
+                "organization",
+                "organization__address",
+                "organization__address__subdivision",
+                "address",
+                "address__subdivision",
+            )
         )
 
 

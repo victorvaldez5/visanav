@@ -46,6 +46,11 @@ const menuItems = [
         href: "/resources",
     },
     {
+        title: "Representatives",
+        icon: "icon-user-check",
+        href: "/representatives",
+    },
+    {
       title: "Forms",
       icon: "icon-folder",
       href: "/forms",

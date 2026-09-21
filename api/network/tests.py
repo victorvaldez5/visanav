@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -347,6 +348,128 @@ def test_representatives_endpoint_empty_and_active_only():
     results = resp.data["results"]
     assert [r["name"] for r in results] == ["Jane Doe"]
     assert results[0]["provider_type"] == "attorney"
+
+
+@pytest.mark.django_db
+def test_organizations_cost_filter_ors_pro_bono_and_fee_models():
+    """The cost chips widen (OR), not narrow: pro-bono OR the picked fee models."""
+    _make_org("pb", pro_bono=True)
+    _make_org("free", pro_bono=False, fee_model="free")
+    _make_org("low", pro_bono=False, fee_model="low-cost")
+    _make_org("paid", pro_bono=False, fee_model="paid")
+
+    client = APIClient()
+
+    resp = client.get(ORGS_URL, {"cost": ["pro_bono", "free"]})
+    assert {r["slug"] for r in resp.data["results"]} == {"pb", "free"}
+
+    resp = client.get(ORGS_URL, {"cost": ["low-cost"]})
+    assert {r["slug"] for r in resp.data["results"]} == {"low"}
+
+
+@pytest.mark.django_db
+def test_representative_serializer_surfaces_org_details_and_days_left():
+    """A rep carries no contact/location of its own — the API fills them in
+    from the linked organization, and computes days_left from the expiry."""
+    addr = _arizona_address()
+    org = _make_org(
+        "az-help",
+        name="Arizona Immigration Help",
+        phones=["+1-602-555-0100"],
+        address=addr,
+    )
+    Representative.objects.create(
+        name="Doe, Jane",
+        provider_type="doj-accredited-rep",
+        organization=org,
+        dhs_only=True,
+        accreditation_expiration=date.today() + timedelta(days=30),
+        is_active=True,
+    )
+
+    row = APIClient().get(REPS_URL).data["results"][0]
+    assert row["organization_name"] == "Arizona Immigration Help"
+    assert row["organization_phone"] == "+1-602-555-0100"
+    assert row["organization_city"] == "Phoenix"
+    assert row["organization_state"] == "Arizona"
+    assert row["days_left"] == 30
+
+
+@pytest.mark.django_db
+def test_representatives_hide_expired_but_keep_undated():
+    Representative.objects.create(
+        name="Expired Rep", provider_type="doj-accredited-rep",
+        accreditation_expiration=date.today() - timedelta(days=1), is_active=True,
+    )
+    Representative.objects.create(
+        name="Future Rep", provider_type="doj-accredited-rep",
+        accreditation_expiration=date.today() + timedelta(days=1), is_active=True,
+    )
+    Representative.objects.create(
+        name="Undated Rep", provider_type="doj-accredited-rep", is_active=True,
+    )
+
+    resp = APIClient().get(REPS_URL)
+    assert {r["name"] for r in resp.data["results"]} == {"Future Rep", "Undated Rep"}
+
+
+@pytest.mark.django_db
+def test_representatives_filter_region_and_ordering():
+    az = _arizona_address()
+    az_org = _make_org("az-org", name="AZ Org", address=az)
+    country = Country.objects.get(country_code="US")
+    tx_sub = Subdivision.objects.create(code="US-TX", name="Texas", country=country)
+    tx_addr = Address.objects.create(line1="1 Main", city="Austin", subdivision=tx_sub)
+    tx_org = _make_org("tx-org", name="TX Org", address=tx_addr)
+
+    today = date.today()
+    Representative.objects.create(
+        name="Soon AZ", provider_type="doj-accredited-rep", organization=az_org,
+        accreditation_expiration=today + timedelta(days=10), is_active=True,
+    )
+    Representative.objects.create(
+        name="Later AZ", provider_type="doj-accredited-rep", organization=az_org,
+        accreditation_expiration=today + timedelta(days=200), is_active=True,
+    )
+    Representative.objects.create(
+        name="Soon TX", provider_type="doj-accredited-rep", organization=tx_org,
+        accreditation_expiration=today + timedelta(days=20), is_active=True,
+    )
+
+    client = APIClient()
+
+    # region filters by the organization's state.
+    resp = client.get(REPS_URL, {"region": "Arizona"})
+    assert {r["name"] for r in resp.data["results"]} == {"Soon AZ", "Later AZ"}
+
+    # default ordering is soonest-to-expire first.
+    resp = client.get(REPS_URL)
+    assert [r["name"] for r in resp.data["results"]] == ["Soon AZ", "Soon TX", "Later AZ"]
+
+    # ordering=name overrides it.
+    resp = client.get(REPS_URL, {"ordering": "name"})
+    assert [r["name"] for r in resp.data["results"]] == ["Later AZ", "Soon AZ", "Soon TX"]
+
+
+@pytest.mark.django_db
+def test_representatives_ordering_sorts_undated_last():
+    today = date.today()
+    Representative.objects.create(
+        name="Dated", provider_type="doj-accredited-rep",
+        accreditation_expiration=today + timedelta(days=30), is_active=True,
+    )
+    Representative.objects.create(
+        name="Undated", provider_type="doj-accredited-rep", is_active=True,
+    )
+    client = APIClient()
+
+    # "latest" (descending) must not float the undated rep to the top.
+    resp = client.get(REPS_URL, {"ordering": "-accreditation_expiration"})
+    assert [r["name"] for r in resp.data["results"]] == ["Dated", "Undated"]
+
+    # ascending keeps it last too.
+    resp = client.get(REPS_URL, {"ordering": "accreditation_expiration"})
+    assert [r["name"] for r in resp.data["results"]] == ["Dated", "Undated"]
 
 
 # --- EOIR roster parser (build_ra_fixtures) -------------------------------

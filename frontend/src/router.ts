@@ -75,6 +75,11 @@ const routes = [
         name: "Resources",
     },
     {
+        path: "/representatives",
+        component: () => import("@/pages/RepresentativesView.vue"),
+        name: "Representatives",
+    },
+    {
         path: "/error",
         component: () => import("@/pages/ServerError.vue"),
         name: "ServerError",
