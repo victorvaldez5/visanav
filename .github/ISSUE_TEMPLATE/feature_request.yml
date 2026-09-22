@@ -6,8 +6,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the idea. If this is about adding immigration data for a
-        country, use the **New or updated country data** template instead.
+        Thanks for the idea. To suggest a website, report wrong information, or
+        volunteer as a reviewer, use **Improve the data** instead.
+
+        Proposing a new scraper? Describe the source and what to extract below,
+        and see the [scraper guide](https://github.com/victorvaldez5/visanav/blob/main/scrapers/README.md).
   - type: textarea
     id: problem
     attributes:

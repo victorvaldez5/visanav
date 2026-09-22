@@ -35,7 +35,7 @@ released (unless you prefer to remain anonymous).
 
 In scope:
 
-- The Django API (`api/`) — authentication, the chat/SSE pipeline, the
+- The Django API (`api/`): authentication, the chat/SSE pipeline, the
   public-resources endpoints, data handling and retention.
 - The Vue frontend (`frontend/`).
 - The USCIS scraper (`scrapers/`) and the data ingestion pipeline.

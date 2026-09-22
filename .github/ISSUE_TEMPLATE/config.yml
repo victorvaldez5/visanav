@@ -5,4 +5,4 @@ contact_links:
     about: Please report vulnerabilities privately, never as a public issue. See SECURITY.md.
   - name: Contributing guide
     url: https://github.com/victorvaldez5/visanav/blob/main/CONTRIBUTING.md
-    about: How to contribute code or immigration data, including sign-off (DCO) and licensing.
+    about: How to contribute immigration data, scrapers, or code.
