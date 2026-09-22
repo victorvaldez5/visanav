@@ -165,6 +165,24 @@ const menuItems = [
           </template>
         </SidebarMenuItem>
       </SidebarMenu>
+      <nav
+        aria-label="Legal"
+        class="mt-1 flex items-center justify-center gap-2 px-2 text-xs text-muted-foreground"
+      >
+        <a
+          href="https://www.visanav.org/terms"
+          target="_blank"
+          rel="noopener"
+          class="hover:underline"
+        >Terms</a>
+        <span aria-hidden="true">·</span>
+        <a
+          href="https://www.visanav.org/privacy"
+          target="_blank"
+          rel="noopener"
+          class="hover:underline"
+        >Privacy</a>
+      </nav>
     </SidebarFooter>
   </Sidebar>
 </template>
