@@ -6,7 +6,7 @@ import { EOIR_ROSTER_URL } from "@/i18n";
 </script>
 
 <template>
-  <div class="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+  <p class="px-2 text-center text-xs leading-4 text-muted-foreground">
     <i18n-t
       keypath="disclaimer.short"
       tag="span"
@@ -21,5 +21,5 @@ import { EOIR_ROSTER_URL } from "@/i18n";
         >{{ $t("rep") }}</a>
       </template>
     </i18n-t>
-  </div>
+  </p>
 </template>

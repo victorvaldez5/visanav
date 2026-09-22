@@ -27,11 +27,11 @@ const body = computed(() => {
 <template>
   <div
     v-if="thinking !== ''"
-    class="text-muted-foreground mb-6 prose"
+    class="text-muted-foreground mb-6 prose dark:prose-invert max-w-none"
     v-html="marked.parse(thinking)"
   />
   <div
-    class="prose"
+    class="prose dark:prose-invert max-w-none text-foreground"
     v-html="marked.parse(body)"
   />
 </template>

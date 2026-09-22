@@ -28,6 +28,7 @@ const {
   messageHistory,
   createConversation,
   postMessage,
+  stopStreaming,
   isStreaming,
   streamStatus,
   scrubNotices,
@@ -66,23 +67,27 @@ async function onSubmit(prompt: string) {
 <template>
   <div
     v-if="messageHistory.length > 0 || isStreaming"
-    class="max-w-3xl mx-auto flex flex-col flex-1 min-h-0"
+    class="relative mx-auto flex w-full max-w-3xl flex-col flex-1 min-h-0"
   >
-    <div class="flex-1 overflow-y-scroll my-4 mb-36 px-4">
-      <!-- Short disclaimer at the start of the conversation -->
-      <ConversationDisclaimer class="mb-4" />
+    <!-- Fade the conversation out under the navbar to hint that it scrolls -->
+    <div
+      class="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-background to-transparent"
+    />
+
+    <!-- The only scrollable region -->
+    <div class="flex-1 min-h-0 overflow-y-auto px-4 pt-4">
       <!-- Render the chat history -->
       <div
         v-for="(message, i) in messageHistory"
         :key="i"
       >
         <template v-if="message.parts[0].part_kind === 'user-prompt'">
-          <div class="p-3 bg-blue-100 rounded-lg text-right my-2">
+          <div class="my-2 rounded-lg bg-accent p-3 text-right text-accent-foreground">
             {{ message.parts[0].content }}
           </div>
           <p
             v-if="scrubNoticeFor(message.parts[0].content)"
-            class="text-right text-xs text-gray-500 -mt-1 mb-2 px-1"
+            class="text-right text-xs text-muted-foreground -mt-1 mb-2 px-1"
           >
             {{ scrubNoticeFor(message.parts[0].content) }}
           </p>
@@ -105,14 +110,23 @@ async function onSubmit(prompt: string) {
       </div>
     </div>
 
-    <UserPromptInput
-      class="fixed bottom-3 w-full max-w-3xl bg-background p-4 z-10"
-      @submit-prompt="onSubmit($event)"
-    />
+    <!-- Composer: in normal flow at the bottom, with a fade above it and the -->
+    <!-- disclaimer beneath, mirroring the marketing hero. -->
+    <div class="relative shrink-0 px-4 pt-2 pb-3 sm:px-6">
+      <div
+        class="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-t from-background to-transparent"
+      />
+      <UserPromptInput
+        :streaming="isStreaming"
+        @submit-prompt="onSubmit($event)"
+        @stop="stopStreaming"
+      />
+      <ConversationDisclaimer class="mt-2" />
+    </div>
   </div>
   <div
     v-else
-    class="md:max-w-3xl p-4 md:p-0 mx-auto flex-1 min-h-0 flex flex-col justify-center"
+    class="mx-auto flex w-full max-w-3xl flex-1 min-h-0 flex-col justify-center px-4 sm:px-6"
   >
     <h3
       v-if="messageHistory?.length === 0"
@@ -120,8 +134,12 @@ async function onSubmit(prompt: string) {
     >
       {{ $t("chat.welcome") }}
     </h3>
-    <UserPromptInput @submit-prompt="onSubmit($event)" />
-    <ConversationDisclaimer class="mt-4" />
+    <UserPromptInput
+      :streaming="isStreaming"
+      @submit-prompt="onSubmit($event)"
+      @stop="stopStreaming"
+    />
+    <ConversationDisclaimer class="mt-3" />
   </div>
 </template>
 <style scoped>

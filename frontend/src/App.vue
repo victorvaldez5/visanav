@@ -2,9 +2,9 @@
   <Toaster rich-colors />
   <SidebarProvider>
     <AppSidebar />
-    <SidebarInset>
-      <BetaBanner />
-      <header class="flex py-4 px-5 gap-3">
+    <SidebarInset class="h-svh min-h-0 overflow-hidden">
+      <BetaBanner class="shrink-0" />
+      <header class="flex shrink-0 py-4 px-5 gap-3">
         <SidebarTrigger />
         <Separator
           orientation="vertical"
