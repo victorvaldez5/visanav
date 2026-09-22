@@ -27,13 +27,13 @@ jobs:
         # this for local runs).
         image: pgvector/pgvector:pg15
         env:
-          POSTGRES_USER: raul
+          POSTGRES_USER: visanav
           POSTGRES_PASSWORD: pswd
           POSTGRES_DB: visanav_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U raul"
+          --health-cmd "pg_isready -U visanav"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -42,7 +42,7 @@ jobs:
       DJANGO_SETTINGS_MODULE: api_project.dev
       DJANGO_SECRET_KEY: ci-secret-key
       POSTGRES_DB: visanav_test
-      POSTGRES_USER: raul
+      POSTGRES_USER: visanav
       POSTGRES_PASSWORD: pswd
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"

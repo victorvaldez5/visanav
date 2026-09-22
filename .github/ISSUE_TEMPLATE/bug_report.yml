@@ -1,0 +1,55 @@
+name: Bug report
+description: Report something that is broken or behaving incorrectly
+title: "[bug] <short description>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please **do not** include personal data or the
+        content of a real conversation. For security vulnerabilities, do not use
+        this form: follow [SECURITY.md](https://github.com/victorvaldez5/visanav/blob/main/SECURITY.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part?
+      options:
+        - Frontend (chat UI)
+        - API (backend)
+        - Scraper
+        - Data / ingestion
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Do '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser/OS, or whether you were running locally (Docker Compose) vs the hosted app.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste any relevant error output. Scrub anything personal first.
+      render: shell
+    validations:
+      required: false
