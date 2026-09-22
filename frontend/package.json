@@ -41,6 +41,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260922.1",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/typography": "^0.5.20",
     "@types/markdown-it": "^14.2.0",

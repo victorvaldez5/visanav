@@ -14,7 +14,7 @@ export default defineConfig({
     // DOM/jsdom is required. Tests that touch browser globals (localStorage) stub
     // them explicitly, which keeps the suite fast and dependency-light.
     environment: 'node',
-    include: ['src/**/*.{test,spec}.ts'],
+    include: ['src/**/*.{test,spec}.ts', 'worker/**/*.{test,spec}.ts'],
     coverage: {
       provider: 'v8',
       // `text` prints a summary in CI logs; `lcov`/`html` write ./coverage for
@@ -24,9 +24,10 @@ export default defineConfig({
       // Scoped to the TS logic layer (composables, services, stores, lib). `.vue`
       // SFCs are excluded until component tests land — they need jsdom, and the
       // v8 provider can't parse an uncovered SFC's <template> as raw source.
-      include: ['src/**/*.ts'],
+      include: ['src/**/*.ts', 'worker/**/*.ts'],
       exclude: [
         'src/**/*.{test,spec}.ts',
+        'worker/**/*.{test,spec}.ts',
         'src/**/*.d.ts',
         // Generated shadcn-style UI primitives — thin re-export/variant wrappers.
         'src/components/ui/**',
