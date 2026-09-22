@@ -168,5 +168,6 @@ export function useConversation(
         // actions
         createConversation,
         postMessage,
+        stopStreaming,
     };
 }
