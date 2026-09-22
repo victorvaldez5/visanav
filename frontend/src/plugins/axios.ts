@@ -1,6 +1,7 @@
 // src/plugins/axios.ts
 import axios from 'axios'
 import {authService} from '@/services/authService'
+import {currentLocale} from '@/i18n'
 
 // In dev, VITE_API_BASE_URL is unset and Vite proxies "/api" → http://api:8000
 // (see vite.config.ts). In production (Cloudflare Pages) the API is a different
@@ -29,6 +30,9 @@ function isAuthEndpoint(url?: string): boolean {
 apiClient.interceptors.request.use(config => {
     const token = authService.getAccessToken()
     if (token) config.headers!['Authorization'] = `Bearer ${token}`
+    // Advertise the active UI locale so the API can localize responses (the
+    // backend's LocaleMiddleware reads this into request.LANGUAGE_CODE).
+    config.headers!['Accept-Language'] = currentLocale()
     return config
 })
 

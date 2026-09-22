@@ -1,0 +1,2 @@
+# gettext catalogs (.po/.mo) are generated here by manage.py makemessages.
+# This keeps the LOCALE_PATHS directory tracked before any catalog exists.

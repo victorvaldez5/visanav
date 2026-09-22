@@ -41,6 +41,12 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Negotiates the active language from the request's Accept-Language header
+    # (the frontends set it explicitly from the active UI locale) into
+    # request.LANGUAGE_CODE, and activates gettext for the response. Django
+    # requires it after SessionMiddleware and before CommonMiddleware. We do NOT
+    # use i18n_patterns, so it performs no URL-prefix redirects.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",  # admin needs CSRF
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -178,6 +184,20 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 PHONENUMBER_DEFAULT_REGION = "US"
+
+# Supported UI/content locales. Keep in sync with /i18n/supported-locales.json
+# (CI enforces parity via scripts/check_i18n_parity.mjs). Constraining LANGUAGES
+# also bounds the locations.Language reference table: its populate migration seeds
+# from settings.LANGUAGES, which previously fell back to Django's full ~100-locale
+# default. Add a locale here + to the canonical allowlist together.
+LANGUAGES = [
+    ("en", "English"),
+    ("es", "Spanish"),
+]
+# Where gettext catalogs (.po/.mo) live. Populated incrementally as user-facing
+# strings get wrapped in gettext (_()); manage.py makemessages/compilemessages
+# read and write here.
+LOCALE_PATHS = [BASE_DIR / "locale"]
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"  # for collectstatic (production)

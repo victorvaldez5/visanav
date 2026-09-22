@@ -110,6 +110,15 @@ export const i18n = createI18n({
   messages,
 });
 
+/**
+ * The active locale, for non-component callers (the axios client and the native
+ * `fetch` SSE stream) that set the `Accept-Language` header on API requests. The
+ * backend's LocaleMiddleware negotiates this into `request.LANGUAGE_CODE`.
+ */
+export function currentLocale(): Locale {
+  return i18n.global.locale.value as Locale;
+}
+
 /** Change the active locale and remember it for next time. */
 export function setLocale(locale: Locale) {
   i18n.global.locale.value = locale;
