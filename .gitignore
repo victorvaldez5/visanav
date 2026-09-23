@@ -9,6 +9,7 @@ __pycache__
 scrapers/uscis_scraper/uscis_scraper/output/html
 scrapers/uscis_scraper/uscis_scraper/output/pdf
 scrapers/uscis_scraper/uscis_scraper/output/items
+/scrapers/uscis_scraper/output/
 /staticfiles/
 
 # Logs

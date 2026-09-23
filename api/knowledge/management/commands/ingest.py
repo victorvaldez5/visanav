@@ -3,7 +3,7 @@
     python manage.py ingest us            # DRY RUN: chunk + preview, no keys/DB
     python manage.py ingest us --upsert   # embed (Voyage) + write KnowledgeChunk rows
 
---upsert transactionally replaces the country's chunks (delete + bulk insert),
+--upsert transactionally replaces the country's curated chunks (delete + bulk insert),
 mirroring the old Pinecone per-namespace overwrite so re-ingesting reaps chunks
 whose content changed. Needs VOYAGE_API_KEY and a reachable database.
 
@@ -64,7 +64,7 @@ class Command(BaseCommand):
         objs = [KnowledgeChunk(embedding=vec, **rec) for rec, vec in zip(records, vectors)]
 
         with transaction.atomic():
-            deleted, _ = KnowledgeChunk.objects.filter(country=code).delete()
+            deleted, _ = KnowledgeChunk.objects.filter(country=code, corpus="curated").delete()
             KnowledgeChunk.objects.bulk_create(objs, batch_size=_EMBED_BATCH)
 
         self.stdout.write(
