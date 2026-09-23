@@ -264,7 +264,7 @@ Contributions are welcome, and the most valuable ones are not code: adding or
 correcting per-country immigration data helps people directly. See
 [CONTRIBUTING.md](CONTRIBUTING.md) to get started, and please read the
 [Code of Conduct](CODE_OF_CONDUCT.md). To report a security issue, follow
-[SECURITY.md](SECURITY.md) (do not open a public issue).
+[SECURITY.md](SECURITY.md) (DO NOT OPEN A PUBLIC ISSUE).
 
 ## Licensing
 
