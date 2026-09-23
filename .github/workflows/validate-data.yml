@@ -7,10 +7,18 @@ on:
   pull_request:
     paths:
       - "data/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/validate-data.yml"
   push:
     branches: [main, develop]
     paths:
       - "data/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/validate-data.yml"
 
 jobs:
   validate:
@@ -18,12 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          # Python 3.13 comes from the root .python-version; uv installs it.
+          enable-cache: true
 
       - name: Install data tooling
-        run: pip install -r data/scripts/requirements.txt
+        run: uv sync --locked --package visanav-data --no-dev
 
       - name: Validate all country data
-        run: python data/scripts/validate.py
+        run: uv run --no-sync python data/scripts/validate.py

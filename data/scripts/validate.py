@@ -16,7 +16,7 @@ Usage:
     python data/scripts/validate.py            # validate all countries
     python data/scripts/validate.py us ca      # validate only these countries
 
-Dependencies: pyyaml, jsonschema  (see data/scripts/requirements.txt)
+Dependencies: pyyaml, jsonschema  (see data/scripts/pyproject.toml)
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ try:
 except ImportError:  # pragma: no cover
     sys.exit(
         "Missing dependencies. Run:\n"
-        "    pip install -r data/scripts/requirements.txt"
+        "    uv run --package visanav-data python data/scripts/validate.py"
     )
 
 DATA_DIR = Path(__file__).resolve().parent.parent

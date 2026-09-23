@@ -3,96 +3,54 @@ name = "api"
 version = "0.1.0"
 description = "an api server"
 authors = [{ name = "Victor Valdez", email = "vv.digitalfuturesllc@gmail.com" }]
-requires-python = ">=3.12,<4.0"
-# Dependencies are declared in [tool.poetry.dependencies] below; mark them dynamic
-# so PEP 621-aware tooling (and the Railway builder) reads them from there instead
-# of treating the project as having no dependencies and re-resolving its own set.
-dynamic = ["dependencies"]
-
-[build-system]
-requires = ["poetry-core>=2.1.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["api_project", "core", "conversation"]
-exclude = ["staticfiles"]
+# Django 6.1 requires Python >=3.12; the deploy/CI runtime is 3.13 (see the root
+# .python-version). voyageai has no 3.14 wheel yet, hence the upper bound.
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    # Vector store: pgvector provides the Django VectorField + CREATE EXTENSION op;
+    # voyageai generates the embeddings (pgvector does not embed). Both are
+    # pure-Python, so no Dockerfile/system-dep changes are needed.
+    "pgvector>=0.5,<0.6",
+    "voyageai>=0.5,<0.6",
+    # Pinned to a minor line so a fresh resolve can't drift onto an untested
+    # release (an unbounded `>=` once let Django jump 5.2 -> 6.1 in a prod build).
+    # Bump deliberately; uv.lock still pins the exact patch.
+    "django>=6.1,<6.2",
+    "django-cors-headers>=4.9,<5",
+    "djangorestframework>=3.18,<4",
+    "djangorestframework-simplejwt>=5.5,<6",
+    "gunicorn>=26.2,<27",
+    "psycopg2-binary>=2.9.10,<3",
+    "python-dotenv>=1.1,<2",
+    "python-jose>=3.5,<4",
+    "whitenoise>=6.12,<7",
+    "uvicorn[standard]>=0.53,<0.54",
+    "mailtrap>=2.1,<3",
+    # The slim package with only the providers we support (anthropic + openai);
+    # the full `pydantic-ai` bundles every provider, including Bedrock (-> boto3).
+    # The [anthropic] extra pulls a compatible anthropic SDK, so we don't pin it
+    # ourselves (a hand pin here is what drifted out of sync with pydantic-ai before).
+    "pydantic-ai-slim[anthropic,openai]>=2.46,<3",
+    "django-phonenumber-field[phonenumberslite]>=8.1,<9",
+    "pycountry>=26.2.16,<27",
+    "django-countries>=9.1,<10",
+    "django-filter>=26.1,<27",
+    "beautifulsoup4>=4.13.5,<5",
+    "pdfplumber>=0.11.7,<0.12",
+    # Reads curated resource YAML (data/countries/<cc>/resources/) in load_resources.
+    "pyyaml>=6.0,<7",
+    # Used directly by core/encryption.py to encrypt conversation content at rest.
+    # Also pulled transitively (pdfminer.six), but declared here so it survives any
+    # future trimming of the PDF/scraper deps.
+    "cryptography>=42.0,<51",
+]
 
 [dependency-groups]
-# Pin ruff to a minor line so CI lint is deterministic — a newer minor can add
-# rules and turn CI red on unchanged code. Bump deliberately, not incidentally.
-dev = ["ruff>=0.16,<0.17", "pytest-django>=4.9", "pytest-cov>=6.0", "pytest-asyncio>=0.24"]
+dev = ["pytest>=9.1,<10", "pytest-django>=4.9", "pytest-cov>=6.0", "pytest-asyncio>=0.24"]
 
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.dependencies]
-# Django 6.1 requires Python >=3.12; the deploy/CI runtime is 3.13.
-python = ">=3.12,<4.0"
-# Vector store: pgvector provides the Django VectorField + CREATE EXTENSION op;
-# voyageai generates the embeddings (Pinecone did this server-side, pgvector does
-# not embed). Both are pure-Python — no Dockerfile/system-dep changes needed.
-pgvector = "^0.5.0"
-# voyageai has no 3.14 wheel yet; the deploy/CI runtime is 3.13 (Dockerfile, CI,
-# ruff target). Marker keeps the lock resolvable across the project's 3.10-<4.0
-# range without dropping the actual runtime.
-voyageai = {version = "^0.5.0", python = "<3.14"}
-# Pinned to a major line so a fresh resolve (e.g. on the Railway builder) can't
-# drift onto an untested major — an unbounded `>=` let Django jump 5.2 -> 6.1 in a
-# prod build. Bump deliberately; the lock still pins the exact patch.
-django = "~6.1"
-django-cors-headers = "^4.9"
-djangorestframework = "^3.18"
-djangorestframework-simplejwt = "^5.5"
-gunicorn = "^26.2"
-psycopg2-binary = "^2.9.10"
-python-dotenv = "^1.1"
-python-jose = "^3.5"
-whitenoise = "^6.12"
-uvicorn = { extras = ["standard"], version = "^0.53.0" }
-mailtrap = "^2.1.0"
-# Use the slim package with only the providers we support (anthropic + openai);
-# the full `pydantic-ai` bundles every provider, including Bedrock (→ boto3).
-# The [anthropic] extra pulls a compatible anthropic SDK, so we don't pin it
-# ourselves (a hand pin here is what drifted out of sync with pydantic-ai before).
-pydantic-ai-slim = {extras = ["anthropic", "openai"], version = "^2.46"}
-django-phonenumber-field = {extras = ["phonenumberslite"], version = "^8.1.0"}
-pycountry = "^26.2.16"
-django-countries = "^9.1.0"
-django-filter = "^26.1"
-beautifulsoup4 = "^4.13.5"
-pdfplumber = "^0.11.7"
-# Reads curated resource YAML (data/countries/<cc>/resources/) in load_resources.
-pyyaml = "^6.0"
-# Used directly by core/encryption.py to encrypt conversation content at rest.
-# Also pulled transitively (pdfminer.six), but declared here so it survives any
-# future trimming of the PDF/scraper deps.
-cryptography = ">=42.0,<51"
-pytest = "^9.1"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^9.1"
-
-[tool.ruff]
-# Match the deploy/CI runtime (Docker + Railway build on 3.13) so version-gated
-# lints (e.g. modern f-string syntax) don't fire on code that runs fine.
-target-version = "py313"
-# Generated/data-only migrations aren't hand-maintained code; don't lint them.
-extend-exclude = ["**/migrations/**"]
-
-[tool.ruff.lint]
-# Pin the enforced rule set explicitly so lints don't drift when ruff is
-# upgraded — a newer ruff can broaden its *default* select and turn CI red on
-# unchanged code (the reason ruff used to be version-pinned here). This mirrors
-# ruff's classic default (pyflakes + core pycodestyle); widen it deliberately,
-# not incidentally.
-select = ["E4", "E7", "E9", "F"]
-
-[tool.ruff.lint.per-file-ignores]
-# Django settings compose with `from .base import *`; the star import (F403) and
-# the names it pulls in (F405) are the idiom here, not a mistake.
-"api_project/dev.py" = ["F403", "F405"]
-"api_project/prod.py" = ["F403", "F405"]
+[tool.uv]
+# A Django project run from this directory, not an installable package.
+package = false
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "api_project.dev"

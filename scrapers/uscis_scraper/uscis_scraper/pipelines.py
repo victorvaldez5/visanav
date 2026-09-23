@@ -1,11 +1,9 @@
 import hashlib
 import json
 import os
-import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from readability import Document
 from scrapy import Request
 from scrapy.exceptions import NotConfigured, DropItem
 from scrapy.pipelines.files import FilesPipeline

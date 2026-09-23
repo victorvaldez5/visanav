@@ -1,67 +1,45 @@
 ###############################################################################
-# 1) BUILDER: install build-deps & build wheels
+# Built with the repo root as context (docker-compose), so the uv workspace
+# manifests are reachable. Installs only the uscis-scraper workspace member's
+# locked deps (never the api's Django stack) into /opt/venv, outside /app so the
+# dev bind mount (./scrapers/uscis_scraper:/app) can't shadow it.
 ###############################################################################
-FROM python:3.13-slim AS builder
-
-# install system packages needed to compile wheels (e.g. lxml, cryptography, ...)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      build-essential \
-      gcc \
-      libxml2-dev \
-      libxslt1-dev \
-      libffi-dev \
-      libssl-dev && \
-    rm -rf /var/lib/apt/lists/*
-
+FROM python:3.13-slim AS base
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 
-# copy your main requirements
-COPY ./scrapers/uscis_scraper/requirements.txt .
-
-# build wheels into /wheels
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /wheels \
-       -r requirements.txt
 ###############################################################################
-# 2) DEVELOPMENT: inherits from builder, adds dev-dependencies & drops to shell
+# 1) BUILDER: install the locked wheels (no resolution happens here)
 ###############################################################################
-FROM builder AS development
+FROM base AS builder
+COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+# uv reads every member's pyproject.toml to validate the workspace, even the
+# ones not installed.
+WORKDIR /workspace
+COPY ./pyproject.toml ./uv.lock ./.python-version ./
+COPY ./api/pyproject.toml ./api/
+COPY ./scrapers/uscis_scraper/pyproject.toml ./scrapers/uscis_scraper/
+COPY ./data/scripts/pyproject.toml ./data/scripts/
+# --locked fails the build if uv.lock is stale rather than silently re-resolving.
+RUN uv sync --locked --package uscis-scraper --no-dev --no-install-workspace
 
-# when we have a separate requirements-dev.txt, copy & install it
-# COPY requirements-dev.txt ./
-# RUN pip install --no-cache-dir -r requirements-dev.txt
-
-COPY --from=builder /wheels /wheels
-
-RUN pip install --no-cache-dir /wheels/*.whl
-
-# by default land in a shell, mount your code locally to /app
+###############################################################################
+# 2) DEVELOPMENT: code comes from the compose bind mount
+###############################################################################
+FROM base AS development
+COPY --from=builder /opt/venv /opt/venv
 CMD ["scrapy", "crawl", "uscis"]
 
 ###############################################################################
-# 3) PRODUCTION: runtime image with only minimal OS libs & your wheels
+# 3) PRODUCTION: venv + the scraper code baked in
 ###############################################################################
-FROM python:3.13-slim AS production
-
-# install only the runtime OS libs needed for your wheels
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      libxml2 \
-      libxslt1.1 \
-      libffi8 \
-      libssl3 && \
-    rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# copy built wheels from the builder stage
-COPY --from=builder /wheels /wheels
-
-# install them
-RUN pip install --no-cache-dir /wheels/*.whl
-
-# copy your actual scraper code
+FROM base AS production
+COPY --from=builder /opt/venv /opt/venv
 COPY scrapers/uscis_scraper/ .
-
-# default to running your crawl
 CMD ["scrapy", "crawl", "uscis"]

@@ -17,12 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          # Python 3.13 comes from the root .python-version; uv installs it.
+          enable-cache: true
 
       - name: Install scraper dependencies
-        run: pip install -r scrapers/uscis_scraper/requirements.txt
+        run: uv sync --locked --package uscis-scraper --no-dev
 
       - name: Crawl USCIS → R2
         working-directory: scrapers/uscis_scraper
@@ -33,4 +34,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION_NAME: auto
-        run: scrapy crawl uscis
+        run: uv run --no-sync scrapy crawl uscis

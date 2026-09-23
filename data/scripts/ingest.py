@@ -29,7 +29,7 @@ from pathlib import Path
 try:
     import yaml
 except ImportError:  # pragma: no cover
-    sys.exit("Missing pyyaml. Run: pip install -r data/scripts/requirements.txt")
+    sys.exit("Missing pyyaml. Run: uv run --package visanav-data python data/scripts/ingest.py")
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 COUNTRIES_DIR = DATA_DIR / "countries"
