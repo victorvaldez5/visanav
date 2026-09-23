@@ -1,0 +1,26 @@
+{
+  "$comment": "Canonical locale allowlist for VisaNav. Single source of truth consumed by all three surfaces (Vue app, Astro marketing, Django API). CI (scripts/check_i18n_parity.mjs) enforces that each surface's declared locale list matches `locales` below. See docs/i18n-architecture.md.",
+  "default": "en",
+  "locales": [
+    {
+      "code": "en",
+      "name": "English",
+      "englishName": "English",
+      "dir": "ltr"
+    },
+    {
+      "code": "es",
+      "name": "Español",
+      "englishName": "Spanish",
+      "dir": "ltr"
+    }
+  ],
+  "planned": [
+    {
+      "code": "zh-Hans",
+      "name": "简体中文",
+      "englishName": "Chinese (Simplified)",
+      "dir": "ltr"
+    }
+  ]
+}

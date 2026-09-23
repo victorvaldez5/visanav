@@ -20,6 +20,8 @@ merge):
 - **API** (in `api/`): `poetry run pytest` and `poetry run ruff check .`
 - **Frontend** (in `frontend/`): `npm run lint` and `npm run build`
 - **Scraper** (in `scrapers/uscis_scraper/`): `pytest`
+- **Translations** (locale lists, catalogs, `i18n/`): `node scripts/check_i18n_parity.mjs`.
+  See [docs/i18n-architecture.md](docs/i18n-architecture.md), including "Adding a locale".
 
 Keep each PR to one logical change, and title it in
 [Conventional Commits](https://www.conventionalcommits.org/) style, e.g.

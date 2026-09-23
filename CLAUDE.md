@@ -12,6 +12,7 @@ independently-deployed services** plus a shared config file:
 - `frontend/` — Vue 3 + Vite SPA (chat UI). Deployed to **Cloudflare** (static `dist/` via Wrangler).
 - `scrapers/uscis_scraper/` — Scrapy spider that crawls USCIS → **Cloudflare R2**. Runs weekly via GitHub Actions.
 - `data/` — community-curated, per-country immigration knowledge/resources (Markdown + YAML) plus the scripts that validate and ingest them into the vector store.
+- `i18n/`: shared internationalization assets: the canonical locale allowlist (`supported-locales.json`) and the translation glossary. See "Internationalization" below.
 - `config/.env` — the single env file read by **all** services (gitignored; see `config/.env.example`).
 
 ## Common commands
@@ -73,6 +74,11 @@ cd api && python manage.py ingest us --upsert    # embed + upsert (needs VOYAGE_
 `manage.py ingest --upsert` transactionally replaces a country's chunks; run it from a
 full checkout (local/CI), not the slim prod web image (which omits `data/`).
 
+### Translations (i18n)
+```bash
+node scripts/check_i18n_parity.mjs   # locale lists + defaults + catalog parity (CI: i18n-ci.yml)
+```
+
 ### Deploy
 - **API → Railway**: `railway up --service visanav-api` builds the `production` stage of
   `api/Dockerfile` from the repo root. `api/entrypoint.sh` runs `migrate` + `collectstatic`
@@ -120,6 +126,8 @@ or the `POSTGRES_*` vars are missing, and **reuses `CSRF_TRUSTED_ORIGINS` as `CO
    `Deps` (`settings.KNOWLEDGE_COUNTRY`, default `us` — it **must** match a country `ingest`
    populated, or retrieval returns nothing); and `resource_lookup` queries the `network.Organization`
    directory directly over the ORM (US-only for now) to surface free/low-cost nonprofit and pro-bono help.
+   `Deps` also carries the reply `locale` (`request.LANGUAGE_CODE`, see "Internationalization"), which
+   a dynamic instruction (`language_instructions`) gives to Javi each turn as the default reply language.
 3. Tokens stream back to the browser as **Server-Sent Events** (`status` / `delta` / `done` / `error`
    frames). This replaced an earlier Celery + Redis "enqueue and poll" design — **there is no Celery,
    no Redis, no Channels**; the cache is Django's in-process `LocMemCache`.
@@ -164,7 +172,21 @@ Vue 3 `<script setup>` + Pinia + Vue Router + Tailwind v4, with shadcn-style UI 
 from `VITE_API_BASE_URL` **baked in at build time**: unset in dev (Vite proxies `/api` →
 `http://api:8000`), set to the absolute Railway/`api.visanav.org` URL in production. The axios client
 auto-refreshes JWTs on 401 with a queued-request retry; the SSE chat stream uses native `fetch`
-(not axios) but the same `API_BASE_URL`.
+(not axios) but the same `API_BASE_URL`. Both send `Accept-Language` from the active UI locale
+(`currentLocale()` in `src/i18n/index.ts`).
+
+### Internationalization
+Language localization of the US product: English + Spanish now, `zh-Hans` next. The design,
+phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
+- **One allowlist:** `i18n/supported-locales.json` is the source of truth. Django `LANGUAGES` +
+  `LANGUAGE_CODE` and the frontend's `SUPPORTED_LOCALES` + `DEFAULT_LOCALE` mirror it, and
+  `scripts/check_i18n_parity.mjs` (CI: `i18n-ci.yml`) fails when they drift or a catalog has gaps.
+- **Transport:** `LocaleMiddleware` maps the `Accept-Language` header onto `LANGUAGES`, so
+  `request.LANGUAGE_CODE` is always an allowlisted code (falling back to `en`). There are no
+  `i18n_patterns`, so no URL-prefix redirects.
+- **Catalogs:** the frontend's vue-i18n messages are `src/locales/<code>.json`; Django gettext
+  catalogs go under `api/locale/` (empty until API strings are wrapped in `_()`); shared domain
+  terms are in `i18n/GLOSSARY.md`.
 
 ## Gotchas
 - **Scraper + R2**: `AWS_USE_SSL = True` is set deliberately — with the default, botocore's

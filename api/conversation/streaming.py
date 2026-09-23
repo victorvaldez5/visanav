@@ -271,9 +271,13 @@ async def chat_stream(request):
 
     async def event_stream():
         # Scope retrieval to a populated country corpus. Curated knowledge is
-        # ingested per country, so default to KNOWLEDGE_COUNTRY; this is where the
-        # user's own country could be threaded through in future.
-        deps = Deps(country=settings.KNOWLEDGE_COUNTRY)
+        # ingested per country, so default to KNOWLEDGE_COUNTRY; the user's own
+        # country could be threaded through here in future. The reply locale is
+        # the language LocaleMiddleware negotiated from Accept-Language (the
+        # frontends send the active UI locale); it is always one of
+        # settings.LANGUAGES, so Javi answers in the user's chosen language even
+        # when their message is short or ambiguous.
+        deps = Deps(country=settings.KNOWLEDGE_COUNTRY, locale=request.LANGUAGE_CODE)
         started_text = False
         start = time.monotonic()
         try:

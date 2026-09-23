@@ -1,5 +1,6 @@
 import {authService} from "@/services/authService";
 import {API_BASE_URL} from "@/plugins/axios";
+import {currentLocale} from "@/i18n";
 
 export interface MessagePayload {
     user_message: string;
@@ -80,6 +81,9 @@ async function runStream(
         method: "POST",
         headers: {
             "Content-Type": "application/json",
+            // Advertise the active UI locale so Javi replies in the chosen
+            // language (the chat view reads request.LANGUAGE_CODE into Deps).
+            "Accept-Language": currentLocale(),
             ...(token ? {Authorization: `Bearer ${token}`} : {}),
         },
         body: JSON.stringify(payload),
