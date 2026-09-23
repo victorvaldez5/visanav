@@ -1,5 +1,7 @@
 import {createRouter, createWebHistory} from "vue-router";
 import {authService} from "@/services/authService.ts";
+import {currentLocale, HANDOFF_PARAM, hasSavedLocale} from "@/i18n";
+import {syncLocaleOnLogin} from "@/services/profileLocale";
 
 const routes = [
     {
@@ -39,6 +41,9 @@ const routes = [
                 // returned tokens), then routes to their profile.
                 const {userId} = await authService.verify(uid, token);
                 if (userId) {
+                    // A brand-new profile has no language yet: record the one
+                    // they signed up in. Best effort, never throws.
+                    await syncLocaleOnLogin(userId, hasSavedLocale(), currentLocale());
                     return next({name: "Profile", params: {userId}});
                 }
 
@@ -104,6 +109,17 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes,
+});
+
+// The marketing site hands its locale off as `?lang=` (consumed by @/i18n when
+// it loads). Drop it from the URL so a bookmark or shared link doesn't keep
+// overriding the visitor's later choice.
+router.beforeEach((to) => {
+    if (HANDOFF_PARAM in to.query) {
+        const query = {...to.query};
+        delete query[HANDOFF_PARAM];
+        return {...to, query, replace: true};
+    }
 });
 
 router.beforeEach((to, _, next) => {

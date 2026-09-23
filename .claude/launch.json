@@ -4,15 +4,34 @@
     {
       "name": "marketing",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "marketing"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "marketing"
+      ],
       "port": 4321
     },
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "frontend"
+      ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd api && DJANGO_SETTINGS_MODULE=api_project.dev exec uv run python -m uvicorn api_project.asgi:application --host 127.0.0.1 --port 8000 --reload"
+      ],
+      "port": 8000
     }
   ]
 }

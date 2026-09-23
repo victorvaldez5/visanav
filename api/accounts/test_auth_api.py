@@ -299,3 +299,66 @@ def test_profile_partial_update_routes_profile_and_user_fields(api_client, user)
     user.refresh_from_db()
     assert profile.notify_marketing is True
     assert user.first_name == "Ana"
+
+
+# ── preferred_language (the UI locale write-through) ──────────────────────────
+
+
+@pytest.fixture
+def locale_languages():
+    return (
+        Language.objects.create(name="English", code="en"),
+        Language.objects.create(name="Spanish", code="es"),
+        Language.objects.create(name="French", code="fr"),  # a row, but not allowlisted
+    )
+
+
+def test_profile_patch_with_only_preferred_language(api_client, user, locale_languages):
+    # The language switcher PATCHes just this one field, on a profile with no
+    # country/subdivision yet. That used to 500 on the hand-built response.
+    api_client.force_authenticate(user=user)
+    url = reverse("profile-detail", kwargs={"pk": user.profile.pk})
+
+    resp = api_client.patch(url, {"preferred_language": "es"}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.data["preferred_language"] == "es"
+    assert resp.data["country"] is None
+    assert resp.data["email"] == user.email
+    user.profile.refresh_from_db()
+    assert user.profile.preferred_language_id == "es"
+
+
+def test_profile_rejects_a_language_outside_the_allowlist(api_client, user, locale_languages):
+    api_client.force_authenticate(user=user)
+    url = reverse("profile-detail", kwargs={"pk": user.profile.pk})
+
+    resp = api_client.patch(url, {"preferred_language": "fr"}, format="json")
+
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert "preferred_language" in resp.data
+
+
+def test_profile_preferred_language_can_be_cleared(api_client, user, locale_languages):
+    profile = user.profile
+    profile.preferred_language = locale_languages[1]
+    profile.save()
+    api_client.force_authenticate(user=user)
+    url = reverse("profile-detail", kwargs={"pk": profile.pk})
+
+    resp = api_client.patch(url, {"preferred_language": None}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.data["preferred_language"] is None
+
+
+def test_profile_patch_is_atomic_across_user_and_profile(api_client, user, locale_languages):
+    # An invalid user field must not leave the profile half-saved.
+    api_client.force_authenticate(user=user)
+    url = reverse("profile-detail", kwargs={"pk": user.profile.pk})
+
+    resp = api_client.patch(url, {"preferred_language": "es", "email": "not-an-email"}, format="json")
+
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    user.profile.refresh_from_db()
+    assert user.profile.preferred_language_id is None
