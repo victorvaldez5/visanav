@@ -2,8 +2,8 @@ name: i18n-ci
 
 # Enforces internationalization consistency across the three surfaces: the
 # canonical locale allowlist (/i18n/supported-locales.json), each surface's
-# declared locale list, and per-locale catalog key parity. See
-# scripts/check_i18n_parity.mjs and docs/i18n-architecture.md.
+# declared locale list and default, JSON catalog key parity, and complete Django
+# .po catalogs. See scripts/check_i18n_parity.mjs and docs/i18n-architecture.md.
 
 on:
   pull_request:
@@ -14,6 +14,7 @@ on:
       - "marketing/src/i18n/**"
       - "marketing/astro.config.mjs"
       - "api/api_project/base.py"
+      - "api/locale/**"
       - "scripts/check_i18n_parity.mjs"
       - ".github/workflows/i18n-ci.yml"
   push:
@@ -25,6 +26,7 @@ on:
       - "marketing/src/i18n/**"
       - "marketing/astro.config.mjs"
       - "api/api_project/base.py"
+      - "api/locale/**"
       - "scripts/check_i18n_parity.mjs"
       - ".github/workflows/i18n-ci.yml"
 

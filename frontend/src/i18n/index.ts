@@ -1,12 +1,20 @@
 import { createI18n } from "vue-i18n";
+import en from "@/locales/en.json";
+import es from "@/locales/es.json";
 
 /**
- * App i18n. English + Spanish for the beta. The current locale is detected from
- * the browser (default English), persisted per-viewer in localStorage, and
- * switchable via the banner's language toggle. `setLocale` is the single writer.
+ * App i18n. The current locale is detected from the browser (default English),
+ * persisted per-viewer in localStorage, and switchable via the banner's language
+ * toggle. `setLocale` is the single writer.
+ *
+ * SUPPORTED_LOCALES and DEFAULT_LOCALE mirror /i18n/supported-locales.json, and
+ * each locale's catalog lives in src/locales/<code>.json. CI
+ * (scripts/check_i18n_parity.mjs) fails if the lists drift or a catalog's keys
+ * differ from the default one.
  */
 export const SUPPORTED_LOCALES = ["en", "es"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
+export const DEFAULT_LOCALE: Locale = "en";
 
 const STORAGE_KEY = "visanav_locale";
 
@@ -15,7 +23,7 @@ export const EOIR_ROSTER_URL =
   "https://www.justice.gov/eoir/recognition-accreditation-roster-reports";
 
 function isLocale(v: unknown): v is Locale {
-  return v === "en" || v === "es";
+  return (SUPPORTED_LOCALES as readonly unknown[]).includes(v);
 }
 
 function detectLocale(): Locale {
@@ -26,87 +34,18 @@ function detectLocale(): Locale {
   } catch {
     /* ignore blocked/unavailable storage */
   }
-  const nav = (navigator.language || "en").toLowerCase();
-  return nav.startsWith("es") ? "es" : "en";
+  // Otherwise the browser's base language ("es-MX" -> "es"), if supported.
+  const base = (navigator.language || "").toLowerCase().split("-")[0];
+  return isLocale(base) ? base : DEFAULT_LOCALE;
 }
 
-export const messages = {
-  en: {
-    rep: "an accredited representative",
-    banner: {
-      text:
-        "Beta: Javi shares information from official sources. This is not " +
-        "legal advice. For help with your specific case, talk to {rep}.",
-    },
-    disclaimer: {
-      short:
-        "Javi shares information from official sources — not legal advice. " +
-        "For your specific case, talk to {rep}.",
-    },
-    sources: {
-      title: "Sources",
-      lastVerified: "Last verified {date}",
-    },
-    chat: {
-      welcome:
-        "Hello, I am here to answer all of your Visa and Immigration questions!",
-      thinking: "Thinking for a good answer...",
-      researching: "Researching official sources...",
-      writing: "Writing your answer...",
-      placeholder: "Ask in your own words...",
-      submit: "Submit",
-      send: "Send message",
-      stop: "Stop",
-      privacy: "Encrypted",
-    },
-    lang: {
-      label: "Language",
-      en: "English",
-      es: "Español",
-    },
-  },
-  es: {
-    rep: "un representante acreditado",
-    banner: {
-      text:
-        "Beta: Javi comparte información de fuentes oficiales. Esto no es " +
-        "asesoría legal. Para ayuda con tu caso, habla con {rep}.",
-    },
-    disclaimer: {
-      short:
-        "Javi comparte información de fuentes oficiales, no asesoría legal. " +
-        "Para tu caso específico, habla con {rep}.",
-    },
-    sources: {
-      title: "Fuentes",
-      lastVerified: "Verificado por última vez el {date}",
-    },
-    chat: {
-      welcome:
-        "¡Hola! Estoy aquí para responder todas tus preguntas sobre visas e " +
-        "inmigración.",
-      thinking: "Pensando en una buena respuesta...",
-      researching: "Buscando en fuentes oficiales...",
-      writing: "Escribiendo tu respuesta...",
-      placeholder: "Escribe con tus propias palabras...",
-      submit: "Enviar",
-      send: "Enviar mensaje",
-      stop: "Detener",
-      privacy: "Cifrado",
-    },
-    lang: {
-      label: "Idioma",
-      en: "English",
-      es: "Español",
-    },
-  },
-} as const;
+export const messages = { en, es };
 
 export const i18n = createI18n({
   legacy: false,
   globalInjection: true, // $t / <i18n-t> available in templates without useI18n
   locale: detectLocale(),
-  fallbackLocale: "en",
+  fallbackLocale: DEFAULT_LOCALE,
   messages,
 });
 

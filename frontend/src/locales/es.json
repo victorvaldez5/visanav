@@ -1,0 +1,29 @@
+{
+  "rep": "un representante acreditado",
+  "banner": {
+    "text": "Beta: Javi comparte información de fuentes oficiales. Esto no es asesoría legal. Para ayuda con tu caso, habla con {rep}."
+  },
+  "disclaimer": {
+    "short": "Javi comparte información de fuentes oficiales, no asesoría legal. Para tu caso específico, habla con {rep}."
+  },
+  "sources": {
+    "title": "Fuentes",
+    "lastVerified": "Verificado por última vez el {date}"
+  },
+  "chat": {
+    "welcome": "¡Hola! Estoy aquí para responder todas tus preguntas sobre visas e inmigración.",
+    "thinking": "Pensando en una buena respuesta...",
+    "researching": "Buscando en fuentes oficiales...",
+    "writing": "Escribiendo tu respuesta...",
+    "placeholder": "Escribe con tus propias palabras...",
+    "submit": "Enviar",
+    "send": "Enviar mensaje",
+    "stop": "Detener",
+    "privacy": "Cifrado"
+  },
+  "lang": {
+    "label": "Idioma",
+    "en": "English",
+    "es": "Español"
+  }
+}

@@ -1,8 +1,8 @@
 # Internationalization (i18n) architecture
 
-Status: agreed plan, Phase 1 in progress.
+Status: Phases 1 and 2 implemented; Phases 3 to 6 planned.
 Owner: VisaNav
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 
 This document is the source of truth for how VisaNav supports multiple languages
 across its three deployed surfaces (the Vue app, the Astro marketing site, and the
@@ -53,18 +53,32 @@ separate future project, and this architecture is built so it does not foreclose
   set we keep it and write it through to the profile. The profile is the durable,
   cross-device copy, not the moment-to-moment authority.
 
-Django's `LANGUAGES` is redefined to the allowlist. Previously it was undefined, so
-the `locations` `0004_populate_languages` migration seeded Django's full ~100
-language list into the reference table. Constraining `LANGUAGES` fixes that going
-forward.
+Django's `LANGUAGES` is set to the allowlist and `LANGUAGE_CODE` to its default
+(`en`); CI checks both against the canonical file. Before this, `LANGUAGES` was
+undefined, so the `locations` `0004_populate_languages` migration seeded Django's
+full list of about 100 languages into the `Language` reference table.
+
+That migration reads `LANGUAGES` only when it runs, so the new setting bounds the
+table on a **new database only**:
+
+- Existing databases (including production) keep their ~100 `Language` rows.
+- A new database gets only `en` and `es`, which also limits the choices for
+  `Profile.preferred_language` there.
+
+Pruning the old rows and restricting `Profile.preferred_language` to the allowlist
+belong to Phase 3 (profile write-through). For the same reason, adding a locale
+needs a data migration for its `Language` row (see "Adding a locale").
 
 ## Transport: how a request's locale reaches the API
 
 All API traffic carries the **`Accept-Language`** header, set explicitly from the
 active UI locale (not the raw browser value), on both the axios client and the
 native-fetch SSE chat stream. On the server, `LocaleMiddleware` turns it into
-`request.LANGUAGE_CODE`. The default when the header is absent or unsupported is
-`en`.
+`request.LANGUAGE_CODE`, and maps it onto `LANGUAGES` as it does so: it ignores
+case, falls back from a regional variant to its base language (`es-MX` becomes
+`es`), and uses `LANGUAGE_CODE` (`en`) when the header is absent or unsupported.
+So `request.LANGUAGE_CODE` is always an allowlisted code, and no view needs its
+own normalization.
 
 We chose `Accept-Language` (over a bespoke body field) because the API is meant to
 become a public, open API, and `Accept-Language` is the standard content
@@ -91,11 +105,15 @@ at generation time.
 - **No locale in the URL.** The app sits behind the chat, is not a discovery
   surface, and gains nothing from `/es/` while paying a full router + auth-guard
   refactor. Locale stays out-of-band (localStorage), per the locale model above.
-- **Catalogs:** move the inline `messages` object in
-  [`frontend/src/i18n/index.ts`](../frontend/src/i18n/index.ts) into per-locale JSON
-  files under `frontend/src/locales/`, namespaced by feature (`nav`, `auth`,
-  `profile`, `resources`, `forms`, `chat`, `common`, `errors`). Lazy-load
-  non-default locales. Fallback locale is `en`.
+- **Catalogs:** per-locale JSON files under `frontend/src/locales/` (`en.json`,
+  `es.json`). They moved out of the inline `messages` object in Phase 1 so the CI
+  parity check covers them. Phase 3 adds feature namespaces (`nav`, `auth`,
+  `profile`, `resources`, `forms`, `chat`, `common`, `errors`) as strings get
+  extracted, and lazy-loads non-default locales. Fallback locale is `en`.
+- **Locale list:** `SUPPORTED_LOCALES` and `DEFAULT_LOCALE` in
+  [`frontend/src/i18n/index.ts`](../frontend/src/i18n/index.ts) mirror the
+  allowlist (CI-checked). `isLocale()` and browser-language detection derive from
+  them, so they need no edit when a locale is added.
 - **Store and service strings** (Pinia toasts, error fallbacks) are routed through
   the exported global `i18n.global.t`, since they live outside component setup.
 - **Extraction** proceeds feature by feature, not big-bang.
@@ -151,14 +169,37 @@ Django `.po`), on three deploys, sharing no code. We keep them consistent with:
   translations for domain terms (e.g. "green card", "asylum", "petitioner",
   "USCIS") so every surface renders them identically.
 - The single canonical `supported-locales.json` allowlist.
-- **CI key-parity checks** that flag missing or orphaned keys per locale, per
-  surface.
+- **CI parity checks** ([`scripts/check_i18n_parity.mjs`](../scripts/check_i18n_parity.mjs),
+  run by `i18n-ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
+  - every surface's declared locale list and default match the canonical file;
+  - every JSON catalog (the frontend now, marketing once it has one) has exactly
+    the keys of the default-locale catalog, so no key is missing or orphaned;
+  - every Django `.po` catalog, once the API has any, covers each non-default
+    locale with no missing, fuzzy, or obsolete entries.
 
 **Production flow:** machine-first (Claude generates the first pass), then
 contributor (open-source community refines via PR editing each surface's native
 catalog), then human review before a locale is revealed. A translation-management
 system (for example Crowdin, free for open source) is a later upgrade once
 contributor volume justifies it, not a launch dependency.
+
+## Adding a locale
+
+1. In [`i18n/supported-locales.json`](../i18n/supported-locales.json), move the
+   locale from `planned` to `locales`, and add its column to
+   [`i18n/GLOSSARY.md`](../i18n/GLOSSARY.md).
+2. Add it to Django `LANGUAGES` in `api/api_project/base.py` and to
+   `SUPPORTED_LOCALES` in `frontend/src/i18n/index.ts` (and to Astro
+   `i18n.locales` once marketing has i18n).
+3. Add a data migration that creates its `locations.Language` row. The populate
+   migration does not run again on existing databases.
+4. Add its catalogs: `frontend/src/locales/<code>.json` (and register it in
+   `messages` in `frontend/src/i18n/index.ts`), plus
+   `api/locale/<code>/LC_MESSAGES/django.po` once the API has translated strings.
+5. Reveal it in a surface's switcher only after that surface is fully translated
+   and reviewed (the launch gate below).
+
+`node scripts/check_i18n_parity.mjs` flags any list or catalog that was missed.
 
 ## Cross-origin handoff and initial-locale precedence
 
@@ -180,11 +221,12 @@ them. When someone browsing `www.visanav.org/es/` clicks through to the app:
 
 Build order front-loads the shared foundations so nothing is built twice.
 
-1. **Foundations** (Phase 1, in progress): the canonical `supported-locales.json`,
-   `GLOSSARY.md`, `Accept-Language` wiring on axios + SSE, Django `LANGUAGES` +
-   `LocaleMiddleware` + `LOCALE_PATHS`, and the CI key-parity check.
-2. **Chat locale:** thread `request.LANGUAGE_CODE` into `Deps` and the agent, plus
-   the softened mirror-rule override.
+1. **Foundations** (done): the canonical `supported-locales.json`, `GLOSSARY.md`,
+   `Accept-Language` wiring on axios + SSE, Django `LANGUAGES` + `LANGUAGE_CODE` +
+   `LocaleMiddleware` + `LOCALE_PATHS`, frontend catalogs as JSON, and the CI
+   parity check.
+2. **Chat locale** (done): thread `request.LANGUAGE_CODE` into `Deps` and the
+   agent, plus the softened mirror-rule override.
 3. **App UI extraction** + promote the switcher.
 4. **Resource-directory language matching.**
 5. **Marketing i18n + SEO.**
