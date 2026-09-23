@@ -1,0 +1,197 @@
+---
+// Privacy Policy. Describes VisaNav's real data handling: client-side PII
+// scrubbing (frontend/src/lib/pii.ts) that strips identifiers but NOT names,
+// anonymous chat with no stored IP, encryption at rest, retention limits, and
+// deletion. Keep this in step with the app; do not over-claim.
+// NOTE: This is a starting template, not legal advice. Have it reviewed by a
+// lawyer before relying on it.
+import Base from "../layouts/Base.astro";
+import Eyebrow from "../components/Eyebrow.astro";
+
+const updated = "September 22, 2026";
+
+const h2 = "mt-10 text-2xl font-bold text-foreground";
+const p = "mt-3 leading-relaxed text-muted-foreground";
+const ul = "mt-3 list-disc space-y-2 pl-5 leading-relaxed text-muted-foreground";
+const a = "text-link underline underline-offset-2 hover:opacity-80";
+---
+
+<Base
+  title="Privacy Policy — VisaNav"
+  description="How VisaNav handles your data: personal details are removed on your device before a message is sent, anonymous chat stores no IP address, conversations are encrypted and deleted on a schedule, and we never sell your data."
+  canonicalPath="/privacy"
+>
+  <section class="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+    <Eyebrow items={["PRIVACY POLICY", "ENCRYPTED, NEVER SOLD"]} />
+
+    <h1 class="mt-5 text-4xl font-bold text-foreground">Privacy Policy</h1>
+    <p class="mt-2 text-sm text-muted-foreground">Last updated: {updated}</p>
+
+    <p class={p}>
+      VisaNav is a free tool for a community that has real reasons to worry about
+      privacy, so we collect as little as we can and protect what we hold. This
+      policy explains what we collect, how we use it, who we share it with, and
+      the choices you have. VisaNav is operated by Victor Valdez ("VisaNav",
+      "we", "us").
+    </p>
+
+    <h2 class={h2}>The short version</h2>
+    <ul class={ul}>
+      <li>
+        <strong class="text-foreground">We remove personal details before your
+        message leaves your device.</strong> VisaNav strips identifiers like
+        A-numbers, receipt and case numbers, Social Security numbers, emails,
+        phone numbers, addresses, and dates in your browser, so they never reach
+        our servers or the AI. You see exactly what was removed. (Note: this
+        removes those identifiers, but not names you type.)
+      </li>
+      <li>
+        <strong class="text-foreground">You can use it anonymously.</strong> No
+        account is required, and we do not store your IP address for chat.
+      </li>
+      <li>
+        <strong class="text-foreground">Conversations are encrypted and
+        deleted on a schedule.</strong> We never sell your data and show no
+        third-party advertising.
+      </li>
+    </ul>
+
+    <h2 class={h2}>Information we collect</h2>
+    <ul class={ul}>
+      <li>
+        <strong class="text-foreground">Your messages.</strong> The questions
+        you send to the assistant, after personal identifiers are removed in your
+        browser as described above. We do not ask you to include identifying
+        details, and you should not.
+      </li>
+      <li>
+        <strong class="text-foreground">Account information (optional).</strong>
+        If you create an account, we store your email address and a securely
+        hashed password, and we send a verification email.
+      </li>
+      <li>
+        <strong class="text-foreground">Conversation history.</strong> If you
+        are signed in (or continue a conversation), we store the messages so you
+        can return to them. They are encrypted at rest and deleted on the
+        schedule below.
+      </li>
+      <li>
+        <strong class="text-foreground">Basic technical data.</strong> To run
+        the site we use privacy-focused, cookieless
+        <a class={a} href="https://www.cloudflare.com/web-analytics/" rel="noopener">Cloudflare Web Analytics</a>,
+        which does not use tracking cookies or fingerprint you, and Cloudflare
+        Turnstile (a privacy-friendly bot check) on our organization sign-up
+        form. Our fonts are self-hosted, so loading a page does not leak data to
+        a font provider.
+      </li>
+      <li>
+        <strong class="text-foreground">Local storage on your device.</strong>
+        The app keeps a few things in your browser, not on our servers: your
+        login tokens (if signed in), and preferences like language and theme. A
+        single cookie remembers whether the sidebar is open; it is not used for
+        tracking.
+      </li>
+    </ul>
+
+    <h2 class={h2}>How we use your information</h2>
+    <ul class={ul}>
+      <li>To answer your questions and provide the assistant.</li>
+      <li>To keep your account and conversation history if you choose to have one.</li>
+      <li>To protect the Service (security, abuse prevention, and rate limits).</li>
+      <li>To understand overall, aggregate usage so we can improve the tool.</li>
+    </ul>
+    <p class={p}>
+      We do not sell your personal information, and we do not use it for
+      third-party advertising.
+    </p>
+
+    <h2 class={h2}>Who we share it with</h2>
+    <p class={p}>
+      We share data only with the service providers that make VisaNav work, and
+      only as needed to run it:
+    </p>
+    <ul class={ul}>
+      <li>
+        <strong class="text-foreground">Our AI provider</strong> (Anthropic or
+        OpenAI, depending on configuration) processes your scrubbed message to
+        generate an answer.
+      </li>
+      <li>
+        <strong class="text-foreground">Voyage AI</strong> converts text into
+        the numeric representations used to search our knowledge base.
+      </li>
+      <li>
+        <strong class="text-foreground">Our hosting providers</strong> (Railway
+        and Cloudflare) run the servers and deliver the site.
+      </li>
+      <li>
+        <strong class="text-foreground">Our email provider</strong> sends
+        account and verification emails.
+      </li>
+    </ul>
+    <p class={p}>
+      We may also disclose information if required by law, or to protect the
+      safety, rights, or security of people and the Service.
+    </p>
+
+    <h2 class={h2}>How long we keep it, and deletion</h2>
+    <p class={p}>
+      Conversation content is encrypted at rest and kept only as long as needed:
+    </p>
+    <ul class={ul}>
+      <li>Anonymous conversations are deleted after about 7 days.</li>
+      <li>Signed-in conversations are deleted after about 30 days, unless you opt to keep your history.</li>
+      <li>
+        You can delete your account and its data at any time. To request
+        deletion or a copy of your data, email
+        <a class={a} href="mailto:privacy@visanav.org">privacy@visanav.org</a>.
+      </li>
+    </ul>
+
+    <h2 class={h2}>Security</h2>
+    <p class={p}>
+      We protect data in transit with encryption (HTTPS) and encrypt stored
+      conversation content at rest. No system is perfectly secure, but we design
+      the Service to hold as little sensitive data as possible in the first
+      place.
+    </p>
+
+    <h2 class={h2}>Children</h2>
+    <p class={p}>
+      The Service is not directed to children under 13, and we do not knowingly
+      collect personal information from them. If you believe a child under 13 has
+      provided us personal information, contact us and we will delete it. The
+      general information on VisaNav can, of course, help families and young
+      people learn about immigration.
+    </p>
+
+    <h2 class={h2}>Your choices and rights</h2>
+    <p class={p}>
+      You can use the assistant anonymously, decline to create an account, and
+      ask us to access or delete your data. Depending on where you live, you may
+      have additional rights under laws such as the GDPR or CCPA; contact us to
+      exercise them and we will respond as required by applicable law.
+    </p>
+
+    <h2 class={h2}>Where data is processed</h2>
+    <p class={p}>
+      VisaNav is operated from the United States, and the providers above may
+      process data in the United States. If you use the Service from another
+      country, you understand your information will be processed here.
+    </p>
+
+    <h2 class={h2}>Changes to this policy</h2>
+    <p class={p}>
+      We may update this policy as the Service evolves. When we make material
+      changes, we will update the date at the top of this page.
+    </p>
+
+    <h2 class={h2}>Contact</h2>
+    <p class={p}>
+      Questions about your privacy? Email
+      <a class={a} href="mailto:privacy@visanav.org">privacy@visanav.org</a>.
+      See also our
+      <a class={a} href="/terms">Terms of Use</a>.
+    </p>
+  </section>
+</Base>

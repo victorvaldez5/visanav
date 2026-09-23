@@ -7,10 +7,28 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "visanav",
   "compatibility_date": "2026-09-14",
+  // The SPA's origin HTML is an empty shell (all content is client-rendered), so
+  // Cloudflare's zone-level HTML→Markdown "Markdown for Agents" has nothing to
+  // convert. This Worker does the content negotiation itself: requests sending
+  // `Accept: text/markdown` get a purpose-built markdown representation; every
+  // other request falls through to the static assets below unchanged.
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
+    // Bind the static assets so the Worker can serve them (env.ASSETS.fetch).
+    "binding": "ASSETS",
+    // Run the Worker before the asset server on every request, so it can see
+    // (and answer) requests for paths that also exist as assets — e.g. `/` maps
+    // to index.html, which would otherwise be served before the Worker runs.
+    "run_worker_first": true,
     // Serve index.html for unknown paths so Vue Router (history mode) works.
     "not_found_handling": "single-page-application"
+  },
+  // Origin the Worker fetches for the live directory pages (/resources,
+  // /representatives). Mirrors the frontend's build-time VITE_API_BASE_URL and,
+  // like it, INCLUDES the /api prefix. Override per-environment as needed.
+  "vars": {
+    "API_BASE_URL": "https://api.visanav.org/api"
   },
   "observability": {
     "logs": {

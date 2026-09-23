@@ -1,0 +1,144 @@
+---
+// Terms of Use. Plain-language, public-good terms for a free beta tool.
+// NOTE: This is a starting template, not legal advice. Have it reviewed by a
+// lawyer before relying on it, and fill in the governing-law state below.
+import Base from "../layouts/Base.astro";
+import Eyebrow from "../components/Eyebrow.astro";
+
+const updated = "September 22, 2026";
+
+const h2 = "mt-10 text-2xl font-bold text-foreground";
+const p = "mt-3 leading-relaxed text-muted-foreground";
+const ul = "mt-3 list-disc space-y-2 pl-5 leading-relaxed text-muted-foreground";
+const a = "text-link underline underline-offset-2 hover:opacity-80";
+---
+
+<Base
+  title="Terms of Use — VisaNav"
+  description="The terms for using VisaNav, a free public-interest tool that helps immigrants find information and trustworthy help. VisaNav is not a law firm and does not provide legal advice."
+  canonicalPath="/terms"
+>
+  <section class="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+    <Eyebrow items={["TERMS OF USE", "FREE PUBLIC TOOL"]} />
+
+    <h1 class="mt-5 text-4xl font-bold text-foreground">Terms of Use</h1>
+    <p class="mt-2 text-sm text-muted-foreground">Last updated: {updated}</p>
+
+    <div class="vn-card mt-8 p-6">
+      <p class="text-[13px] font-bold leading-5 text-foreground">
+        VisaNav is not a law firm and does not provide legal advice.
+      </p>
+      <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+        VisaNav gives general immigration information and points you to official
+        sources and free or low-cost help. It is not a substitute for advice
+        about your specific situation from a licensed attorney or a
+        DOJ-accredited representative.
+      </p>
+    </div>
+
+    <p class={p}>
+      These Terms of Use ("Terms") are an agreement between you and Victor
+      Valdez, the individual who operates VisaNav ("VisaNav", "we", "us"). By
+      using the VisaNav website and chat assistant (the "Service"), you agree to
+      these Terms. If you do not agree, please do not use the Service.
+    </p>
+
+    <h2 class={h2}>What VisaNav is</h2>
+    <p class={p}>
+      VisaNav is a free, public-interest tool, currently in beta. It answers
+      immigration questions in plain language, links to official government
+      sources, and lists nonprofit and pro-bono organizations that offer free or
+      low-cost help. The information is general and may not fit your
+      circumstances.
+    </p>
+
+    <h2 class={h2}>No legal advice, no attorney-client relationship</h2>
+    <p class={p}>
+      Nothing on the Service is legal advice, and using it does not create an
+      attorney-client relationship with anyone. Immigration law is complex and
+      changes often, and an answer that is right for one person can be wrong for
+      another. Always confirm anything important with a qualified, accredited
+      representative or attorney before you act on it. VisaNav is free: no one
+      should ever ask you to pay to use it.
+    </p>
+
+    <h2 class={h2}>The resource and representative directory</h2>
+    <p class={p}>
+      The Service lists organizations and representatives to help you find
+      trustworthy assistance. We try to keep the directory accurate, but we do
+      not employ, control, or guarantee any listed organization or person, and a
+      listing is not an endorsement or a referral. Verify credentials yourself,
+      including through the government's own rosters, before relying on anyone.
+    </p>
+
+    <h2 class={h2}>Accounts</h2>
+    <p class={p}>
+      You can use the chat assistant anonymously, without an account. If you
+      choose to create an account, you are responsible for keeping your login
+      details secure and for activity under your account. Provide accurate
+      information and let us know if you believe your account has been
+      compromised.
+    </p>
+
+    <h2 class={h2}>Acceptable use</h2>
+    <p class={p}>When using the Service, you agree not to:</p>
+    <ul class={ul}>
+      <li>Use it for any unlawful purpose or to harm others.</li>
+      <li>
+        Submit other people's personal information without their permission.
+      </li>
+      <li>
+        Attempt to break, overload, scrape at scale, or gain unauthorized access
+        to the Service or its data.
+      </li>
+      <li>
+        Misrepresent the Service's output as legal advice from a licensed
+        professional, or resell it as such.
+      </li>
+      <li>
+        Interfere with security features, rate limits, or other users' access.
+      </li>
+    </ul>
+
+    <h2 class={h2}>Availability and changes</h2>
+    <p class={p}>
+      The Service is offered on an "as is" and "as available" basis. Because it
+      is a free beta run as a public good, we may change, suspend, or discontinue
+      any part of it at any time, and we may update these Terms. When we make
+      material changes to the Terms, we will update the date above. Continuing to
+      use the Service after a change means you accept the updated Terms.
+    </p>
+
+    <h2 class={h2}>No warranty</h2>
+    <p class={p}>
+      We work to keep the information accurate and current, but we do not warrant
+      that it is complete, error-free, or up to date, or that the Service will be
+      uninterrupted or secure. To the fullest extent permitted by law, we
+      disclaim all warranties, express or implied.
+    </p>
+
+    <h2 class={h2}>Limitation of liability</h2>
+    <p class={p}>
+      To the fullest extent permitted by law, VisaNav and its operator will not
+      be liable for any indirect, incidental, or consequential damages, or for
+      any decisions you make based on the Service. The Service is a free
+      information tool; it is not a legal representative and cannot be
+      responsible for the outcome of your immigration matter.
+    </p>
+
+    <h2 class={h2}>Governing law</h2>
+    <p class={p}>
+      These Terms are governed by the laws of the State of [Your U.S. state],
+      United States, without regard to its conflict-of-laws rules, except where
+      applicable law requires otherwise.
+    </p>
+
+    <h2 class={h2}>Contact</h2>
+    <p class={p}>
+      Questions about these Terms? Email
+      <a class={a} href="mailto:privacy@visanav.org">privacy@visanav.org</a>.
+      See also our
+      <a class={a} href="/privacy">Privacy Policy</a>.
+    </p>
+  </section>
+</Base>

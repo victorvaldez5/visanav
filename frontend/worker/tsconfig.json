@@ -1,0 +1,24 @@
+{
+  // Standalone type-check for the Cloudflare Worker. It is intentionally NOT a
+  // project reference of the root tsconfig: the Worker is bundled by wrangler
+  // (not vite), and keeping it out of `vue-tsc -b` means the app build can't be
+  // broken by Worker types. Verify it directly with:
+  //   npx tsc -p worker/tsconfig.json --noEmit
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["@cloudflare/workers-types", "vitest/globals"],
+    "resolveJsonModule": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["**/*.ts", "../src/data/forms.json"]
+}

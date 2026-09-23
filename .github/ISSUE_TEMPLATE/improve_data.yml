@@ -1,0 +1,54 @@
+name: Improve the data
+description: Suggest a website to cover, report wrong or outdated information, or volunteer to review
+title: "[data] <country>: <short description>"
+labels: ["data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping keep VisaNav accurate and useful. You do **not** need
+        to be technical.
+
+        Please **do not** include your own case details or personal information.
+  - type: dropdown
+    id: type
+    attributes:
+      label: What would you like to do?
+      options:
+        - Suggest a website we should cover (government site or public resource)
+        - Report information that is wrong or outdated
+        - Volunteer to review content for a country or topic
+    validations:
+      required: true
+  - type: input
+    id: country
+    attributes:
+      label: Country
+      placeholder: "Canada"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: >
+        Suggesting a website: what's useful there, and why is it trustworthy?
+        Reporting a problem: what does VisaNav say, and what is correct?
+        Volunteering: your background, and which topics you can review.
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Link
+      description: The website you're suggesting, or an official page that supports the correction.
+      placeholder: "https://www.canada.ca/en/immigration-refugees-citizenship.html"
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have not included personal or case-specific information.
+          required: true

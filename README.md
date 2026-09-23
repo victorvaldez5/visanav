@@ -1,4 +1,4 @@
-# Project Raul Overview
+# VisaNav
 
 Immigration RAG AI Chatbot
 
@@ -255,3 +255,24 @@ and holds none of it in plaintext.
       audience.
 - [ ] A written, dated retention policy that matches the above (routine deletion
       is only defensible when it's consistent and documented).
+
+---
+
+## Contributing
+
+Contributions are welcome, and the most valuable ones are not code: adding or
+correcting per-country immigration data helps people directly. See
+[CONTRIBUTING.md](CONTRIBUTING.md) to get started, and please read the
+[Code of Conduct](CODE_OF_CONDUCT.md). To report a security issue, follow
+[SECURITY.md](SECURITY.md) (DO NOT OPEN A PUBLIC ISSUE).
+
+## Licensing
+
+VisaNav is split across two licenses:
+
+- **Code** (everything outside `data/`) is licensed under the
+  [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). Running a modified
+  version as a network service requires publishing your source under the same terms.
+- **Data** (the `data/` corpus of immigration knowledge and resources) is licensed
+  under [Creative Commons Attribution 4.0 International](data/LICENSE) (CC-BY-4.0),
+  so it can be reused widely with attribution.
