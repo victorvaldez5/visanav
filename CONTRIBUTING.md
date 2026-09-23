@@ -16,12 +16,14 @@ fits you:
 Run the checks for whatever you touched (CI runs them too, and must be green to
 merge):
 
-- **Data:** `python data/scripts/validate.py`
-- **API** (in `api/`): `poetry run pytest` and `poetry run ruff check .`
+- **Data:** `just validate-data`
+- **API:** `just test-api` and `just lint`
 - **Frontend** (in `frontend/`): `npm run lint` and `npm run build`
-- **Scraper** (in `scrapers/uscis_scraper/`): `pytest`
-- **Translations** (locale lists, catalogs, `i18n/`): `node scripts/check_i18n_parity.mjs`.
+- **Scraper:** `just test-scraper`
+- **Translations** (locale lists, catalogs, `i18n/`): `just check-i18n`.
   See [docs/i18n-architecture.md](docs/i18n-architecture.md), including "Adding a locale".
+
+(`just test` runs every suite. First-time setup is `just setup`; see the README.)
 
 Keep each PR to one logical change, and title it in
 [Conventional Commits](https://www.conventionalcommits.org/) style, e.g.

@@ -22,7 +22,8 @@ issue.
 ```
 scrapers/uscis_scraper/
 ├── scrapy.cfg                  # project entrypoint
-├── requirements.txt
+├── pyproject.toml              # deps (uv workspace member "uscis-scraper")
+├── pull_feeds.py               # download crawl feeds from R2 for ingest
 └── uscis_scraper/
     ├── settings.py             # env loading, output sinks, pipelines
     ├── items.py                # UscisItem (the item schema)
@@ -39,10 +40,9 @@ scrapers/uscis_scraper/
 From the repo root:
 
 ```bash
-pip install -r scrapers/uscis_scraper/requirements.txt
-cd scrapers/uscis_scraper
-scrapy crawl uscis        # sanity check the existing spider
-pytest                    # run the scraper tests
+just setup                # once: uv sync --all-packages (+ frontend deps)
+just crawl                # sanity check the existing spider (local output only)
+just test-scraper         # run the scraper tests
 ```
 
 `LOCAL_TEST` defaults to `true`, so a local crawl writes to `./output/`

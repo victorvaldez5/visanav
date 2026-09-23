@@ -45,7 +45,9 @@ services:
 
     # Run under ASGI (uvicorn) so Server-Sent Events streaming works in dev.
     # `runserver` is WSGI and buffers streaming responses.
-    command: bash -lc "python -m uvicorn api_project.asgi:application --host 0.0.0.0 --port 8000 --reload"
+    # Exec form, not `bash -lc`: a login shell resets PATH and drops the image's
+    # /opt/venv/bin, so `python` would lose every installed package.
+    command: ["python", "-m", "uvicorn", "api_project.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     env_file:
       - config/.env
     volumes:
@@ -56,6 +58,10 @@ services:
     environment:
       - PYTHONBUFFERED=1
       - PYTHONPATH=/app
+      # Reach Postgres by its compose service name. Set here (not in
+      # config/.env) so the same env file also works for commands run on the
+      # host, where the db is on localhost:5432.
+      - POSTGRES_HOST=db
       # The ./data:/app/data mount above puts the corpus here, but the default
       # (BASE_DIR.parent/data/countries) resolves to /data in the container
       # because api code lives at /app, not /app/api. Point ingest at the mount.

@@ -21,6 +21,10 @@ class KnowledgeChunk(models.Model):
     chunk_id = models.CharField(max_length=128, unique=True)
     doc_id = models.CharField(max_length=255)
     country = models.CharField(max_length=8, db_index=True)
+    # Which producer wrote the row: "curated" (data/ Markdown via `ingest`) or a
+    # scrape source such as "uscis" (via `ingest_scrape`). Each command replaces
+    # only its own corpus, so re-ingesting one never wipes the other.
+    corpus = models.CharField(max_length=32, default="curated", db_index=True)
     text = models.TextField()
     embedding = VectorField(dimensions=settings.EMBEDDING_DIM)
 

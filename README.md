@@ -34,8 +34,9 @@ common immigration scams.
 ## Prerequisites
 
 - Git (to clone the repo)
-- Python 3.13.5
-- [pip](https://pip.pypa.io/)
+- [uv](https://docs.astral.sh/uv/) (installs Python 3.13 for you)
+- [just](https://just.systems/) (task runner; `brew install just uv` on macOS)
+- Node.js + npm (frontend)
 - Docker & Docker Compose
 
 ---
@@ -48,28 +49,14 @@ common immigration scams.
    cd visanav
    ```
 
-2. Create & activate a Python virtual environment
+2. Install everything
    ```bash
-   python3.13 -m venv .venv
-   source .venv/bin/activate      # on macOS/Linux
-   .\.venv\Scripts\Activate.ps1   # on Windows PowerShell
+   cp config/.env.example config/.env   # then fill in the secrets marked "CHANGE ME"
+   just setup                           # uv sync --all-packages + npm install
    ```
-
-3. Install Python dependencies
-   Each subdirectory is a service. Each service has its own requirements.
-   to install specific project requirements, go into that service directory and run:
-   ```bash
-   pip install --upgrade pip
-   pip install poetry
-   poetry install
-   ```
-
-4. Install Frontend dependencies
-   Inside the frontend directory run the following commands
-
-```bash
-npm install -D
-```
+   The Python services (`api`, the scraper, the data tooling) share one
+   [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/): a
+   single `uv.lock` and one `.venv` at the repo root. Run `just` to see every task.
 
 ---
 

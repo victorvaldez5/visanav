@@ -85,7 +85,9 @@ DATABASES = {
         "NAME": os.environ.get("POSTGRES_DB"),
         "USER": os.environ.get("POSTGRES_USER"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("POSTGRES_HOST", "0.0.0.0"),
+        # localhost = the compose db's published port, for commands run on the
+        # host; docker-compose sets POSTGRES_HOST=db for the api container.
+        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }

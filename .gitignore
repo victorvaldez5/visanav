@@ -5,10 +5,13 @@ config/.env
 /scrapers/uscis_scraper/form_pages/*
 /scrapers/uscis_scraper/pdfs/*
 __pycache__
+# uv workspace environment (uv sync --all-packages)
+/.venv/
 *.pyc
 scrapers/uscis_scraper/uscis_scraper/output/html
 scrapers/uscis_scraper/uscis_scraper/output/pdf
 scrapers/uscis_scraper/uscis_scraper/output/items
+/scrapers/uscis_scraper/output/
 /staticfiles/
 
 # Logs

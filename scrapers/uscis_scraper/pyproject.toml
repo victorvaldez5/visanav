@@ -1,0 +1,18 @@
+[project]
+name = "uscis-scraper"
+version = "0.1.0"
+description = "Scrapy spider that crawls USCIS forms, the INA and the Policy Manual to Cloudflare R2"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "scrapy>=2.19,<2.20",
+    # R2 (S3-compatible) uploads: botocore for the pipelines/FilesPipeline, boto3 for pull_feeds.py.
+    "boto3>=1.43,<2",
+    "python-dotenv>=1.1,<2",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1,<10"]
+
+[tool.uv]
+# Run from this directory (scrapy.cfg), not installed as a package.
+package = false

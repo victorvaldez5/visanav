@@ -138,3 +138,106 @@ async def semantic_search_ctx(deps, query):
     ctx = _Ctx()
     ctx.deps = deps
     return await semantic_search(ctx, query)
+
+
+# -- scraped-corpus ingest (knowledge.scrape_utils / ingest_scrape) -------------
+
+_PM_HTML = """<div id="page-content"><article><h1><span>Chapter 2 - Revocation</span></h1>
+<div id="guidance"><h2>A. Background</h2><p>{body}</p></div>
+<div id="updates"><p>Technical update, do not index.</p></div></article></div>"""
+
+_USC_HTML = """<div id="docViewer"><span class="contextHeadline">
+<!-- field-start:cite -->8 USC 1537<!-- field-end:cite -->: Custody and release</span>
+<!-- field-start:statute --><p>(a) {body}</p><!-- field-end:statute -->
+<!-- field-start:notes --><p>Amendments note, do not index.</p><!-- field-end:notes --></div>"""
+
+_FORM_HTML = """<div id="page-content"><article><h1>I-485, <span>Adjust Status</span></h1>
+<p>{body}</p><section class="files-listing"><a>Form I-485 (PDF, 1.74 MB)</a></section>
+</article></div>"""
+
+_BODY = "Words about immigration law and procedure. " * 12
+
+
+def _write_feed(path, pages):
+    import json
+
+    path.write_text(
+        "\n".join(
+            json.dumps({"url": u, "content_type": "text/html", "content": h})
+            for u, h in pages
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_scrape_extract_keeps_only_substantive_text():
+    from knowledge.scrape_utils import extract
+
+    pm = extract(
+        "https://www.uscis.gov/policy-manual/volume-12-part-l-chapter-2",
+        _PM_HTML.format(body=_BODY),
+    )
+    assert pm["title"] == "USCIS Policy Manual, Vol. 12, Part L, Chapter 2 - Revocation"
+    assert pm["doc_id"] == "uscis/policy-manual/volume-12-part-l-chapter-2"
+    assert "Background" in pm["text"] and "Technical update" not in pm["text"]
+
+    usc = extract(
+        "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1537&num=0",
+        _USC_HTML.format(body=_BODY),
+    )
+    assert usc["doc_id"] == "usc/8-1537"
+    assert usc["title"] == "8 USC 1537: Custody and release"
+    assert "Amendments" not in usc["text"]
+
+    form = extract("https://www.uscis.gov/i-485", _FORM_HTML.format(body=_BODY))
+    assert form["forms"] == ["I-485"]
+    assert "PDF" not in form["text"]
+
+
+def test_scrape_records_merge_incremental_feeds(tmp_path):
+    from knowledge.scrape_utils import records_from_feeds
+
+    url = "https://www.uscis.gov/i-485"
+    # Older full crawl has two pages; the newer incremental crawl only re-emits
+    # the one that changed, so the other must still come from the older feed.
+    _write_feed(
+        tmp_path / "2026-09-14T00-00-00+00-00.jsonl",
+        [(url, _FORM_HTML.format(body="Old text. " * 40)),
+         ("https://www.uscis.gov/n-400", _FORM_HTML.format(body=_BODY))],
+    )
+    _write_feed(
+        tmp_path / "2026-09-21T00-00-00+00-00.jsonl",
+        [(url, _FORM_HTML.format(body="New text. " * 40))],
+    )
+    records = records_from_feeds(sorted(tmp_path.glob("*.jsonl")))
+    by_url = {r["source_url"]: r for r in records}
+    assert "New text" in by_url[url]["text"] and "Old text" not in by_url[url]["text"]
+    assert "https://www.uscis.gov/n-400" in by_url
+    assert all(r["corpus"] == "uscis" and r["source_type"] == "official" for r in records)
+    assert all(r["last_verified"] == date(2026, 9, 21) for r in records)
+    assert all(r["text"].startswith("I-485, Adjust Status: ") for r in records if r["source_url"] == url)
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_replaces_only_its_own_corpus(fake_voyage, settings, tmp_path):
+    from django.core.management import call_command
+
+    settings.VOYAGE_API_KEY = "test"
+    KnowledgeChunk.objects.create(
+        chunk_id="curated-1", doc_id="curated", country="us", text="curated",
+        embedding=[0.0] * 1024,
+    )
+    KnowledgeChunk.objects.create(
+        chunk_id="stale-scrape", doc_id="uscis/old", country="us", corpus="uscis",
+        text="stale", embedding=[0.0] * 1024,
+    )
+    _write_feed(
+        tmp_path / "2026-09-21T00-00-00+00-00.jsonl",
+        [("https://www.uscis.gov/i-485", _FORM_HTML.format(body=_BODY))],
+    )
+    call_command("ingest_scrape", str(tmp_path), "--upsert")
+
+    assert KnowledgeChunk.objects.filter(chunk_id="curated-1").exists()
+    assert not KnowledgeChunk.objects.filter(chunk_id="stale-scrape").exists()
+    assert KnowledgeChunk.objects.filter(corpus="uscis", doc_id="uscis/i-485").exists()
