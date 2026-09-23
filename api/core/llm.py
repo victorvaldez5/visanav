@@ -174,12 +174,13 @@ class Deps:
     # writes curated knowledge per country (e.g. "us"), so this scopes retrieval
     # to a populated corpus.
     country: str
-    # Preferred reply language for this turn: a supported locale code resolved by
-    # the streaming view from the request's Accept-Language header (which the
-    # frontends set from the active UI locale). Drives the agent's default reply
-    # language via the language_instructions dynamic instruction. Defaults to
-    # English so non-web callers (management commands, tests) need not set it.
-    locale: str = "en"
+    # Preferred reply language for this turn: a code from settings.LANGUAGES. The
+    # streaming view passes request.LANGUAGE_CODE, which LocaleMiddleware has
+    # already negotiated onto that list from the Accept-Language header. Drives
+    # the agent's default reply language via language_instructions. Defaults to
+    # settings.LANGUAGE_CODE so non-web callers (management commands, tests) need
+    # not set it.
+    locale: str = field(default_factory=lambda: settings.LANGUAGE_CODE)
     # Confident sources retrieved during this turn, collected so the streaming
     # view can surface them to the UI as clickable citations. Mutated by
     # semantic_search; one Deps instance per chat turn (never shared).
@@ -490,32 +491,16 @@ async def resource_lookup(
     return await asyncio.to_thread(_query)
 
 
-def _language_name(code: str) -> str:
-    """Human-readable name for a locale code, from settings.LANGUAGES.
-
-    Falls back to the base language ("es-419" -> "es") and finally English, so
-    the agent always gets a nameable language even for an unexpected code.
-    """
-    names = dict(settings.LANGUAGES)
-    return names.get(code) or names.get(code.split("-")[0]) or "English"
-
-
 def language_instructions(ctx: RunContext[Deps]) -> str:
     """Per-turn dynamic instruction naming the user's preferred reply language.
 
-    Injected at run time (the agent is built once and cached, so the concrete
-    language cannot live in the static INSTRUCTIONS string) from Deps.locale,
-    which the streaming view resolves from the request's Accept-Language header.
-    The user's own message written in another language still overrides this, per
-    the Language block in INSTRUCTIONS.
+    Injected at run time from Deps.locale, because the agent is built once and
+    cached, so the concrete language cannot live in the static INSTRUCTIONS
+    string. It only names the language: when to reply in it, and when the user's
+    own message overrides it, is the Language block in INSTRUCTIONS.
     """
-    code = (ctx.deps.locale or "").strip() or "en"
-    name = _language_name(code)
-    return (
-        f"Preferred reply language for this user: {name} ({code}). Reply in "
-        f"{name} by default, unless the user's own latest message is clearly "
-        f"written in a different language."
-    )
+    code = ctx.deps.locale
+    return f"The user's preferred reply language is {dict(settings.LANGUAGES)[code]} ({code})."
 
 
 @lru_cache(maxsize=1)

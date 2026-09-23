@@ -61,25 +61,6 @@ def _turn_usage_limits() -> UsageLimits:
     )
 
 
-def _resolve_locale(request) -> str:
-    """Normalize the request's negotiated language to a supported reply locale.
-
-    LocaleMiddleware sets ``request.LANGUAGE_CODE`` from the Accept-Language header
-    (the frontends send the active UI locale). We map it onto our allowlist
-    (``settings.LANGUAGES``), case-insensitively, falling back to the base language
-    and finally English, so the agent always receives a supported code. Returns the
-    canonical-cased code as declared in ``settings.LANGUAGES``.
-    """
-    by_lower = {code.lower(): code for code, _ in settings.LANGUAGES}
-    lang = (getattr(request, "LANGUAGE_CODE", "") or "").strip().lower()
-    if lang in by_lower:
-        return by_lower[lang]
-    base = lang.split("-")[0]
-    if base in by_lower:
-        return by_lower[base]
-    return "en"
-
-
 def _client_ip(request) -> str:
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded:
@@ -287,16 +268,16 @@ async def chat_stream(request):
 
     conversation_id = conversation.id
     history = await _load_history(conversation_id)
-    # Preferred reply language, negotiated from Accept-Language by LocaleMiddleware
-    # and normalized to a supported locale. Threaded into the agent so Javi answers
-    # in the user's chosen language even when their message is short or ambiguous.
-    reply_locale = _resolve_locale(request)
 
     async def event_stream():
         # Scope retrieval to a populated country corpus. Curated knowledge is
         # ingested per country, so default to KNOWLEDGE_COUNTRY; the user's own
-        # country could be threaded through here in future.
-        deps = Deps(country=settings.KNOWLEDGE_COUNTRY, locale=reply_locale)
+        # country could be threaded through here in future. The reply locale is
+        # the language LocaleMiddleware negotiated from Accept-Language (the
+        # frontends send the active UI locale); it is always one of
+        # settings.LANGUAGES, so Javi answers in the user's chosen language even
+        # when their message is short or ambiguous.
+        deps = Deps(country=settings.KNOWLEDGE_COUNTRY, locale=request.LANGUAGE_CODE)
         started_text = False
         start = time.monotonic()
         try:
@@ -345,9 +326,8 @@ async def chat_stream(request):
             if deps.sources:
                 yield _sse("sources", {"sources": deps.sources})
             logger.info(
-                "chat turn ok req=%s locale=%s latency_ms=%d sources=%d",
+                "chat turn ok req=%s latency_ms=%d sources=%d",
                 request_id,
-                reply_locale,
                 int((time.monotonic() - start) * 1000),
                 len(deps.sources),
             )

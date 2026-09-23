@@ -265,51 +265,46 @@ async def test_streams_frames_and_persists_the_turn(anon_conv, use_fake_agent):
 # --- reply language ----------------------------------------------------------
 
 
-async def test_accept_language_threads_locale_into_deps(anon_conv, use_fake_agent, monkeypatch):
-    """An Accept-Language header reaches Deps.locale via LocaleMiddleware.
-
-    The frontends send the active UI locale as Accept-Language; LocaleMiddleware
-    negotiates it into request.LANGUAGE_CODE, and the view must resolve that onto
-    the allowlist and hand it to the agent as Deps.locale (which drives the reply
-    language). Spy on Deps construction to capture what the view passed.
-    """
+@pytest.fixture
+def captured_deps(monkeypatch):
+    """Spy on the view's Deps construction; returns the kwargs it was built with."""
     captured = {}
     real_deps = streaming.Deps
 
-    def spy_deps(**kwargs):
+    def spy(**kwargs):
         captured.update(kwargs)
         return real_deps(**kwargs)
 
-    monkeypatch.setattr(streaming, "Deps", spy_deps)
+    monkeypatch.setattr(streaming, "Deps", spy)
+    return captured
 
+
+@pytest.mark.parametrize(
+    ("accept_language", "expected"),
+    [
+        ("es", "es"),
+        ("ES", "es"),  # case-insensitive
+        ("es-MX", "es"),  # regional variant -> base language
+        ("fr", "en"),  # unsupported -> LANGUAGE_CODE
+        (None, "en"),  # no header -> LANGUAGE_CODE
+    ],
+)
+async def test_accept_language_sets_the_reply_locale(
+    anon_conv, use_fake_agent, captured_deps, accept_language, expected
+):
+    """The Accept-Language header reaches Deps.locale via LocaleMiddleware.
+
+    The frontends send the active UI locale as Accept-Language; LocaleMiddleware
+    negotiates it onto settings.LANGUAGES, and the view hands the result to the
+    agent as Deps.locale (which drives the reply language).
+    """
+    headers = {"Accept-Language": accept_language} if accept_language else {}
     resp = await AsyncClient().post(
-        CHAT_URL,
-        data=body(anon_conv.uuid),
-        content_type="application/json",
-        headers={"Accept-Language": "es"},
+        CHAT_URL, data=body(anon_conv.uuid), content_type="application/json", headers=headers
     )
     assert resp.status_code == 200
     await drain(resp)  # Deps is built inside the stream, so drive the generator
-    assert captured.get("locale") == "es"
-
-
-async def test_reply_locale_defaults_to_en_without_header(anon_conv, use_fake_agent, monkeypatch):
-    """With no Accept-Language, the resolved reply locale falls back to English."""
-    captured = {}
-    real_deps = streaming.Deps
-
-    def spy_deps(**kwargs):
-        captured.update(kwargs)
-        return real_deps(**kwargs)
-
-    monkeypatch.setattr(streaming, "Deps", spy_deps)
-
-    resp = await AsyncClient().post(
-        CHAT_URL, data=body(anon_conv.uuid), content_type="application/json"
-    )
-    assert resp.status_code == 200
-    await drain(resp)
-    assert captured.get("locale") == "en"
+    assert captured_deps["locale"] == expected
 
 
 # --- per-turn agent budget ---------------------------------------------------

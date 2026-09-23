@@ -126,6 +126,8 @@ or the `POSTGRES_*` vars are missing, and **reuses `CSRF_TRUSTED_ORIGINS` as `CO
    `Deps` (`settings.KNOWLEDGE_COUNTRY`, default `us` — it **must** match a country `ingest`
    populated, or retrieval returns nothing); and `resource_lookup` queries the `network.Organization`
    directory directly over the ORM (US-only for now) to surface free/low-cost nonprofit and pro-bono help.
+   `Deps` also carries the reply `locale` (`request.LANGUAGE_CODE`, see "Internationalization"), which
+   a dynamic instruction (`language_instructions`) gives to Javi each turn as the default reply language.
 3. Tokens stream back to the browser as **Server-Sent Events** (`status` / `delta` / `done` / `error`
    frames). This replaced an earlier Celery + Redis "enqueue and poll" design — **there is no Celery,
    no Redis, no Channels**; the cache is Django's in-process `LocMemCache`.

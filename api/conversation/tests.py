@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
+from django.test import override_settings
 from pydantic_ai import models
 from pydantic_ai.messages import (
     ModelRequest,
@@ -57,29 +58,19 @@ def test_searches_on_the_query_the_model_wrote_scoped_to_country():
     assert result["matches"][0]["source_url"] == "https://uscis.gov/i-130"
 
 
-def test_resolve_locale_normalizes_accept_language():
-    """The view maps request.LANGUAGE_CODE onto the supported allowlist.
-
-    LocaleMiddleware may hand back a base or region-qualified code; the resolver
-    must land on a supported locale (canonical-cased) or fall back to English.
-    """
-    resolve = streaming._resolve_locale
-    assert resolve(SimpleNamespace(LANGUAGE_CODE="es")) == "es"
-    assert resolve(SimpleNamespace(LANGUAGE_CODE="ES")) == "es"  # case-insensitive
-    assert resolve(SimpleNamespace(LANGUAGE_CODE="en-US")) == "en"  # base fallback
-    assert resolve(SimpleNamespace(LANGUAGE_CODE="fr")) == "en"  # unsupported -> en
-    assert resolve(SimpleNamespace(LANGUAGE_CODE="")) == "en"  # absent -> en
-
-
 def test_language_instructions_names_the_preferred_locale():
     """The dynamic instruction names the Deps.locale language for the model."""
     ctx = SimpleNamespace(deps=llm.Deps(country="us", locale="es"))
-    out = llm.language_instructions(ctx)
-    assert "Spanish" in out and "es" in out
+    assert llm.language_instructions(ctx) == (
+        "The user's preferred reply language is Spanish (es)."
+    )
 
-    # An unset/blank locale degrades to English rather than erroring.
-    ctx_default = SimpleNamespace(deps=llm.Deps(country="us", locale=""))
-    assert "English" in llm.language_instructions(ctx_default)
+
+def test_deps_locale_defaults_to_language_code():
+    """Deps built without a locale (management commands, tests) use LANGUAGE_CODE."""
+    assert llm.Deps(country="us").locale == "en"
+    with override_settings(LANGUAGE_CODE="es"):
+        assert llm.Deps(country="us").locale == "es"
 
 
 @pytest.mark.django_db(transaction=True)

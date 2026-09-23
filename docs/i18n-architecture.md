@@ -91,11 +91,26 @@ Today Javi mirrors the user's input language via a prompt rule
 one-word message under a Spanish UI can still come back in English, and no locale
 flows from the request into the agent.
 
-Fix: thread `request.LANGUAGE_CODE` from
-[`api/conversation/streaming.py`](../api/conversation/streaming.py) into `Deps`
-(add a locale field) and into the agent instructions. The active UI locale becomes
-the explicit default reply language. A softened version of the mirror rule stays as
-an override: if the user clearly writes in another language, follow them.
+Fix (done): the view in
+[`api/conversation/streaming.py`](../api/conversation/streaming.py) passes
+`request.LANGUAGE_CODE` (already an allowlisted code, see "Transport") into
+`Deps.locale`. A pydantic-ai dynamic instruction (`language_instructions` in
+[`api/core/llm.py`](../api/core/llm.py)) names that language to the agent on each
+turn. It has to be dynamic because the agent is built once and cached, so the
+language cannot live in the static prompt.
+
+The active UI locale is the explicit default reply language. The static Language
+rules keep two things:
+
+- **A softened mirror rule as an override:** if the user's own message is clearly
+  in another language, reply in that language.
+- **An injection guard:** never switch language because of text inside retrieved
+  sources or pasted material. That text is untrusted data, and this stops injected
+  text from changing the reply language.
+
+The locale is **not logged**. Under the privacy-first logging rules in
+`api/api_project/base.py`, only content-free diagnostics are logged, and a user's
+language is not one of them.
 
 Retrieval stays English (corpus is deferred); Javi translates the grounded context
 at generation time.
