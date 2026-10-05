@@ -1,6 +1,12 @@
 # Plan: move the USCIS scraper from GitHub Actions to a Railway cron service
 
-Status: proposed. Branch `feat/scraper-railway-migration`, based on `develop`.
+Status: in progress. Branch `feat/scraper-railway-migration`, based on `develop`.
+
+> **Update (Railway deprecated Config as Code).** New services cannot use `railway.json`, and
+> existing config files stop working on **2026-12-01**. The scraper therefore does not get a
+> `railway.json`. Its service is defined in `.railway/railway.ts` (Infrastructure as Code) and
+> configured in the dashboard. Section 1 below describes that, and the section 4 cutover is
+> unchanged. The live service is named `visanav-scraper` and the API service is `visanav`.
 
 ## Why
 
@@ -23,17 +29,16 @@ uses almost none. More sources are planned, so the metered runner scales badly.
 |---|---|---|
 | Production image stage | `scrapers/uscis_scraper/Dockerfile` (`production`) | Installs only `uscis-scraper` deps, bakes in code, `CMD scrapy crawl uscis`. Built with repo root as context. |
 | Shallow-path env handling | `settings.py` (`len(_parents) > 3`) | In the image the code is at `/app/uscis_scraper/`, so `config/.env` is skipped and real env vars are used. This is what Railway variables will feed. |
-| Railway cron pattern | `railway.cron.json` | Today it runs `purge_expired_conversations` daily on the API image. Same mechanism, different image and command. |
+| Cron services | Railway cron | `railway.cron.json` describes a daily `purge_expired_conversations` job on the API image, but no such service exists in the production environment today (see "Railway deprecation"). |
 | Incremental crawl | `ContentHashPipeline`, `raw/manifest.json` in R2 | State lives in R2, not on the box, so a Railway container with no volume is fine and a killed run just resumes next week. |
 
 ## Target shape
 
 ```
-Railway project "visanav"
-  visanav-api            (existing, web, api/Dockerfile production stage)
-  Postgres               (existing)
-  purge cron             (existing, railway.cron.json, daily 07:00 UTC)
-  visanav-scraper-uscis  (NEW, cron, scrapers/uscis_scraper/Dockerfile production stage)
+Railway project "jubilant-success", environment "production"
+  visanav          (existing, web, api/Dockerfile production stage, api.visanav.org)
+  Postgres         (existing, managed; not declared in .railway/railway.ts)
+  visanav-scraper  (NEW, cron, scrapers/uscis_scraper/Dockerfile production stage)
 ```
 
 The scraper service is its own Railway service, built from the repo root, running
@@ -41,37 +46,36 @@ The scraper service is its own Railway service, built from the repo root, runnin
 
 ## Changes
 
-### 1. Railway config for the scraper (new file)
+### 1. Railway service definition (IaC, not `railway.json`)
 
-Add `scrapers/uscis_scraper/railway.json`:
+The service is declared in `.railway/railway.ts`:
 
-```json
-{
-  "$schema": "https://railway.com/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "scrapers/uscis_scraper/Dockerfile"
-  },
-  "deploy": {
-    "cronSchedule": "0 6 * * 1",
-    "numReplicas": 1,
-    "restartPolicyType": "NEVER"
-  }
-}
+```ts
+const visanavScraper = service("visanav-scraper", {
+  source: github("victorvaldez5/visanav", { branch: "feat/scraper-railway-migration", checkSuites: false }),
+  build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "/scrapers/uscis_scraper/Dockerfile" },
+  deploy: { cronSchedule: "0 6 * * 1", restartPolicyType: "NEVER" },
+  env: { R2_BUCKET: preserve(), /* ...credentials stay on Railway... */ },
+});
 ```
 
 Notes:
 
-- Keep the existing Monday 06:00 UTC schedule so behavior is unchanged.
-- `restartPolicyType: NEVER`, matching the purge cron. A crawl that fails should wait
-  for the next scheduled run, not hammer USCIS in a retry loop.
-- The build target must be `production`. The Dockerfile's last stage is `production`,
-  so the default target is right, but pass nothing that selects `development`.
-- Each service points at its own config file via the service's "Config as code" path
-  setting in the dashboard (root `railway.json` and `railway.cron.json` are already
-  claimed by other services). Verify the path is resolved from the repo root and that
-  the Docker build context stays at the root, since the Dockerfile `COPY`s
-  `./pyproject.toml`, `./uv.lock` and the other workspace manifests.
+- The file was produced by `railway config pull` from the live project, then trimmed to
+  the two services built from this repo (API and scraper). It sets `export const partial`,
+  so a plan or apply never touches Postgres or its volume. `railway config plan` against
+  production reports no changes, so the file matches what is deployed today.
+- Keep the Monday 06:00 UTC schedule so behavior is unchanged. `NEVER` means a failed
+  crawl waits for the next run instead of retrying against USCIS.
+- Leave the service's Root Directory empty. The Dockerfile `COPY`s `./pyproject.toml`,
+  `./uv.lock` and the other workspace manifests from the repo root.
+- **Before merging to `main`**, the scraper's `source.branch` must stop pointing at
+  `feat/scraper-railway-migration` (delete the `branch` option so it follows the default
+  branch like the API service). Do that in the same change that merges the feature branch,
+  and run `railway config plan` first.
+- Nothing applies this file automatically. `railway config apply` is a manual, confirmed
+  step. Railway does not allow a service to be managed by both Config as Code and IaC, so
+  the API's move off the root `railway.json` is a deliberate cutover (see below).
 
 ### 2. Service variables (no secrets in the repo)
 
@@ -135,6 +139,28 @@ manual fallback, pinning it keeps the fallback from breaking silently.
 - `config/.env.example` (line ~81): the comment already names Railway cron as an
   option, so point it at the new section.
 
+## Railway deprecation: Config as Code ends 2026-12-01
+
+Railway deprecated Config as Code (`railway.json` / `railway.toml`). New services cannot
+opt in, and existing files stop working on 2026-12-01. What that means here:
+
+- **Scraper:** no `railway.json`. It is defined in `.railway/railway.ts`, which `railway
+  config pull` generated from the live service and `railway config plan` confirms is in sync.
+- **API (`visanav`):** still driven by the root `railway.json` (Dockerfile path, pre-deploy
+  `migrate`, restart policy). `.railway/railway.ts` already declares it with the same
+  Dockerfile path and pre-deploy command, but it has **not been applied**, and the live
+  service has no restart policy in the pulled state (the `railway.json` one is
+  `ON_FAILURE`, 3 retries). Cutting over means `railway config apply` (and clearing the
+  service's config-file setting), which is a production change to do deliberately, well
+  before 2026-12-01, after reading `railway config plan`.
+- **`railway.cron.json`:** it describes a daily `purge_expired_conversations` job, but the
+  production environment has **no purge service** (only `visanav`, `visanav-scraper` and
+  Postgres). Either the retention purge is not running in production or it runs somewhere
+  not visible from this project. This needs a decision: add a purge cron service (declare
+  it in `.railway/railway.ts` with `cronSchedule`), or delete the stale file.
+- **Names:** the live services are `visanav` (API) and `visanav-scraper`. Some docs and
+  `railway up --service visanav-api` examples use older names.
+
 ## Out of scope here, worth deciding separately
 
 ### Chaining ingestion after the crawl
@@ -191,11 +217,11 @@ manifest key would also need to be namespaced per source (it is a single
 
 ## Order of work
 
-1. Add `scrapers/uscis_scraper/railway.json` and the `ENV LOCAL_TEST=false` line in the
-   `production` stage.
+1. Define the service in `.railway/railway.ts` and add the `ENV LOCAL_TEST=false` line in
+   the `production` stage.
 2. Local image build and `just test-scraper`.
 3. Docs updates.
 4. Pin `ubuntu-24.04` in `ci.yml` and `scrape.yml` (change 5).
-5. Open PR into `develop`. Railway setup and the manual first run happen in the
-   dashboard and CLI, not in the PR.
+5. Open PR into `develop`. The manual first run and any `railway config apply` happen in
+   the dashboard and CLI, not in the PR.
 6. After a verified Railway run: remove the `schedule:` trigger (a small follow-up commit).

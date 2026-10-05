@@ -107,9 +107,14 @@ just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defau
   env vars — `prod.py` refuses to boot without them.
 - **Frontend → Cloudflare**: `npm run build` then `wrangler deploy` uploads `dist/` as a
   static-assets Worker (`frontend/wrangler.jsonc`, SPA fallback for Vue Router history mode).
-- **Scraper → Railway cron**: the `visanav-scraper-uscis` service (`scrapers/uscis_scraper/railway.json`,
-  `production` stage of its Dockerfile, repo-root context) crawls weekly to R2. `.github/workflows/scrape.yml`
-  is a `workflow_dispatch`-only fallback.
+- **Scraper → Railway cron**: the `visanav-scraper` service (defined in `.railway/railway.ts`,
+  `production` stage of `scrapers/uscis_scraper/Dockerfile`, repo-root context) crawls weekly to R2.
+  `.github/workflows/scrape.yml` is a `workflow_dispatch`-only fallback.
+- **Railway config**: `railway.json` / `railway.cron.json` are Config as Code, which Railway deprecated
+  (new services cannot use it; existing files stop working **2026-12-01**). `.railway/railway.ts` is the
+  Infrastructure as Code replacement (`railway config plan` previews, `railway config apply` applies; it
+  declares only the API and scraper services, never Postgres). Until the API is cut over, `railway.json`
+  still drives its pre-deploy `migrate`.
 
 ## Architecture
 

@@ -112,13 +112,15 @@ The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Ac
 - **Incremental**: a content-hash manifest (`raw/manifest.json`) lets re-runs skip
   pages whose content is unchanged, so only changed documents are re-written and
   forwarded downstream.
-- **Scheduling**: a **Railway cron service** (`visanav-scraper-uscis`) runs the crawl
-  weekly, Mondays 06:00 UTC, writing to R2. Its config is
-  [`scrapers/uscis_scraper/railway.json`](scrapers/uscis_scraper/railway.json); it builds the
-  `production` stage of `scrapers/uscis_scraper/Dockerfile` from the repo root. Set
+- **Scheduling**: a **Railway cron service** (`visanav-scraper`) runs the crawl
+  weekly, Mondays 06:00 UTC, writing to R2. It builds the `production` stage of
+  `scrapers/uscis_scraper/Dockerfile` from the repo root (leave the service's Root
+  Directory empty: the Dockerfile copies the uv workspace manifests from the root).
+  The service definition (Dockerfile path, cron, no-retry policy) lives in
+  [`.railway/railway.ts`](.railway/railway.ts), Railway's Infrastructure as Code. Set
   `R2_BUCKET`, `AWS_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and
-  `AWS_REGION_NAME=auto` as service variables (the image sets `LOCAL_TEST=false`), and
-  point the service's "Config as code" path at that file. Plan and rationale:
+  `AWS_REGION_NAME=auto` as service variables in the dashboard (the image sets
+  `LOCAL_TEST=false`). Plan and rationale:
   [`docs/scraper-railway-migration.md`](docs/scraper-railway-migration.md).
   `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback.
 - **Tests**: the `scraper` job in `.github/workflows/ci.yml` runs the scraper's pytest suite on
