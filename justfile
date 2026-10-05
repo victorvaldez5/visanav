@@ -126,10 +126,6 @@ fe-build:
 release-check *args:
     scripts/release.sh check {{args}}
 
-# Open the develop -> main release PR with a generated description
-release-pr:
-    scripts/release.sh pr
-
-# After merging the release PR: tag origin/main as vYYYY.MM.DD
-release-tag:
-    scripts/release.sh tag
+# Merge develop into main and tag vYYYY.MM.DD (checks CI, confirms first); -y skips the prompt, --local runs checks here
+release *args:
+    scripts/release.sh {{args}}

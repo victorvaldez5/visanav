@@ -2,11 +2,12 @@
 # Release helper for the develop -> main flow described in docs/RELEASING.md.
 #
 #   scripts/release.sh check [--local]   what would ship, migrations, new env vars, CI status
-#   scripts/release.sh pr                open the develop -> main PR with a generated body
-#   scripts/release.sh tag               after merging, tag origin/main as vYYYY.MM.DD
+#   scripts/release.sh [-y] [--local]    merge origin/develop into main, push, tag vYYYY.MM.DD
 #
 # `check` exits non-zero if CI on develop's tip is failing or pending. --local runs
 # lint + tests locally instead of trusting CI (for when Actions minutes run out).
+# The release merges in a throwaway worktree, so your checkout and branches are untouched.
+# -y skips the confirmation prompt. Pushing main needs direct-push rights on the branch.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -67,36 +68,41 @@ cmd_check() {
   echo "Remember: set new env vars on Railway/Cloudflare/GitHub, and back up Postgres first if a migration is marked REVIEW."
 }
 
-cmd_pr() {
-  fetch
-  local body title
-  title="chore(release): $(date +%Y-%m-%d)"
-  body="$(summary)
+cmd_release() {
+  local yes=0 local_flag=""
+  for a in "$@"; do
+    case "$a" in -y|--yes) yes=1 ;; --local) local_flag="--local" ;; *) echo "unknown option: $a"; exit 2 ;; esac
+  done
 
-## Before merging
-- [ ] CI green on develop
-- [ ] New env vars set
-- [ ] Postgres backup taken if any migration is destructive
-- [ ] Any manual data step noted here
+  # Same gate as `check`: prints what ships and exits non-zero if CI isn't green.
+  cmd_check $local_flag
+  if [ -z "$(git rev-list "$range")" ]; then echo "Nothing to release: main already contains develop."; exit 0; fi
 
-After merging: \`scripts/release.sh tag\`. See docs/RELEASING.md.
+  local tag n=1
+  tag="v$(date +%Y.%m.%d)"
+  while git rev-parse -q --verify "refs/tags/$tag" >/dev/null; do n=$((n+1)); tag="v$(date +%Y.%m.%d)-$n"; done
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)"
-  gh pr create --base main --head develop --title "$title" --body "$body"
-}
+  if [ "$yes" != 1 ]; then
+    read -r -p "Merge develop into main and tag $tag? This deploys to production. [y/N] " ans
+    [ "$ans" = "y" ] || [ "$ans" = "Y" ] || { echo "aborted"; exit 1; }
+  fi
 
-cmd_tag() {
-  fetch
-  local tag="v$(date +%Y.%m.%d)"
-  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then echo "tag $tag already exists"; exit 1; fi
-  git tag -a "$tag" -m "Release $tag" origin/main
-  git push origin "$tag"
-  echo "tagged origin/main as $tag"
+  local wt
+  wt=$(mktemp -d)
+  trap 'git worktree remove --force "$wt" 2>/dev/null || true' EXIT
+  git worktree add -q --detach "$wt" origin/main
+  (
+    cd "$wt"
+    git merge --no-ff -q origin/develop -m "chore(release): $tag" || { echo "merge conflict: resolve develop vs main by hand"; exit 1; }
+    git tag -a "$tag" -m "Release $tag"
+    git push --atomic origin HEAD:main "refs/tags/$tag"
+  )
+  git fetch -q origin main --tags
+  echo "released $tag: origin/main is now $(git rev-parse --short origin/main). Watch the Railway and Cloudflare deploys."
 }
 
 case "${1:-}" in
   check) shift; cmd_check "${1:-}" ;;
-  pr)    cmd_pr ;;
-  tag)   cmd_tag ;;
-  *)     sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)     cmd_release "$@" ;;
 esac
