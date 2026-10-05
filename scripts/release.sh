@@ -89,7 +89,7 @@ cmd_release() {
 
   local wt
   wt=$(mktemp -d)
-  trap 'git worktree remove --force "$wt" 2>/dev/null || true' EXIT
+  trap "git worktree remove --force '$wt' 2>/dev/null || true" EXIT
   git worktree add -q --detach "$wt" origin/main
   (
     cd "$wt"
