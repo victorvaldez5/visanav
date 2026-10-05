@@ -57,7 +57,7 @@ Tests run under **pytest + pytest-django** (config in `[tool.pytest.ini_options]
 module is `api_project.dev` and `--no-migrations` builds the schema straight from the models —
 so tests get isolated, empty tables and skip the reference-data migrations (which pre-populate
 all countries via `pycountry` and load org fixtures). The unittest-style `SimpleTestCase` in
-`conversation/tests.py` runs under pytest too. `.github/workflows/api-ci.yml` runs `ruff check`
+`conversation/tests.py` runs under pytest too. the `api` job in `.github/workflows/ci.yml` runs `ruff check`
 + `pytest` (against a Postgres service) on every PR touching `api/`.
 
 ### Frontend (`frontend/`)
@@ -96,7 +96,7 @@ other. Run them from a full checkout (local/CI), not the prod web image.
 
 ### Translations (i18n)
 ```bash
-just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defaults + catalog parity (CI: i18n-ci.yml)
+just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defaults + catalog parity (CI: the `i18n` job in `ci.yml`)
 ```
 
 ### Deploy
@@ -209,7 +209,7 @@ Language localization of the US product: English + Spanish now, `zh-Hans` next. 
 phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
 - **One allowlist:** `i18n/supported-locales.json` is the source of truth. Django `LANGUAGES` +
   `LANGUAGE_CODE` and the frontend's `SUPPORTED_LOCALES` + `DEFAULT_LOCALE` mirror it, and
-  `scripts/check_i18n_parity.mjs` (CI: `i18n-ci.yml`) fails when they drift or a catalog has gaps.
+  `scripts/check_i18n_parity.mjs` (CI: the `i18n` job in `ci.yml`) fails when they drift or a catalog has gaps.
 - **Transport:** `LocaleMiddleware` maps the `Accept-Language` header onto `LANGUAGES`, so
   `request.LANGUAGE_CODE` is always an allowlisted code (falling back to `en`). There are no
   `i18n_patterns`, so no URL-prefix redirects.

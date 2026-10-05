@@ -192,7 +192,7 @@ Django `.po`), on three deploys, sharing no code. We keep them consistent with:
   "USCIS") so every surface renders them identically.
 - The single canonical `supported-locales.json` allowlist.
 - **CI parity checks** ([`scripts/check_i18n_parity.mjs`](../scripts/check_i18n_parity.mjs),
-  run by `i18n-ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
+  run by the `i18n` job in `ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
   - every surface's declared locale list and default match the canonical file;
   - every JSON catalog (the frontend now, marketing once it has one) has exactly
     the keys of the default-locale catalog, so no key is missing or orphaned;
