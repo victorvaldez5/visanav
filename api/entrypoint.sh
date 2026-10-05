@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
-# Apply database migrations
-python manage.py migrate --no-input
+# Apply database migrations on boot. On Railway, railway.json runs `migrate` as a
+# pre-deploy command instead (once per release, before the new version takes
+# traffic, and a failed migration blocks the deploy), so the service sets
+# SKIP_MIGRATE_ON_START=1 to avoid migrating again on every cold start. Locally
+# and anywhere the var is unset this still migrates on boot; migrate is
+# idempotent, so running it in both places is harmless.
+if [ "${SKIP_MIGRATE_ON_START:-}" = "1" ]; then
+  echo "SKIP_MIGRATE_ON_START=1: skipping migrate (handled by the pre-deploy command)."
+else
+  python manage.py migrate --no-input
+fi
 
 # Optionally seed the public-resources directory. The seed commands are
 # idempotent (upsert + cross-source dedup), so this is safe to leave on, but it

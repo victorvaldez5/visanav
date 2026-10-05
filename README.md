@@ -205,10 +205,15 @@ railway domain --service visanav-api  # generate the public HTTPS domain
 > Prefer auto-deploys? Connect the GitHub repo to the API service in the Railway
 > dashboard instead of `railway up`; it reads `railway.json` and redeploys on push.
 
-`api/entrypoint.sh` runs `migrate` and `collectstatic` on container start, so
-the schema and WhiteNoise static manifest are applied automatically. (Optional
-hardening: move `migrate` to a Railway *pre-deploy command* so it runs once per
-release instead of on every cold start under scale-to-zero.)
+**Migrations run as a Railway pre-deploy command** (`preDeployCommand` in
+[`railway.json`](railway.json)): once per release, before the new version takes
+traffic, and a failing migration aborts the deploy so the old version keeps
+serving. Set `SKIP_MIGRATE_ON_START=1` on the API service so the container
+doesn't migrate a second time on every cold start. If the variable is unset it
+is harmless (migrate is idempotent), just redundant. `api/entrypoint.sh` still
+runs `collectstatic` on every start, and still migrates on boot locally.
+
+Before a `develop` → `main` release, work through [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ---
 
