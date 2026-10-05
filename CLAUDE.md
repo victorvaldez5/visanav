@@ -101,8 +101,9 @@ just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defau
 
 ### Deploy
 - **API → Railway**: `railway up --service visanav-api` builds the `production` stage of
-  `api/Dockerfile` from the repo root. `api/entrypoint.sh` runs `migrate` + `collectstatic`
-  (and optionally creates a superuser) on every container start. See README for the required
+  `api/Dockerfile` from the repo root. Railway runs `migrate` as a pre-deploy command
+  (`railway.json`; the service sets `SKIP_MIGRATE_ON_START=1`), and `api/entrypoint.sh` runs `collectstatic`
+  (and optionally creates a superuser) on every container start. Release steps: `docs/RELEASING.md`. See README for the required
   env vars — `prod.py` refuses to boot without them.
 - **Frontend → Cloudflare**: `npm run build` then `wrangler deploy` uploads `dist/` as a
   static-assets Worker (`frontend/wrangler.jsonc`, SPA fallback for Vue Router history mode).
@@ -231,7 +232,7 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   overridable with `CHAT_MODEL`.
 - **pgvector needs a pgvector-capable Postgres**: `docker-compose` and CI use `pgvector/pgvector:pg15`
   (not `postgres:*-alpine`). The `knowledge` initial migration runs `CREATE EXTENSION vector` (so
-  Railway `entrypoint.sh migrate` sets it up), but tests run `--no-migrations` (schema from models),
+  Railway's pre-deploy `migrate` sets it up), but tests run `--no-migrations` (schema from models),
   so `api/conftest.py` seeds the `vector` extension into `template1` before the test DB is created.
 - **Embeddings ≠ chat provider**: retrieval always embeds with **Voyage** (`EMBEDDING_MODEL`,
   1024-dim) regardless of `LLM_PROVIDER` (Anthropic has no embeddings API). `voyage-3` ↔ `voyage-law-2`
