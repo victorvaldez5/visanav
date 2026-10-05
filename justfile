@@ -119,3 +119,17 @@ fe-dev:
 # Typecheck + production build to frontend/dist
 fe-build:
     cd frontend && npm run build
+
+# ── release ──────────────────────────────────────────────────────────────────
+
+# What would ship (commits, migrations, new env vars, CI status); add --local to run checks here
+release-check *args:
+    scripts/release.sh check {{args}}
+
+# Open the develop -> main release PR with a generated description
+release-pr:
+    scripts/release.sh pr
+
+# After merging the release PR: tag origin/main as vYYYY.MM.DD
+release-tag:
+    scripts/release.sh tag
