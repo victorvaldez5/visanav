@@ -104,7 +104,7 @@ def test_html_pipeline_xhtml_local(tmp_path):
     pipeline.process_item(item, spider=None)
     # should write under <netloc>/<last‐param>.html, e.g. host/section=5.html
     # splitting logic takes 'section=5' as key
-    expected = tmp_path / "html" / f"host/USC-prelim-title8-section1101.html"
+    expected = tmp_path / "html" / "host/USC-prelim-title8-section1101.html"
     assert expected.exists()
     assert "XHTML" in expected.read_text()
 

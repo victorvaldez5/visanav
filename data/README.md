@@ -75,9 +75,9 @@ yourself to `maintainers`. Then add at least one knowledge doc or resource.
 running it first saves a round trip:
 
 ```bash
-pip install -r data/scripts/requirements.txt
-python data/scripts/validate.py        # everything (or: validate.py us)
-python data/scripts/ingest.py us       # preview the chunks that would be built
+# needs uv (https://docs.astral.sh/uv/); it installs Python and the two small deps
+uv run --package visanav-data python data/scripts/validate.py   # everything (or: validate.py us)
+uv run --package visanav-data python data/scripts/ingest.py us  # preview the chunks
 ```
 
 A country maintainer reviews the substance and merges. Want to become a
@@ -88,7 +88,7 @@ maintainer for a country? Say so in an issue.
 Embedding and loading into the vector store happens in the API, not here:
 
 ```bash
-cd api && python manage.py ingest us --upsert   # needs VOYAGE_API_KEY + a database
+just ingest us   # needs VOYAGE_API_KEY + a database
 ```
 
 ## Licensing

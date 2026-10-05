@@ -12,9 +12,29 @@ independently-deployed services** plus a shared config file:
 - `frontend/` — Vue 3 + Vite SPA (chat UI). Deployed to **Cloudflare** (static `dist/` via Wrangler).
 - `scrapers/uscis_scraper/` — Scrapy spider that crawls USCIS → **Cloudflare R2**. Runs weekly via GitHub Actions.
 - `data/` — community-curated, per-country immigration knowledge/resources (Markdown + YAML) plus the scripts that validate and ingest them into the vector store.
+- `i18n/`: shared internationalization assets: the canonical locale allowlist (`supported-locales.json`) and the translation glossary. See "Internationalization" below.
 - `config/.env` — the single env file read by **all** services (gitignored; see `config/.env.example`).
 
 ## Common commands
+
+A root **`justfile`** wraps the everyday tasks (`just` lists them all): `just setup`,
+`just test`, `just lint`, `just migrate`, `just manage <cmd>`, `just db-status`,
+`just ingest us`, `just corpus-pull`, `just corpus-ingest`. Recipes run on the host
+against the compose Postgres (`just db` starts only that). Prefer them over ad-hoc
+commands; they never load `config/.env` into the shell.
+
+### Python: one uv workspace
+The Python services are members of a single **uv workspace** (root `pyproject.toml` +
+one `uv.lock`): `api`, `scrapers/uscis_scraper` (`uscis-scraper`), and `data/scripts`
+(`visanav-data`). There is **no Poetry and no requirements.txt**.
+```bash
+uv sync --all-packages      # dev: one repo-root .venv with every member + dev tools
+uv run ruff check .         # lint (config lives in the ROOT pyproject.toml)
+uv lock                     # after editing any member's dependencies
+```
+Each member declares only its own deps; images and CI install one member
+(`uv sync --locked --package api --no-dev`), so the API image never ships Scrapy/boto3.
+Python is pinned to 3.13 by `.python-version` (voyageai has no 3.14 wheel yet).
 
 ### Local development (Docker Compose — the primary workflow)
 ```bash
@@ -26,14 +46,12 @@ Both the `api` and `frontend` images build with the **repo root as the build con
 `config/` is reachable); the dev API runs under **uvicorn/ASGI, not `runserver`**, because SSE
 streaming requires an unbuffered ASGI server.
 
-### API (`api/`, Poetry + a 3.10+ venv)
+### API (`api/`)
 ```bash
-poetry install --with dev            # main deps + dev tools (pytest-django, ruff)
-python manage.py migrate
-python manage.py makemigrations
-poetry run pytest                     # run all API tests (see below)
-poetry run pytest -k semantic_search  # a single test by name
-poetry run ruff check .               # lint (config in pyproject.toml)
+just migrate                          # = cd api && uv run python manage.py migrate
+just makemigrations
+just test-api                         # all API tests (see below)
+just test-api -k semantic_search      # a single test by name
 ```
 Tests run under **pytest + pytest-django** (config in `[tool.pytest.ini_options]`): the settings
 module is `api_project.dev` and `--no-migrations` builds the schema straight from the models —
@@ -54,29 +72,38 @@ deliberately skip it, so run `npm run lint` yourself before shipping.
 
 ### Scraper (`scrapers/uscis_scraper/`)
 ```bash
-pip install -r requirements.txt
-scrapy crawl uscis   # LOCAL_TEST=true → writes ./output/ ; LOCAL_TEST=false → uploads to R2
-pytest               # scraper unit tests
+just crawl           # LOCAL_TEST=true crawl → scrapers/uscis_scraper/output/ (never R2)
+just test-scraper    # scraper unit tests
 ```
+(`LOCAL_TEST=false` uploads to R2; only the weekly `scrape.yml` job runs that way.)
 
 ### Data corpus
 ```bash
 # Validation + chunk preview (dependency-light, no keys/DB — this is all CI needs):
-pip install -r data/scripts/requirements.txt
-python data/scripts/validate.py [cc]     # format gate (CI runs this on data/ PRs)
-python data/scripts/ingest.py us         # preview the chunks (dry run only)
+just validate-data [cc]                  # format gate (CI runs this on data/ PRs)
+uv run python data/scripts/ingest.py us  # preview the chunks (dry run only)
 
 # Authoritative ingestion (embed via Voyage + write to pgvector) lives in the API:
-cd api && python manage.py ingest us            # DRY RUN: chunk + preview, no keys/DB
-cd api && python manage.py ingest us --upsert    # embed + upsert (needs VOYAGE_API_KEY + DB)
+just ingest us --dry     # DRY RUN: chunk + preview, no keys/DB
+just ingest us           # embed + upsert curated data/ (needs VOYAGE_API_KEY + DB)
+just corpus-pull         # fetch the crawl's JSONL feeds from R2 (needs R2 read creds)
+just corpus-ingest       # embed + upsert the scraped USCIS corpus from those feeds
+just db-status           # chunk counts per country / corpus / topic
 ```
-`manage.py ingest --upsert` transactionally replaces a country's chunks; run it from a
-full checkout (local/CI), not the slim prod web image (which omits `data/`).
+Both ingest commands transactionally replace **only their own corpus** (the
+`KnowledgeChunk.corpus` column: `curated` vs `uscis`), so re-running one never wipes the
+other. Run them from a full checkout (local/CI), not the prod web image.
+
+### Translations (i18n)
+```bash
+just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defaults + catalog parity (CI: i18n-ci.yml)
+```
 
 ### Deploy
 - **API → Railway**: `railway up --service visanav-api` builds the `production` stage of
-  `api/Dockerfile` from the repo root. `api/entrypoint.sh` runs `migrate` + `collectstatic`
-  (and optionally creates a superuser) on every container start. See README for the required
+  `api/Dockerfile` from the repo root. Railway runs `migrate` as a pre-deploy command
+  (`railway.json`; the service sets `SKIP_MIGRATE_ON_START=1`), and `api/entrypoint.sh` runs `collectstatic`
+  (and optionally creates a superuser) on every container start. Release steps: `docs/RELEASING.md`. See README for the required
   env vars — `prod.py` refuses to boot without them.
 - **Frontend → Cloudflare**: `npm run build` then `wrangler deploy` uploads `dist/` as a
   static-assets Worker (`frontend/wrangler.jsonc`, SPA fallback for Vue Router history mode).
@@ -85,6 +112,11 @@ full checkout (local/CI), not the slim prod web image (which omits `data/`).
 ## Architecture
 
 ### Configuration: one env file, loaded by relative path
+`config/.env` works both on the host and in containers: it does **not** set `POSTGRES_HOST`
+(Django defaults to `localhost`, the compose db's published port), and `docker-compose.yml`
+sets `POSTGRES_HOST=db` for the `api` container only. Don't put `POSTGRES_HOST=db` back in
+the env file, or every host-side command loses the database.
+
 There is a single `config/.env` at the repo root. Each service reaches it by walking up from
 its own file location: `api/api_project/base.py` and the scraper's `settings.py` both
 `load_dotenv(<relative path to>/config/.env)`. **Moving those files changes the relative depth
@@ -120,6 +152,8 @@ or the `POSTGRES_*` vars are missing, and **reuses `CSRF_TRUSTED_ORIGINS` as `CO
    `Deps` (`settings.KNOWLEDGE_COUNTRY`, default `us` — it **must** match a country `ingest`
    populated, or retrieval returns nothing); and `resource_lookup` queries the `network.Organization`
    directory directly over the ORM (US-only for now) to surface free/low-cost nonprofit and pro-bono help.
+   `Deps` also carries the reply `locale` (`request.LANGUAGE_CODE`, see "Internationalization"), which
+   a dynamic instruction (`language_instructions`) gives to Javi each turn as the default reply language.
 3. Tokens stream back to the browser as **Server-Sent Events** (`status` / `delta` / `done` / `error`
    frames). This replaced an earlier Celery + Redis "enqueue and poll" design — **there is no Celery,
    no Redis, no Channels**; the cache is Django's in-process `LocMemCache`.
@@ -134,9 +168,9 @@ a bad key surfaces on the first embed/chat request rather than crashing boot. `L
 constructed. Embeddings are a **separate** concern from the chat provider (Anthropic has no
 embeddings API): `EMBEDDING_MODEL` (default `voyage-3`, 1024-dim) is always Voyage.
 
-### The data → vector store pipeline (two independent producers)
-The pgvector corpus (`knowledge.KnowledgeChunk`) is fed by two separate paths that do **not**
-currently connect to each other:
+### The data → vector store pipeline (two producers)
+The pgvector corpus (`knowledge.KnowledgeChunk`) is fed by two separate paths, each owning
+its rows via the `corpus` column:
 - **Curated knowledge** (`data/`): human-written Markdown+YAML under `data/countries/<cc>/`.
   The `manage.py ingest` command (chunking in `knowledge/ingest_utils.py`) splits frontmatter,
   chunks the body (~200 words), embeds via Voyage, and upserts rows scoped by **country** with the
@@ -145,7 +179,10 @@ currently connect to each other:
 - **Raw scrape** (`scrapers/`): the `uscis` spider crawls USCIS forms, the INA, and the Policy
   Manual, writing raw HTML/PDF/JSONL to R2 under `raw/`. It is **incremental** via a content-hash
   manifest (`raw/manifest.json`): `ContentHashPipeline` drops unchanged pages before they hit the
-  storage sinks. This is raw archival — it is not yet wired into the vector store.
+  storage sinks, and every crawl also writes a JSONL feed (`raw/items/uscis/<time>.jsonl`, url +
+  main-content HTML). Because feeds are deltas, `manage.py ingest_scrape` (`knowledge/scrape_utils.py`)
+  merges **all** of them oldest→newest, extracts the Policy Manual guidance, INA statute text and
+  form pages, and writes `corpus="uscis"` chunks. PDFs aren't ingested yet.
 
 ### Django apps
 - `accounts` — custom `User` (AbstractUser, `AUTH_USER_MODEL = accounts.User`) + `Profile`; JWT auth (SimpleJWT: 10-min access, 7-day refresh), registration, email verification.
@@ -164,9 +201,28 @@ Vue 3 `<script setup>` + Pinia + Vue Router + Tailwind v4, with shadcn-style UI 
 from `VITE_API_BASE_URL` **baked in at build time**: unset in dev (Vite proxies `/api` →
 `http://api:8000`), set to the absolute Railway/`api.visanav.org` URL in production. The axios client
 auto-refreshes JWTs on 401 with a queued-request retry; the SSE chat stream uses native `fetch`
-(not axios) but the same `API_BASE_URL`.
+(not axios) but the same `API_BASE_URL`. Both send `Accept-Language` from the active UI locale
+(`currentLocale()` in `src/i18n/index.ts`).
+
+### Internationalization
+Language localization of the US product: English + Spanish now, `zh-Hans` next. The design,
+phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
+- **One allowlist:** `i18n/supported-locales.json` is the source of truth. Django `LANGUAGES` +
+  `LANGUAGE_CODE` and the frontend's `SUPPORTED_LOCALES` + `DEFAULT_LOCALE` mirror it, and
+  `scripts/check_i18n_parity.mjs` (CI: `i18n-ci.yml`) fails when they drift or a catalog has gaps.
+- **Transport:** `LocaleMiddleware` maps the `Accept-Language` header onto `LANGUAGES`, so
+  `request.LANGUAGE_CODE` is always an allowlisted code (falling back to `en`). There are no
+  `i18n_patterns`, so no URL-prefix redirects.
+- **Catalogs:** the frontend's vue-i18n messages are `src/locales/<code>.json`; Django gettext
+  catalogs go under `api/locale/` (empty until API strings are wrapped in `_()`); shared domain
+  terms are in `i18n/GLOSSARY.md`.
 
 ## Gotchas
+- **Docker images install into `/opt/venv`** (on `PATH`), outside `/app`, so the dev bind mount
+  can't shadow it. Never start container commands via `bash -lc`: a login shell resets `PATH`
+  and `python` silently loses every package. Build context is the repo root, so the root
+  `.dockerignore` is the only one Docker reads (it keeps `.venv`, `node_modules`, `.claude/`
+  and `config/.env` out of the context).
 - **Scraper + R2**: `AWS_USE_SSL = True` is set deliberately — with the default, botocore's
   S3 region-redirector infinitely recurses against R2. Don't remove it.
 - **`pydantic-ai-slim`, not `pydantic-ai`**: only the `anthropic` + `openai` extras are installed
@@ -176,7 +232,7 @@ auto-refreshes JWTs on 401 with a queued-request retry; the SSE chat stream uses
   overridable with `CHAT_MODEL`.
 - **pgvector needs a pgvector-capable Postgres**: `docker-compose` and CI use `pgvector/pgvector:pg15`
   (not `postgres:*-alpine`). The `knowledge` initial migration runs `CREATE EXTENSION vector` (so
-  Railway `entrypoint.sh migrate` sets it up), but tests run `--no-migrations` (schema from models),
+  Railway's pre-deploy `migrate` sets it up), but tests run `--no-migrations` (schema from models),
   so `api/conftest.py` seeds the `vector` extension into `template1` before the test DB is created.
 - **Embeddings ≠ chat provider**: retrieval always embeds with **Voyage** (`EMBEDDING_MODEL`,
   1024-dim) regardless of `LLM_PROVIDER` (Anthropic has no embeddings API). `voyage-3` ↔ `voyage-law-2`

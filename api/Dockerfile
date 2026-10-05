@@ -3,22 +3,32 @@ ARG PYTHON_VERSION=3.13-slim
 # Base layer with system deps shared by all stages
 FROM python:${PYTHON_VERSION} AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates libpq-dev gcc \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# Builder stage: install Python deps into an in-project virtualenv (.venv)
+# Builder stage: install the api's locked deps (only the api workspace member,
+# never the scraper's Scrapy/boto3) into a venv at /opt/venv. It lives outside
+# /app so the dev bind mount (./api:/app) can't shadow it.
 FROM base AS builder
-# Use Poetry just to resolve/install into a local venv for reproducible builds
-RUN pip install --no-cache-dir poetry
-# Only copy dependency manifests first for better layer caching
-COPY ./api/pyproject.toml ./api/poetry.lock /app/
-# Install prod-only deps into a local venv inside /app, honoring the lock file
-# so builds are reproducible (pins opentelemetry-api 1.36.0 that pydantic-ai needs)
-RUN poetry config virtualenvs.create false \
- && poetry install --only main --no-root --no-interaction --no-ansi
+COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+# Only the workspace manifests + lock first, for layer caching. uv reads every
+# member's pyproject.toml to validate the workspace, even the ones not installed.
+WORKDIR /workspace
+COPY ./pyproject.toml ./uv.lock ./.python-version ./
+COPY ./api/pyproject.toml ./api/
+COPY ./scrapers/uscis_scraper/pyproject.toml ./scrapers/uscis_scraper/
+COPY ./data/scripts/pyproject.toml ./data/scripts/
+# --locked fails the build if uv.lock is stale rather than silently re-resolving.
+RUN uv sync --locked --package api --no-dev --no-install-workspace
+WORKDIR /app
 # Now copy the application code
 COPY ./api /app
 # Bring in the curated resource corpus next to the app so the `load_resources`
@@ -28,8 +38,7 @@ COPY ./data /app/data
 
 # Development stage: includes autoreload and dev server
 FROM base AS development
-# Bring in the virtualenv created by builder'
-COPY --from=builder /usr/local /usr/local
+COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/ /app/
 RUN chmod +x ./entrypoint.sh || true
 EXPOSE 8000
@@ -39,7 +48,7 @@ CMD ["python", "-m", "uvicorn", "api_project.asgi:application", "--host", "0.0.0
 
 # Production stage: minimal runtime image
 FROM base AS production
-COPY --from=builder /usr/local /usr/local
+COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app /app
 RUN chmod +x ./entrypoint.sh || true
 EXPOSE 8000

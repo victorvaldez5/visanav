@@ -7,10 +7,18 @@ on:
   pull_request:
     paths:
       - "scrapers/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/scraper-ci.yml"
   push:
     branches: [main, develop]
     paths:
       - "scrapers/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/scraper-ci.yml"
 
 jobs:
   test:
@@ -18,13 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          # Python 3.13 comes from the root .python-version; uv installs it.
+          enable-cache: true
+
+      - name: Lint (ruff)
+        run: |
+          uv sync --locked --only-group dev
+          uv run --no-sync ruff check scrapers
 
       - name: Install scraper dependencies
-        run: pip install -r scrapers/uscis_scraper/requirements.txt
+        run: uv sync --locked --package uscis-scraper
 
       - name: Run scraper tests
         working-directory: scrapers/uscis_scraper
-        run: pytest
+        run: uv run --no-sync pytest

@@ -14,8 +14,11 @@ from dotenv import load_dotenv
 
 # Environment lives in the repo-root config/ directory (see config/.env.example).
 # settings.py is at scrapers/uscis_scraper/uscis_scraper/, so the repo root is
-# three levels up.
-load_dotenv(Path(__file__).resolve().parents[3] / "config" / ".env")
+# three levels up. In the Docker image the code sits at /app/uscis_scraper/, too
+# shallow for that walk, and compose injects config/.env via env_file instead.
+_parents = Path(__file__).resolve().parents
+if len(_parents) > 3:
+    load_dotenv(_parents[3] / "config" / ".env")
 logger = logging.getLogger(__name__)
 BOT_NAME = "uscis_scraper"
 

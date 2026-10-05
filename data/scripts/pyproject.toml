@@ -1,0 +1,14 @@
+# Data tooling (validate.py + the ingest.py chunk preview). Kept as its own tiny
+# workspace member so contributors who only touch data/ can run it with just:
+#   uv run --package visanav-data python data/scripts/validate.py
+# Authoritative ingestion (embed + write to pgvector) lives in the API:
+#   just ingest us
+[project]
+name = "visanav-data"
+version = "0.1.0"
+description = "Validation and chunk-preview tooling for the curated data/ corpus"
+requires-python = ">=3.13,<3.14"
+dependencies = ["pyyaml>=6.0,<7", "jsonschema>=4.20,<5"]
+
+[tool.uv]
+package = false

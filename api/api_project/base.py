@@ -41,6 +41,12 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Negotiates the active language from the request's Accept-Language header
+    # (the frontends set it explicitly from the active UI locale) into
+    # request.LANGUAGE_CODE, and activates gettext for the response. Django
+    # requires it after SessionMiddleware and before CommonMiddleware. We do NOT
+    # use i18n_patterns, so it performs no URL-prefix redirects.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",  # admin needs CSRF
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -79,7 +85,9 @@ DATABASES = {
         "NAME": os.environ.get("POSTGRES_DB"),
         "USER": os.environ.get("POSTGRES_USER"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("POSTGRES_HOST", "0.0.0.0"),
+        # localhost = the compose db's published port, for commands run on the
+        # host; docker-compose sets POSTGRES_HOST=db for the api container.
+        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
@@ -173,11 +181,30 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "en-us"
+# Default locale: the "default" in /i18n/supported-locales.json, and one of
+# LANGUAGES (CI checks both). LocaleMiddleware falls back to it when a request
+# carries no supported Accept-Language.
+LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 PHONENUMBER_DEFAULT_REGION = "US"
+
+# Supported UI/content locales. Keep in sync with /i18n/supported-locales.json
+# (CI enforces parity via scripts/check_i18n_parity.mjs). LocaleMiddleware maps
+# every request onto one of these, so request.LANGUAGE_CODE is always a code
+# listed here. locations.0004_populate_languages seeds the Language table from
+# this setting only when it runs, so the list bounds that table on a NEW database
+# only; existing databases keep the rows seeded before. See "Locale model" and
+# "Adding a locale" in docs/i18n-architecture.md.
+LANGUAGES = [
+    ("en", "English"),
+    ("es", "Spanish"),
+]
+# Where gettext catalogs (.po/.mo) live. Populated incrementally as user-facing
+# strings get wrapped in gettext (_()); manage.py makemessages/compilemessages
+# read and write here.
+LOCALE_PATHS = [BASE_DIR / "locale"]
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"  # for collectstatic (production)

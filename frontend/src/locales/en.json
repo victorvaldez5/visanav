@@ -1,0 +1,29 @@
+{
+  "rep": "an accredited representative",
+  "banner": {
+    "text": "Beta: Javi shares information from official sources. This is not legal advice. For help with your specific case, talk to {rep}."
+  },
+  "disclaimer": {
+    "short": "Javi shares information from official sources, not legal advice. For your specific case, talk to {rep}."
+  },
+  "sources": {
+    "title": "Sources",
+    "lastVerified": "Last verified {date}"
+  },
+  "chat": {
+    "welcome": "Hello, I am here to answer all of your Visa and Immigration questions!",
+    "thinking": "Thinking for a good answer...",
+    "researching": "Researching official sources...",
+    "writing": "Writing your answer...",
+    "placeholder": "Ask in your own words...",
+    "submit": "Submit",
+    "send": "Send message",
+    "stop": "Stop",
+    "privacy": "Encrypted"
+  },
+  "lang": {
+    "label": "Language",
+    "en": "English",
+    "es": "Español"
+  }
+}

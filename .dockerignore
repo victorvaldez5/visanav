@@ -1,0 +1,24 @@
+# Every image builds with the repo root as context (so config/ and the uv
+# workspace manifests are reachable); this file is the only .dockerignore Docker
+# reads for them. Keep the context to source + manifests.
+
+# Secrets: services read config/.env at runtime via env_file, never from the image.
+config/.env
+**/.env
+
+# Local environments, caches and build output
+.venv/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+frontend/dist/
+marketing/dist/
+api/staticfiles/
+*.sqlite3
+
+# Crawl output and VCS / agent state
+scrapers/uscis_scraper/output/
+.git/
+.claude/

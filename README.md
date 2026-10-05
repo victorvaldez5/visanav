@@ -34,8 +34,9 @@ common immigration scams.
 ## Prerequisites
 
 - Git (to clone the repo)
-- Python 3.13.5
-- [pip](https://pip.pypa.io/)
+- [uv](https://docs.astral.sh/uv/) (installs Python 3.13 for you)
+- [just](https://just.systems/) (task runner; `brew install just uv` on macOS)
+- Node.js + npm (frontend)
 - Docker & Docker Compose
 
 ---
@@ -48,28 +49,14 @@ common immigration scams.
    cd visanav
    ```
 
-2. Create & activate a Python virtual environment
+2. Install everything
    ```bash
-   python3.13 -m venv .venv
-   source .venv/bin/activate      # on macOS/Linux
-   .\.venv\Scripts\Activate.ps1   # on Windows PowerShell
+   cp config/.env.example config/.env   # then fill in the secrets marked "CHANGE ME"
+   just setup                           # uv sync --all-packages + npm install
    ```
-
-3. Install Python dependencies
-   Each subdirectory is a service. Each service has its own requirements.
-   to install specific project requirements, go into that service directory and run:
-   ```bash
-   pip install --upgrade pip
-   pip install poetry
-   poetry install
-   ```
-
-4. Install Frontend dependencies
-   Inside the frontend directory run the following commands
-
-```bash
-npm install -D
-```
+   The Python services (`api`, the scraper, the data tooling) share one
+   [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/): a
+   single `uv.lock` and one `.venv` at the repo root. Run `just` to see every task.
 
 ---
 
@@ -218,10 +205,15 @@ railway domain --service visanav-api  # generate the public HTTPS domain
 > Prefer auto-deploys? Connect the GitHub repo to the API service in the Railway
 > dashboard instead of `railway up`; it reads `railway.json` and redeploys on push.
 
-`api/entrypoint.sh` runs `migrate` and `collectstatic` on container start, so
-the schema and WhiteNoise static manifest are applied automatically. (Optional
-hardening: move `migrate` to a Railway *pre-deploy command* so it runs once per
-release instead of on every cold start under scale-to-zero.)
+**Migrations run as a Railway pre-deploy command** (`preDeployCommand` in
+[`railway.json`](railway.json)): once per release, before the new version takes
+traffic, and a failing migration aborts the deploy so the old version keeps
+serving. Set `SKIP_MIGRATE_ON_START=1` on the API service so the container
+doesn't migrate a second time on every cold start. If the variable is unset it
+is harmless (migrate is idempotent), just redundant. `api/entrypoint.sh` still
+runs `collectstatic` on every start, and still migrates on boot locally.
+
+Before a `develop` → `main` release, work through [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ---
 
