@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Source } from "@/services/messageService";
+import { fmtDate } from "@/lib/format";
 
 const props = defineProps<{ sources: Source[] | null | undefined }>();
 
@@ -24,15 +25,6 @@ function safeHref(url?: string | null): string | null {
   }
 }
 
-// Format an ISO date (YYYY-MM-DD) without timezone drift (Date parsing of a bare
-// ISO date is UTC, which can show the previous day in negative offsets).
-function formatVerified(iso?: string | null): string | null {
-  if (!iso) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!m) return iso;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
 </script>
 
 <template>
@@ -58,9 +50,9 @@ function formatVerified(iso?: string | null): string | null {
         >{{ source.title || source.source_url }}</a>
         <span v-else>{{ source.title || source.source_url }}</span>
         <span
-          v-if="formatVerified(source.last_verified)"
+          v-if="fmtDate(source.last_verified)"
           class="text-xs text-muted-foreground"
-        >· {{ $t("sources.lastVerified", { date: formatVerified(source.last_verified) }) }}</span>
+        >· {{ $t("sources.lastVerified", { date: fmtDate(source.last_verified) }) }}</span>
       </li>
     </ul>
   </div>

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useI18n } from "vue-i18n";
-import { EOIR_ROSTER_URL, setLocale, SUPPORTED_LOCALES, type Locale } from "@/i18n";
+import { EOIR_ROSTER_URL } from "@/i18n";
 import LineIcon from "@/components/interface/LineIcon.vue";
 
 // Persistent (non-dismissible) beta + legal-information disclaimer. The
 // "accredited representative" phrase links to the official DOJ EOIR roster.
-const { locale } = useI18n();
+// The language switcher lives in the sidebar footer (LanguageSwitcher.vue).
 </script>
 
 <template>
@@ -34,25 +33,6 @@ const { locale } = useI18n();
             >{{ $t("rep") }}</a>
           </template>
         </i18n-t>
-      </div>
-      <div
-        class="flex shrink-0 items-center gap-1"
-        role="group"
-        :aria-label="$t('lang.label')"
-      >
-        <button
-          v-for="loc in SUPPORTED_LOCALES"
-          :key="loc"
-          type="button"
-          class="rounded px-2 py-0.5 text-xs font-semibold transition-colors"
-          :class="locale === loc
-            ? 'bg-status text-status-foreground'
-            : 'text-warn-foreground/70 hover:bg-warn-foreground/10'"
-          :aria-pressed="locale === loc"
-          @click="setLocale(loc as Locale)"
-        >
-          {{ $t(`lang.${loc}`) }}
-        </button>
       </div>
     </div>
   </div>

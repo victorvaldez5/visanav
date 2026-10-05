@@ -419,6 +419,7 @@ import {computed, onMounted} from "vue";
 import {useProfileStore} from "@/stores/useProfileStore.ts";
 import {storeToRefs} from "pinia";
 import {toast} from "vue-sonner";
+import {currentLocale, isLocale, setLocale} from "@/i18n";
 import {
   Combobox,
   ComboboxAnchor,
@@ -526,6 +527,10 @@ const onSubmit = handleSubmit(async (_values) => {
     }
     if (resp.preferred_language !== null) {
       _language = profileStore.getLanguageById(resp.preferred_language)
+    }
+    // Saving a preferred language is a language choice: apply it to the UI too.
+    if (isLocale(resp.preferred_language) && resp.preferred_language !== currentLocale()) {
+      await setLocale(resp.preferred_language)
     }
     setValues({
       email: resp.email,

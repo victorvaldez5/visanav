@@ -32,18 +32,17 @@ new_env_vars() {
     | grep -E '^\+[A-Z][A-Z0-9_]*=' | sed 's/^+//; s/=.*//' | sort -u || true
 }
 
-# One line per CI workflow on develop's tip; returns 1 if any is not a success.
+# Result of the `ci` workflow on develop's tip (it runs on every push, so a missing
+# run means CI hasn't started or Actions is down); returns 1 unless it succeeded.
 ci_status() {
-  local sha out bad=0
+  local sha out status conclusion
   sha=$(git rev-parse origin/develop)
-  out=$(gh run list --commit "$sha" --json name,status,conclusion \
-        --jq '.[] | "\(.name)\t\(.status)\t\(.conclusion)"' 2>/dev/null || true)
-  if [ -z "$out" ]; then echo "no CI runs found for ${sha:0:7} (path-filtered, or never ran)"; return 1; fi
-  while IFS=$'\t' read -r name status conclusion; do
-    if [ "$conclusion" = "success" ]; then echo "  ok       $name"
-    else echo "  $status${conclusion:+/$conclusion}  $name"; bad=1; fi
-  done <<< "$out"
-  return $bad
+  out=$(gh run list --workflow ci.yml --commit "$sha" --limit 1 --json status,conclusion \
+        --jq '.[] | "\(.status)\t\(.conclusion)"' 2>/dev/null || true)
+  if [ -z "$out" ]; then echo "no ci run found for ${sha:0:7} (not started yet, or Actions is down)"; return 1; fi
+  IFS=$'\t' read -r status conclusion <<< "$out"
+  if [ "$conclusion" = "success" ]; then echo "  ok       ci"; return 0; fi
+  echo "  $status${conclusion:+/$conclusion}  ci"; return 1
 }
 
 summary() {

@@ -24,6 +24,8 @@
   "lang": {
     "label": "Idioma",
     "en": "English",
-    "es": "Español"
+    "es": "Español",
+    "loadError": "No se pudo cambiar el idioma. Inténtalo de nuevo.",
+    "saveError": "No se pudo guardar tu idioma en tu perfil."
   }
 }

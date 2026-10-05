@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from phonenumber_field.serializerfields import PhoneNumberField
@@ -68,7 +69,14 @@ class UserSerializer(ModelSerializer):
 class ProfileSerializer(ModelSerializer):
     country = serializers.PrimaryKeyRelatedField(queryset=Country.objects.all())
     subdivision = serializers.PrimaryKeyRelatedField(queryset=Subdivision.objects.all())
-    preferred_language = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all())
+    # Read and written as the locale code ("es"), limited to the i18n allowlist
+    # (settings.LANGUAGES), so a profile can only hold a language the app ships.
+    preferred_language = serializers.SlugRelatedField(
+        slug_field="code",
+        queryset=Language.objects.filter(code__in=[code for code, _ in settings.LANGUAGES]),
+        allow_null=True,
+        required=False,
+    )
 
     class Meta:
         model = Profile

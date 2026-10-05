@@ -103,7 +103,7 @@ export const useProfileStore = defineStore("profile", () => {
             ...data,
             country: data.country?.id,
             subdivision: data.subdivision?.id,
-            preferred_language: data.preferred_language?.id,
+            preferred_language: data.preferred_language?.code ?? null,
         }
         const updated = await authService.updateProfile(userId, payload);
         profile.value = updated;

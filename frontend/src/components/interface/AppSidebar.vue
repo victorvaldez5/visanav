@@ -23,6 +23,7 @@ import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
 import ThemeToggle from "@/components/interface/ThemeToggle.vue";
+import LanguageSwitcher from "@/components/interface/LanguageSwitcher.vue";
 import { useTheme } from "@/composables/useTheme";
 import logoLight from "@/assets/VisaNav-Horizontal-Main.svg";
 import logoDark from "@/assets/VisaNav-Horizontal-OnDark.svg";
@@ -165,6 +166,7 @@ const menuItems = [
           </template>
         </SidebarMenuItem>
       </SidebarMenu>
+      <LanguageSwitcher class="mt-2" />
       <nav
         aria-label="Legal"
         class="mt-1 flex items-center justify-center gap-2 px-2 text-xs text-muted-foreground"

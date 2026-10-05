@@ -2,12 +2,20 @@ import { describe, it, expect } from "vitest";
 import { fmtDate, telHref } from "@/lib/format";
 
 describe("fmtDate", () => {
-  it("formats an ISO date as 'Mon D, YYYY'", () => {
+  it("formats an ISO date as 'Mon D, YYYY' in the default locale", () => {
     expect(fmtDate("2026-09-13")).toBe("Sep 13, 2026");
   });
 
   it("drops leading zeros from the day", () => {
     expect(fmtDate("2026-01-05")).toBe("Jan 5, 2026");
+  });
+
+  it("formats in the requested locale", () => {
+    expect(fmtDate("2026-09-13", "es")).toMatch(/^13 sept?\.? 2026$/);
+  });
+
+  it("returns an unparseable value unchanged", () => {
+    expect(fmtDate("soon")).toBe("soon");
   });
 
   it("returns an empty string for a null or blank date", () => {

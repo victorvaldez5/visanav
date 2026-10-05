@@ -116,7 +116,7 @@ The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Ac
   `workflow_dispatch`), writing to R2. It reads `R2_BUCKET`, `AWS_ENDPOINT_URL`,
   `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` from **GitHub Secrets**.
   (A Fly scheduled Machine is an alternative if you'd rather keep everything on Fly.)
-- **Tests**: `.github/workflows/scraper-ci.yml` runs the scraper's pytest suite on
+- **Tests**: the `scraper` job in `.github/workflows/ci.yml` runs the scraper's pytest suite on
   every PR touching `scrapers/`.
 
 ---

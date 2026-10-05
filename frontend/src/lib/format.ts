@@ -1,13 +1,18 @@
 // Small formatting helpers shared by the resource-directory views
-// (Organizations + Representatives).
+// (Organizations + Representatives) and chat source citations.
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { currentLocale } from "@/i18n";
 
-// ISO date (YYYY-MM-DD) → "Mon D, YYYY". Empty string for a null/blank date.
-export function fmtDate(iso: string | null): string {
+// ISO date (YYYY-MM-DD) → a short date in the active UI locale ("Sep 13, 2026",
+// "13 sept 2026"). Built from the date parts, not `new Date(iso)`, because a bare
+// ISO date parses as UTC and can show the previous day in negative offsets.
+// Empty string for a null/blank date; an unparseable value is returned as-is.
+export function fmtDate(iso: string | null | undefined, locale: string = currentLocale()): string {
   if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return `${MONTHS[+m - 1]} ${+d}, ${y}`;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }).format(date);
 }
 
 // A phone number → a `tel:` href, keeping only digits and a leading "+".

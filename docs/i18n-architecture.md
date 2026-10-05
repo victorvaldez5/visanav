@@ -1,6 +1,6 @@
 # Internationalization (i18n) architecture
 
-Status: Phases 1 and 2 implemented; Phases 3 to 6 planned.
+Status: Phases 1 and 2 implemented; Phase 3 in progress (3a done); Phases 4 to 6 planned.
 Owner: VisaNav
 Last updated: 2026-09-23
 
@@ -58,16 +58,14 @@ Django's `LANGUAGES` is set to the allowlist and `LANGUAGE_CODE` to its default
 undefined, so the `locations` `0004_populate_languages` migration seeded Django's
 full list of about 100 languages into the `Language` reference table.
 
-That migration reads `LANGUAGES` only when it runs, so the new setting bounds the
-table on a **new database only**:
-
-- Existing databases (including production) keep their ~100 `Language` rows.
-- A new database gets only `en` and `es`, which also limits the choices for
-  `Profile.preferred_language` there.
-
-Pruning the old rows and restricting `Profile.preferred_language` to the allowlist
-belong to Phase 3 (profile write-through). For the same reason, adding a locale
-needs a data migration for its `Language` row (see "Adding a locale").
+Phase 3 settled this. `locations` migration `0007_prune_languages` shrinks the
+table to the allowlist on every database: a profile on a regional variant keeps its
+language via the base code (`es-mx` becomes `es`), any other non-allowlisted
+preference is cleared, and the extra rows are deleted. `ProfileSerializer` reads and
+writes `preferred_language` as the locale code and rejects anything outside
+`LANGUAGES`. Because the populate migration never runs again on existing databases,
+adding a locale needs a data migration for its `Language` row (see "Adding a
+locale").
 
 ## Transport: how a request's locale reaches the API
 
@@ -124,7 +122,9 @@ at generation time.
   `es.json`). They moved out of the inline `messages` object in Phase 1 so the CI
   parity check covers them. Phase 3 adds feature namespaces (`nav`, `auth`,
   `profile`, `resources`, `forms`, `chat`, `common`, `errors`) as strings get
-  extracted, and lazy-loads non-default locales. Fallback locale is `en`.
+  extracted. Only `en` (the fallback) is bundled; every other catalog is its own
+  chunk, found by an `import.meta.glob` and loaded by `loadLocaleMessages()` before
+  first paint (`initLocale()` in `main.ts`) or on switch.
 - **Locale list:** `SUPPORTED_LOCALES` and `DEFAULT_LOCALE` in
   [`frontend/src/i18n/index.ts`](../frontend/src/i18n/index.ts) mirror the
   allowlist (CI-checked). `isLocale()` and browser-language detection derive from
@@ -132,10 +132,17 @@ at generation time.
 - **Store and service strings** (Pinia toasts, error fallbacks) are routed through
   the exported global `i18n.global.t`, since they live outside component setup.
 - **Extraction** proceeds feature by feature, not big-bang.
-- **Switcher:** promoted out of the temporary `BetaBanner.vue` into a stable
-  control in the sidebar footer, visible to anonymous and authenticated users. On
-  change: `setLocale()` + persist localStorage + sync `<html lang>`, and if
-  authenticated, write through to `Profile.preferred_language`.
+- **Switcher:** `LanguageSwitcher.vue` in the sidebar footer (moved out of
+  `BetaBanner.vue`), visible to anonymous and authenticated users, each option
+  labelled in its own language. On change: `setLocale()` (load catalog + set +
+  persist localStorage + sync `<html lang>`), and if authenticated, write through
+  to `Profile.preferred_language` (`useLocaleSync`).
+- **Profile sync** (`services/profileLocale.ts`): on login and on email
+  verification, a browser with no saved choice adopts the profile's language;
+  otherwise its choice is written to the profile. Saving a language on the profile
+  page applies it to the UI too.
+- **Dates** go through `fmtDate()` (`src/lib/format.ts`), which formats with
+  `Intl.DateTimeFormat` in the active UI locale (not the browser's).
 
 ## Marketing (`www.visanav.org`, Astro)
 
@@ -185,7 +192,7 @@ Django `.po`), on three deploys, sharing no code. We keep them consistent with:
   "USCIS") so every surface renders them identically.
 - The single canonical `supported-locales.json` allowlist.
 - **CI parity checks** ([`scripts/check_i18n_parity.mjs`](../scripts/check_i18n_parity.mjs),
-  run by `i18n-ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
+  run by the `i18n` job in `ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
   - every surface's declared locale list and default match the canonical file;
   - every JSON catalog (the frontend now, marketing once it has one) has exactly
     the keys of the default-locale catalog, so no key is missing or orphaned;
@@ -208,8 +215,8 @@ contributor volume justifies it, not a launch dependency.
    `i18n.locales` once marketing has i18n).
 3. Add a data migration that creates its `locations.Language` row. The populate
    migration does not run again on existing databases.
-4. Add its catalogs: `frontend/src/locales/<code>.json` (and register it in
-   `messages` in `frontend/src/i18n/index.ts`), plus
+4. Add its catalogs: `frontend/src/locales/<code>.json` (picked up and
+   lazy-loaded automatically), plus
    `api/locale/<code>/LC_MESSAGES/django.po` once the API has translated strings.
 5. Reveal it in a surface's switcher only after that surface is fully translated
    and reviewed (the launch gate below).
@@ -242,7 +249,8 @@ Build order front-loads the shared foundations so nothing is built twice.
    parity check.
 2. **Chat locale** (done): thread `request.LANGUAGE_CODE` into `Deps` and the
    agent, plus the softened mirror-rule override.
-3. **App UI extraction** + promote the switcher.
+3. **App UI extraction** + promote the switcher (3a done: lazy catalogs, `?lang=`
+   handoff, switcher, profile write-through, `Language` prune).
 4. **Resource-directory language matching.**
 5. **Marketing i18n + SEO.**
 6. **Emails.**

@@ -162,7 +162,7 @@ def test_parse_follows_main_links():
     assert req.meta["parent_page"] == resp.url
 ```
 
-CI (`.github/workflows/scraper-ci.yml`) runs `pytest` on every PR that touches
+CI (the `scraper` job in `.github/workflows/ci.yml`) runs `pytest` on every PR that touches
 `scrapers/`.
 
 ## 6. Open a PR
