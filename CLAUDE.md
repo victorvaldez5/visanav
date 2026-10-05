@@ -10,7 +10,7 @@ independently-deployed services** plus a shared config file:
 
 - `api/` — Django REST Framework backend (chat, auth, public-resources directory). Deployed to **Railway**.
 - `frontend/` — Vue 3 + Vite SPA (chat UI). Deployed to **Cloudflare** (static `dist/` via Wrangler).
-- `scrapers/uscis_scraper/` — Scrapy spider that crawls USCIS → **Cloudflare R2**. Runs weekly via GitHub Actions.
+- `scrapers/uscis_scraper/` — Scrapy spider that crawls USCIS → **Cloudflare R2**. Runs weekly as a Railway cron service.
 - `data/` — community-curated, per-country immigration knowledge/resources (Markdown + YAML) plus the scripts that validate and ingest them into the vector store.
 - `i18n/`: shared internationalization assets: the canonical locale allowlist (`supported-locales.json`) and the translation glossary. See "Internationalization" below.
 - `config/.env` — the single env file read by **all** services (gitignored; see `config/.env.example`).
@@ -75,7 +75,7 @@ deliberately skip it, so run `npm run lint` yourself before shipping.
 just crawl           # LOCAL_TEST=true crawl → scrapers/uscis_scraper/output/ (never R2)
 just test-scraper    # scraper unit tests
 ```
-(`LOCAL_TEST=false` uploads to R2; only the weekly `scrape.yml` job runs that way.)
+(`LOCAL_TEST=false` uploads to R2; only the weekly Railway cron service runs that way; `scrape.yml` is a manual fallback.)
 
 ### Data corpus
 ```bash
@@ -107,7 +107,9 @@ just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defau
   env vars — `prod.py` refuses to boot without them.
 - **Frontend → Cloudflare**: `npm run build` then `wrangler deploy` uploads `dist/` as a
   static-assets Worker (`frontend/wrangler.jsonc`, SPA fallback for Vue Router history mode).
-- **Scraper → GitHub Actions**: `.github/workflows/scrape.yml` crawls weekly to R2.
+- **Scraper → Railway cron**: the `visanav-scraper-uscis` service (`scrapers/uscis_scraper/railway.json`,
+  `production` stage of its Dockerfile, repo-root context) crawls weekly to R2. `.github/workflows/scrape.yml`
+  is a `workflow_dispatch`-only fallback.
 
 ## Architecture
 

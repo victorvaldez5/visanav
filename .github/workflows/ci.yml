@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: read
@@ -70,7 +70,7 @@ jobs:
   api:
     needs: changes
     if: needs.changes.outputs.api == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -136,7 +136,7 @@ jobs:
   frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -179,7 +179,7 @@ jobs:
   scraper:
     needs: changes
     if: needs.changes.outputs.scraper == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -204,7 +204,7 @@ jobs:
   data:
     needs: changes
     if: needs.changes.outputs.data == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -226,7 +226,7 @@ jobs:
   i18n:
     needs: changes
     if: needs.changes.outputs.i18n == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -242,7 +242,7 @@ jobs:
   ci:
     if: always()
     needs: [changes, api, frontend, scraper, data, i18n]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Verify every area job passed or was skipped
         env:

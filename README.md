@@ -112,10 +112,15 @@ The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Ac
 - **Incremental**: a content-hash manifest (`raw/manifest.json`) lets re-runs skip
   pages whose content is unchanged, so only changed documents are re-written and
   forwarded downstream.
-- **Scheduling**: `.github/workflows/scrape.yml` runs the crawl weekly (and on manual
-  `workflow_dispatch`), writing to R2. It reads `R2_BUCKET`, `AWS_ENDPOINT_URL`,
-  `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` from **GitHub Secrets**.
-  (A Fly scheduled Machine is an alternative if you'd rather keep everything on Fly.)
+- **Scheduling**: a **Railway cron service** (`visanav-scraper-uscis`) runs the crawl
+  weekly, Mondays 06:00 UTC, writing to R2. Its config is
+  [`scrapers/uscis_scraper/railway.json`](scrapers/uscis_scraper/railway.json); it builds the
+  `production` stage of `scrapers/uscis_scraper/Dockerfile` from the repo root. Set
+  `R2_BUCKET`, `AWS_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and
+  `AWS_REGION_NAME=auto` as service variables (the image sets `LOCAL_TEST=false`), and
+  point the service's "Config as code" path at that file. Plan and rationale:
+  [`docs/scraper-railway-migration.md`](docs/scraper-railway-migration.md).
+  `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback.
 - **Tests**: the `scraper` job in `.github/workflows/ci.yml` runs the scraper's pytest suite on
   every PR touching `scrapers/`.
 
