@@ -7,6 +7,13 @@ Status: in progress. Branch `feat/scraper-railway-migration`, based on `develop`
 > `railway.json`. Its service is defined in `.railway/railway.ts` (Infrastructure as Code) and
 > configured in the dashboard. Section 1 below describes that, and the section 4 cutover is
 > unchanged. The live service is named `visanav-scraper` and the API service is `visanav`.
+>
+> **First test run failed because of the root `railway.json`.** A deployment built from git
+> loaded `api/Dockerfile` for the scraper service and ran the API's pre-deploy `migrate`
+> (the traceback was `manage.py` failing to reach Postgres at localhost). The root file
+> applies to every service built from this repo and overrides each service's own settings.
+> The fix, in this PR: delete the root `railway.json` and `railway.cron.json`, and keep
+> their effective settings (restart policy, pre-deploy) in `.railway/railway.ts`.
 
 ## Why
 
@@ -146,18 +153,18 @@ opt in, and existing files stop working on 2026-12-01. What that means here:
 
 - **Scraper:** no `railway.json`. It is defined in `.railway/railway.ts`, which `railway
   config pull` generated from the live service and `railway config plan` confirms is in sync.
-- **API (`visanav`):** still driven by the root `railway.json` (Dockerfile path, pre-deploy
-  `migrate`, restart policy). `.railway/railway.ts` already declares it with the same
-  Dockerfile path and pre-deploy command, but it has **not been applied**, and the live
-  service has no restart policy in the pulled state (the `railway.json` one is
-  `ON_FAILURE`, 3 retries). Cutting over means `railway config apply` (and clearing the
-  service's config-file setting), which is a production change to do deliberately, well
-  before 2026-12-01, after reading `railway config plan`.
-- **`railway.cron.json`:** it describes a daily `purge_expired_conversations` job, but the
-  production environment has **no purge service** (only `visanav`, `visanav-scraper` and
-  Postgres). Either the retention purge is not running in production or it runs somewhere
-  not visible from this project. This needs a decision: add a purge cron service (declare
-  it in `.railway/railway.ts` with `cronSchedule`), or delete the stale file.
+- **API (`visanav`):** the root `railway.json` is deleted in this PR. Its settings are in
+  `.railway/railway.ts` (Dockerfile path, pre-deploy `migrate`, replicas, and the
+  `ON_FAILURE`, 3 retries restart policy the file used to impose). The live service already
+  held the Dockerfile path and pre-deploy command in its own settings, so the main
+  production risk is the first git-triggered API deploy after the file is gone. Do it
+  deliberately, after reading `railway config plan`, and watch that deploy.
+- **`railway.cron.json`:** deleted. It described a daily `purge_expired_conversations` job
+  (`python manage.py purge_expired_conversations`, 07:00 UTC, API image), but the production
+  environment has **no purge service** (only `visanav`, `visanav-scraper` and Postgres).
+  Either the retention purge is not running in production or it runs somewhere not visible
+  from this project. Add a purge cron service to `.railway/railway.ts`; that is a separate
+  decision, tracked in the README production checklist.
 - **Names:** the live services are `visanav` (API) and `visanav-scraper`. Some docs and
   `railway up --service visanav-api` examples use older names.
 

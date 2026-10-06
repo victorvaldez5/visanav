@@ -102,7 +102,7 @@ just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defau
 ### Deploy
 - **API → Railway**: `railway up --service visanav-api` builds the `production` stage of
   `api/Dockerfile` from the repo root. Railway runs `migrate` as a pre-deploy command
-  (`railway.json`; the service sets `SKIP_MIGRATE_ON_START=1`), and `api/entrypoint.sh` runs `collectstatic`
+  (`preDeploy` in `.railway/railway.ts`; the service sets `SKIP_MIGRATE_ON_START=1`), and `api/entrypoint.sh` runs `collectstatic`
   (and optionally creates a superuser) on every container start. Release steps: `docs/RELEASING.md`. See README for the required
   env vars — `prod.py` refuses to boot without them.
 - **Frontend → Cloudflare**: `npm run build` then `wrangler deploy` uploads `dist/` as a
@@ -110,11 +110,11 @@ just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defau
 - **Scraper → Railway cron**: the `visanav-scraper` service (defined in `.railway/railway.ts`,
   `production` stage of `scrapers/uscis_scraper/Dockerfile`, repo-root context) crawls weekly to R2.
   `.github/workflows/scrape.yml` is a `workflow_dispatch`-only fallback.
-- **Railway config**: `railway.json` / `railway.cron.json` are Config as Code, which Railway deprecated
-  (new services cannot use it; existing files stop working **2026-12-01**). `.railway/railway.ts` is the
-  Infrastructure as Code replacement (`railway config plan` previews, `railway config apply` applies; it
-  declares only the API and scraper services, never Postgres). Until the API is cut over, `railway.json`
-  still drives its pre-deploy `migrate`.
+- **Railway config**: `.railway/railway.ts` (Infrastructure as Code) declares the API and scraper services,
+  never Postgres. `railway config plan` previews and `railway config apply` applies; read the plan first.
+  **Do not add a root `railway.json`/`railway.toml`**: Railway deprecated Config as Code (stops working
+  2026-12-01), and a root file is applied to every service built from this repo, so it made the scraper
+  build the API image.
 
 ## Architecture
 
