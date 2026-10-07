@@ -16,7 +16,7 @@ import App from './App.vue'
 import {createPinia} from "pinia";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
 import router from './router.ts';
-import {i18n} from "@/i18n";
+import {i18n, initLocale} from "@/i18n";
 
 const app = createApp(App)
 app.use(createPinia())
@@ -24,4 +24,6 @@ app.use(router)
 app.use(i18n)
 const auth = useAuthStore()
 auth.init()
-app.mount('#app')
+// Load the initial locale's catalog before the first paint so the app never
+// flashes English for a Spanish-speaking visitor. initLocale never rejects.
+initLocale().then(() => app.mount('#app'))

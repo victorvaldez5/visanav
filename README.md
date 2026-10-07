@@ -112,11 +112,18 @@ The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Ac
 - **Incremental**: a content-hash manifest (`raw/manifest.json`) lets re-runs skip
   pages whose content is unchanged, so only changed documents are re-written and
   forwarded downstream.
-- **Scheduling**: `.github/workflows/scrape.yml` runs the crawl weekly (and on manual
-  `workflow_dispatch`), writing to R2. It reads `R2_BUCKET`, `AWS_ENDPOINT_URL`,
-  `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` from **GitHub Secrets**.
-  (A Fly scheduled Machine is an alternative if you'd rather keep everything on Fly.)
-- **Tests**: `.github/workflows/scraper-ci.yml` runs the scraper's pytest suite on
+- **Scheduling**: a **Railway cron service** (`visanav-scraper`) runs the crawl
+  weekly, Mondays 06:00 UTC, writing to R2. It builds the `production` stage of
+  `scrapers/uscis_scraper/Dockerfile` from the repo root (leave the service's Root
+  Directory empty: the Dockerfile copies the uv workspace manifests from the root).
+  The service definition (Dockerfile path, cron, no-retry policy) lives in
+  [`.railway/railway.ts`](.railway/railway.ts), Railway's Infrastructure as Code. Set
+  `R2_BUCKET`, `AWS_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and
+  `AWS_REGION_NAME=auto` as service variables in the dashboard (the image sets
+  `LOCAL_TEST=false`). Plan and rationale:
+  [`docs/scraper-railway-migration.md`](docs/scraper-railway-migration.md).
+  `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback.
+- **Tests**: the `scraper` job in `.github/workflows/ci.yml` runs the scraper's pytest suite on
   every PR touching `scrapers/`.
 
 ---
@@ -146,7 +153,8 @@ When you’re done:
 
 The API is deployed to **Railway** as a Dockerfile service plus a managed
 Postgres. Redis is not needed — the app uses Django's in-process `LocMemCache`.
-Build/deploy config lives in [`railway.json`](railway.json); it builds the
+Build/deploy config lives in the service's Railway settings, declared in
+[`.railway/railway.ts`](.railway/railway.ts); it builds the
 `production` stage of [`api/Dockerfile`](api/Dockerfile) (the final stage) from
 the **repo root** as the build context.
 
@@ -203,10 +211,10 @@ railway domain --service visanav-api  # generate the public HTTPS domain
 ```
 
 > Prefer auto-deploys? Connect the GitHub repo to the API service in the Railway
-> dashboard instead of `railway up`; it reads `railway.json` and redeploys on push.
+> dashboard instead of `railway up`; it redeploys on push using the service's settings.
 
-**Migrations run as a Railway pre-deploy command** (`preDeployCommand` in
-[`railway.json`](railway.json)): once per release, before the new version takes
+**Migrations run as a Railway pre-deploy command** (`preDeploy` in
+[`.railway/railway.ts`](.railway/railway.ts)): once per release, before the new version takes
 traffic, and a failing migration aborts the deploy so the old version keeps
 serving. Set `SKIP_MIGRATE_ON_START=1` on the API service so the container
 doesn't migrate a second time on every cold start. If the variable is unset it
@@ -228,7 +236,8 @@ and holds none of it in plaintext.
   `CONVERSATION_ANON_RETENTION_DAYS` (7) / `CONVERSATION_USER_RETENTION_DAYS` (30),
   or kept when the user opts in (`Profile.retain_history`). `0` disables it.
 - **Deletion.** `python manage.py purge_expired_conversations` (`--dry-run` to
-  preview); `railway.cron.json` runs it daily on Railway.
+  preview). Run it daily (07:00 UTC) as a Railway cron service on the API image; that
+  service is not defined yet (see the checklist).
 - **Legal hold.** The purge skips `legal_hold=True` — set it (admin at `/nimda/`)
   before deleting data you're on notice to preserve.
 
@@ -241,8 +250,9 @@ and holds none of it in plaintext.
       refuses to boot otherwise).
 - [ ] `CONVERSATION_ENCRYPTION_KEYS` set to a real, backed-up Fernet key — losing
       it makes every stored conversation unreadable.
-- [ ] `purge_expired_conversations` scheduled — the `railway.cron.json` service
-      is deployed, has its env vars set, and a dry-run was confirmed in its logs.
+- [ ] `purge_expired_conversations` scheduled — a Railway cron service on the API image
+      (`python manage.py purge_expired_conversations`, daily) is deployed, has its env
+      vars set, and a dry-run was confirmed in its logs. None exists in production yet.
 - [ ] Retention windows (`CONVERSATION_*_RETENTION_DAYS`) reviewed for the launch
       audience.
 - [ ] A written, dated retention policy that matches the above (routine deletion

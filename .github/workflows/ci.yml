@@ -1,0 +1,254 @@
+name: ci
+
+# One workflow for every PR check. A `changes` job decides which areas a push
+# touched; each area job runs only when its paths changed, and the final `ci`
+# job is the single result to require (branch protection) and to gate releases
+# on (scripts/release.sh). It always runs, so every commit gets a verdict even
+# when no area matched; skipped area jobs count as passing.
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# Supersede stale PR runs; never cancel a main/develop push, so each tip keeps a result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      scraper: ${{ steps.filter.outputs.scraper }}
+      data: ${{ steps.filter.outputs.data }}
+      i18n: ${{ steps.filter.outputs.i18n }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            workflow: &workflow
+              - ".github/workflows/ci.yml"
+            python: &python
+              - "pyproject.toml"
+              - "uv.lock"
+              - ".python-version"
+              - *workflow
+            api:
+              - "api/**"
+              - *python
+            scraper:
+              - "scrapers/**"
+              - *python
+            data:
+              - "data/**"
+              - *python
+            frontend:
+              - "frontend/**"
+              - *workflow
+            i18n:
+              - "i18n/**"
+              - "frontend/src/i18n/**"
+              - "frontend/src/locales/**"
+              - "marketing/src/i18n/**"
+              - "marketing/astro.config.mjs"
+              - "api/api_project/base.py"
+              - "api/locale/**"
+              - "scripts/check_i18n_parity.mjs"
+              - *workflow
+
+  # Lints and tests the Django API against a real Postgres, with the schema built
+  # from the models (pytest --no-migrations, configured in api/pyproject.toml).
+  api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        # pgvector-enabled image so the `vector` extension is available. Tests run
+        # --no-migrations (schema from models), so the extension is seeded into
+        # template1 below before the test DB is created (api/conftest.py mirrors
+        # this for local runs).
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: visanav
+          POSTGRES_PASSWORD: pswd
+          POSTGRES_DB: visanav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U visanav"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: api_project.dev
+      DJANGO_SECRET_KEY: ci-secret-key
+      POSTGRES_DB: visanav_test
+      POSTGRES_USER: visanav
+      POSTGRES_PASSWORD: pswd
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          # Python 3.13 comes from the root .python-version; uv installs it.
+          enable-cache: true
+
+      # ruff lives in the workspace root's dev group, which a per-package sync
+      # doesn't include, so lint from its own (tiny) sync first.
+      - name: Lint (ruff)
+        run: |
+          uv sync --locked --only-group dev
+          uv run --no-sync ruff check api
+
+      # Only the api member's deps (+ its pytest dev group), exactly as the
+      # image installs them: a missing dependency can't hide behind the
+      # scraper's packages.
+      - name: Install dependencies
+        run: uv sync --locked --package api
+
+      - name: Run tests (with coverage)
+        working-directory: api
+        run: uv run --no-sync pytest --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: api-coverage
+          path: api/coverage.xml
+          if-no-files-found: ignore
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Test (Vitest + coverage)
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          if-no-files-found: ignore
+
+      - name: Build app
+        working-directory: frontend
+        run: npm run build
+
+  # Runs the scraper's unit tests.
+  scraper:
+    needs: changes
+    if: needs.changes.outputs.scraper == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          # Python 3.13 comes from the root .python-version; uv installs it.
+          enable-cache: true
+
+      - name: Lint (ruff)
+        run: |
+          uv sync --locked --only-group dev
+          uv run --no-sync ruff check scrapers
+
+      - name: Install scraper dependencies
+        run: uv sync --locked --package uscis-scraper
+
+      - name: Run scraper tests
+        working-directory: scrapers/uscis_scraper
+        run: uv run --no-sync pytest
+
+  # Gates the *format* of contributed data. Human maintainers still review the substance.
+  data:
+    needs: changes
+    if: needs.changes.outputs.data == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          # Python 3.13 comes from the root .python-version; uv installs it.
+          enable-cache: true
+
+      - name: Install data tooling
+        run: uv sync --locked --package visanav-data --no-dev
+
+      - name: Validate all country data
+        run: uv run --no-sync python data/scripts/validate.py
+
+  # Enforces internationalization consistency across the three surfaces: the
+  # canonical locale allowlist (/i18n/supported-locales.json), each surface's
+  # declared locale list and default, JSON catalog key parity, and complete Django
+  # .po catalogs. See scripts/check_i18n_parity.mjs and docs/i18n-architecture.md.
+  i18n:
+    needs: changes
+    if: needs.changes.outputs.i18n == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: i18n parity check
+        run: node scripts/check_i18n_parity.mjs
+
+  # The one check to require and to release on. Skipped area jobs pass; a failed
+  # or cancelled one (including a runner that never picked the job up) does not.
+  ci:
+    if: always()
+    needs: [changes, api, frontend, scraper, data, i18n]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify every area job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) echo "a required job failed or was cancelled"; exit 1 ;;
+          esac

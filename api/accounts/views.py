@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.db import transaction
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
@@ -154,8 +155,6 @@ class ProfileViewSet(viewsets.ModelViewSet):
         profile_data = {}
         user_data = {}
 
-        updated_user = {}
-
         for key, value in request.data.items():
             if key in ProfileSerializer.Meta.fields:
                 profile_data[key] = value
@@ -164,24 +163,21 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
         profile_serializer = ProfileSerializer(instance, data=profile_data, partial=True)
         profile_serializer.is_valid(raise_exception=True)
-        updated_profile = profile_serializer.save()
 
+        user_serializer = None
         if user_data:
             user_serializer = UserSerializer(instance.user, data=user_data, partial=True)
             user_serializer.is_valid(raise_exception=True)
-            updated_user = user_serializer.save()
 
-        response_data = {
-            "first_name": updated_user.first_name,
-            "middle_name": updated_user.middle_name,
-            "last_name": updated_user.last_name,
-            "email": updated_user.email,
-            "phone_number": str(updated_user.phone_number),
-            "country": str(updated_profile.country.country_code),
-            "subdivision": updated_profile.subdivision.code,
-            "postal_code": updated_profile.postal_code,
-            "preferred_language": updated_profile.preferred_language.code,
-            "notify_marketing": updated_profile.notify_marketing,
-            "notify_system": updated_profile.notify_system,
-        }
-        return Response(response_data)
+        # Validate both halves before saving either, so a bad user field can't
+        # leave the profile half-updated.
+        with transaction.atomic():
+            profile_serializer.save()
+            if user_serializer is not None:
+                user_serializer.save()
+
+        # One flat object: the user's fields plus the profile's. Related fields
+        # serialize as their codes (country "US", preferred_language "es") and
+        # may be null, which a PATCH of a single field (e.g. the language
+        # switcher's write-through) must survive.
+        return Response({**UserSerializer(instance.user).data, **profile_serializer.data})

@@ -40,6 +40,10 @@ CMD ["scrapy", "crawl", "uscis"]
 # 3) PRODUCTION: venv + the scraper code baked in
 ###############################################################################
 FROM base AS production
+# Production crawls write to R2. settings.py defaults LOCAL_TEST to true, so
+# without this a service missing the variable would crawl into the container's
+# ephemeral disk and still exit 0. (Dev and compose keep the safe local default.)
+ENV LOCAL_TEST=false
 COPY --from=builder /opt/venv /opt/venv
 COPY scrapers/uscis_scraper/ .
 CMD ["scrapy", "crawl", "uscis"]

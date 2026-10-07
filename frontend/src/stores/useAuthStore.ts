@@ -4,6 +4,8 @@ import apiClient from "@/plugins/axios";
 import {authService} from "@/services/authService";
 import {useRouter} from "vue-router";
 import {toast} from "vue-sonner";
+import {currentLocale, hasSavedLocale} from "@/i18n";
+import {syncLocaleOnLogin} from "@/services/profileLocale";
 
 interface JwtPayload {
     user_id?: number;
@@ -69,6 +71,11 @@ export const useAuthStore = defineStore("auth", () => {
         try {
             const {access} = await authService.login(loginOrEmail, password, turnstileToken);
             setFromToken(access);
+            // Reconcile the UI language with the profile before routing, so the
+            // next page renders in it. Best effort: it never throws.
+            if (userId.value !== null) {
+                await syncLocaleOnLogin(userId.value, hasSavedLocale(), currentLocale());
+            }
             await router.push({name: "Home"}); // remove if you prefer to navigate in the component
         } catch (e: any) {
             error.value =

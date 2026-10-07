@@ -29,6 +29,11 @@ vi.mock("@/services/authService", () => ({
   },
 }));
 
+// Login reconciles the UI language with the profile; that logic is covered by
+// profileLocale.test.ts, so stub it here.
+const { syncLocaleOnLogin } = vi.hoisted(() => ({ syncLocaleOnLogin: vi.fn(() => Promise.resolve()) }));
+vi.mock("@/services/profileLocale", () => ({ syncLocaleOnLogin }));
+
 import apiClient from "@/plugins/axios";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -86,6 +91,8 @@ describe("useAuthStore.login", () => {
     expect(push).toHaveBeenCalledWith({ name: "Home" });
     expect(store.loading).toBe(false);
     expect(store.error).toBe(null);
+    // The UI language is reconciled with the profile before routing.
+    expect(syncLocaleOnLogin).toHaveBeenCalledWith(1, expect.any(Boolean), "en");
   });
 
   it("surfaces the server's detail message on failure and re-throws", async () => {
