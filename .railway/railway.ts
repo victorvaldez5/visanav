@@ -15,7 +15,7 @@ export const partial = "visanav";
 
 export default defineRailway(() => {
   const visanavScraper = service("visanav-scraper", {
-    source: github("victorvaldez5/visanav", { branch: "feat/scraper-railway-migration", checkSuites: false }),
+    source: github("victorvaldez5/visanav", { checkSuites: false }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "/scrapers/uscis_scraper/Dockerfile" },
     replicas: { "us-east4-eqdc4a": 1 },
     deploy: { cronSchedule: "0 6 * * 1", restartPolicyType: "NEVER" },

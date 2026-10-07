@@ -1,6 +1,6 @@
 # Plan: move the USCIS scraper from GitHub Actions to a Railway cron service
 
-Status: in progress. Branch `feat/scraper-railway-migration`, based on `develop`.
+Status: merged to `develop` (PR #36). Apply the IaC with `railway config apply` after release.
 
 > **Update (Railway deprecated Config as Code).** New services cannot use `railway.json`, and
 > existing config files stop working on **2026-12-01**. The scraper therefore does not get a
@@ -59,7 +59,7 @@ The service is declared in `.railway/railway.ts`:
 
 ```ts
 const visanavScraper = service("visanav-scraper", {
-  source: github("victorvaldez5/visanav", { branch: "feat/scraper-railway-migration", checkSuites: false }),
+  source: github("victorvaldez5/visanav", { checkSuites: false }),
   build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "/scrapers/uscis_scraper/Dockerfile" },
   deploy: { cronSchedule: "0 6 * * 1", restartPolicyType: "NEVER" },
   env: { R2_BUCKET: preserve(), /* ...credentials stay on Railway... */ },
@@ -76,10 +76,8 @@ Notes:
   crawl waits for the next run instead of retrying against USCIS.
 - Leave the service's Root Directory empty. The Dockerfile `COPY`s `./pyproject.toml`,
   `./uv.lock` and the other workspace manifests from the repo root.
-- **Before merging to `main`**, the scraper's `source.branch` must stop pointing at
-  `feat/scraper-railway-migration` (delete the `branch` option so it follows the default
-  branch like the API service). Do that in the same change that merges the feature branch,
-  and run `railway config plan` first.
+- The scraper's `source` has no `branch` option, so it follows the default branch like the API
+  service. Run `railway config plan` before applying.
 - Nothing applies this file automatically. `railway config apply` is a manual, confirmed
   step. Railway does not allow a service to be managed by both Config as Code and IaC, so
   the API's move off the root `railway.json` is a deliberate cutover (see below).
