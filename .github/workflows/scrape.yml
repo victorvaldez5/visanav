@@ -1,18 +1,18 @@
 name: scrape
 
-# Scheduled USCIS crawl → Cloudflare R2. Runs weekly (forms + INA + Policy
-# Manual all change slowly) and on manual dispatch. The crawl is incremental:
-# unchanged pages are skipped via the content-hash manifest in R2, so re-runs
-# only write what actually changed.
+# Manual USCIS crawl → Cloudflare R2. The weekly schedule now runs on Railway
+# (the `visanav-scraper` cron service, .railway/railway.ts); this workflow is
+# only a manual fallback, kept off the schedule because the repo is private and
+# a full crawl costs ~170 Actions minutes. It writes to whatever bucket the
+# R2_BUCKET / AWS_* repo secrets point at, which may not be the production bucket
+# Railway uses, so check them before dispatching it.
 
 on:
-  schedule:
-    - cron: "0 6 * * 1" # Mondays 06:00 UTC
   workflow_dispatch: {}
 
 jobs:
   crawl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v5

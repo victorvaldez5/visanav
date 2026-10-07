@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-# Apply database migrations on boot. On Railway, railway.json runs `migrate` as a
-# pre-deploy command instead (once per release, before the new version takes
+# Apply database migrations on boot. On Railway, the service's pre-deploy command (.railway/railway.ts)
+# runs `migrate` instead (once per release, before the new version takes
 # traffic, and a failed migration blocks the deploy), so the service sets
 # SKIP_MIGRATE_ON_START=1 to avoid migrating again on every cold start. Locally
 # and anywhere the var is unset this still migrates on boot; migrate is
