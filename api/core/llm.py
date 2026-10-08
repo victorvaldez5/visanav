@@ -63,7 +63,10 @@ INSTRUCTIONS = """
       user, so ground your answer in them.
     - Use resource_lookup to surface free/low-cost nonprofit and pro-bono help and
       DOJ-recognized providers, especially when the user names a state or asks who
-      can help them.
+      can help them. It prefers organizations that serve the user's language; pass
+      `language` when they ask for help in a specific one. Only say an organization
+      serves a language if its `languages` list includes it: an empty list means
+      unknown, not English-only.
 
     INFORMATION vs. ADVICE — your most important rule:
     - Legal INFORMATION (allowed): what a form is and does, what the law says in
@@ -370,6 +373,9 @@ class ResourceMatch(BaseModel):
     websites: List[str]
     emails: List[str]
     phones: List[str]
+    # ISO 639-1 codes of languages the org serves clients in. Empty means the
+    # directory has no language information for it, NOT that it is English-only.
+    languages: List[str] = []
     city: Optional[str] = None
     region: Optional[str] = None
 
@@ -388,6 +394,7 @@ async def resource_lookup(
     region: Optional[str] = None,
     pro_bono_only: bool = False,
     service: Optional[str] = None,
+    language: Optional[str] = None,
 ):
     """
     Find free/low-cost nonprofit and pro-bono immigration help and
@@ -404,6 +411,11 @@ async def resource_lookup(
             "family-petitions". Treated as a SOFT preference: if no organization
             is tagged for it, the search broadens to general help for the area
             (reported in the result `note`) instead of returning nothing.
+        language: A language the user needs help in, as a 2-letter ISO 639-1
+            code ("es", "zh", "tl"). Omit it to use the user's interface
+            language. Also a SOFT preference: organizations known to serve that
+            language are listed first, but nothing is excluded, because the
+            directory records languages for very few organizations.
 
     Returns a dict {"matches": [...], "count": N, "note": str|None}. An empty
     match list means nothing in the directory fit — point the user to the DOJ
@@ -412,6 +424,12 @@ async def resource_lookup(
     # Bound the model-generated filters (short identifiers) before they hit the DB.
     region = _clip_arg(region, 64)
     service = _clip_arg(service, 64)
+    # Prefer the model's explicit request, else the user's UI language. Locale
+    # codes can carry a script ("zh-Hans"); the directory stores bare ISO 639-1.
+    wanted = _clip_arg(language, 8) or getattr(ctx.deps, "locale", None)
+    lang = (wanted or "").strip().lower().split("-")[0]
+    if lang == settings.LANGUAGE_CODE.split("-")[0]:
+        lang = ""  # the default language needs no steering
 
     def _query() -> Dict[str, Any]:
         # Imported here so this module stays importable without a DB configured.
@@ -454,12 +472,24 @@ async def resource_lookup(
             # Prefer entries that can actually be contacted, and pro-bono help,
             # then order deterministically. Sort a bounded candidate pool in
             # Python since contactability spans three array columns.
-            candidates = list(
-                qs.select_related("address", "address__subdivision").order_by(
-                    "-pro_bono", "name"
-                )[:60]
+            ranked = qs.select_related("address", "address__subdivision")
+            candidates = list(ranked.order_by("-pro_bono", "name")[:60])
+            if lang:
+                # Language-tagged orgs are rare, so make sure they reach the pool
+                # even when they would sort outside the first 60 by name.
+                seen = [o.pk for o in candidates]
+                candidates += list(
+                    ranked.filter(languages__contains=[lang])
+                    .exclude(pk__in=seen)
+                    .order_by("-pro_bono", "name")[:20]
+                )
+
+            def _serves(o) -> bool:
+                return bool(lang) and lang in (o.languages or [])
+
+            candidates.sort(
+                key=lambda o: (not _contactable(o), not _serves(o), not o.pro_bono)
             )
-            candidates.sort(key=lambda o: (not _contactable(o), not o.pro_bono))
 
             matches = []
             for org in candidates[:5]:
@@ -475,6 +505,7 @@ async def resource_lookup(
                         websites=list(org.websites or []),
                         emails=list(org.emails or []),
                         phones=list(org.phones or []),
+                        languages=list(org.languages or []),
                         city=addr.city if addr else None,
                         region=subdivision.name if subdivision else None,
                     )
@@ -482,6 +513,24 @@ async def resource_lookup(
 
             if not matches and region:
                 note = f"No organizations for {region} are in the directory yet."
+
+            if lang and matches and not note:
+                language_name = dict(settings.LANGUAGES).get(lang, lang)
+                if any(_serves(o) for o in candidates[: len(matches)]):
+                    note = (
+                        f"Organizations known to serve {language_name} are listed "
+                        "first. For the others, the directory has no language "
+                        "information, so suggest the user ask about language "
+                        "support when they contact them."
+                    )
+                else:
+                    note = (
+                        f"The directory has no {language_name} language "
+                        "information for these organizations. Do not claim any of "
+                        f"them serves {language_name} speakers; suggest the user "
+                        "ask about language support (or an interpreter) when they "
+                        "contact one."
+                    )
 
             return ResourceLookupResult(
                 matches=matches, count=len(matches), note=note

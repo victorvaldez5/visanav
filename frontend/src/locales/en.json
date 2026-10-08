@@ -98,7 +98,10 @@
     "forbiddenBody": "You don’t have permission to view this page.",
     "notFoundBody": "The page you’re looking for doesn’t exist.",
     "slowLoad": "If this takes too long, please check your connection and try again.",
-    "profileLoad": "Failed to load user/profile"
+    "profileLoad": "Failed to load user/profile",
+    "notAllowed": "You aren't allowed there!",
+    "tryAgain": "Please try again later",
+    "somethingWrong": "Something went wrong"
   },
   "conversations": {
     "title": "Conversations",
@@ -172,7 +175,8 @@
     "ctaBody": "No account, nothing saved unless you ask.",
     "ctaButton": "Start a free chat",
     "disclaimer": "Listings are drawn from the DOJ EOIR pro-bono and Recognition & Accreditation rosters. Contact an organization directly to confirm current availability. A listing here isn't an endorsement.",
-    "loadError": "Couldn't load organizations. Please try again."
+    "loadError": "Couldn't load organizations. Please try again.",
+    "languages": "Languages: {list}"
   },
   "reps": {
     "eyebrow": [

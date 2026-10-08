@@ -57,8 +57,8 @@ async function onSubmit(prompt: string) {
     }
   } catch (e) {
     console.error(e);
-    toast("Oops, an error occurred", {
-      description: "Please try again later",
+    toast(t("common.genericError"), {
+      description: t("errors.tryAgain"),
     });
   }
 }

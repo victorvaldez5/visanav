@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fmtDate, telHref } from "@/lib/format";
+import { fmtDate, fmtLanguages, telHref } from "@/lib/format";
 
 describe("fmtDate", () => {
   it("formats an ISO date as 'Mon D, YYYY' in the default locale", () => {
@@ -31,5 +31,21 @@ describe("telHref", () => {
 
   it("preserves a leading + for international numbers", () => {
     expect(telHref("+1 202-555-0100")).toBe("tel:+12025550100");
+  });
+});
+
+describe("fmtLanguages", () => {
+  it("names languages in the requested locale", () => {
+    expect(fmtLanguages(["es", "en"], "en")).toBe("Spanish English");
+    expect(fmtLanguages(["es", "en"], "es")).toBe("español inglés");
+  });
+
+  it("returns an empty string for no languages", () => {
+    expect(fmtLanguages([], "en")).toBe("");
+    expect(fmtLanguages(null, "en")).toBe("");
+  });
+
+  it("falls back to the code when it isn't a language", () => {
+    expect(fmtLanguages(["??"], "en")).toBe("??");
   });
 });

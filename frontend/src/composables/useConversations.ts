@@ -25,7 +25,7 @@ export function useConversation(
     // leaves the browser. `scrubNotices` maps a sent (already-scrubbed) message
     // to the counts of what was removed, so the UI can show a per-message notice
     // (keyed by content so it survives the post-send history refresh).
-    const {locale} = useI18n();
+    const {t, locale} = useI18n();
     const {scrub} = usePiiScrubber(locale);
     const scrubNotices = ref(new Map<string, PiiSummary>());
 
@@ -51,8 +51,8 @@ export function useConversation(
                 messageHistory.value = conv.messages;
             } catch (e) {
                 console.error("Error fetching conversation:", e);
-                toast("Oops, an error occurred", {
-                    description: "You aren't allowed there!",
+                toast(t("common.genericError"), {
+                    description: t("errors.notAllowed"),
                 });
                 await router.push({name: "Home"});
             }
@@ -125,15 +125,15 @@ export function useConversation(
                     onError: (detail) => {
                         const part = messageHistory.value[assistantIndex].parts[0];
                         part.content = part.content || `⚠️ ${detail}`;
-                        toast("Something went wrong", {description: detail});
+                        toast(t("errors.somethingWrong"), {description: detail});
                     },
                 },
                 streamAbort.signal,
             );
         } catch (e) {
             console.error("Error streaming message:", e);
-            toast("Something went wrong", {
-                description: "Please try again later",
+            toast(t("errors.somethingWrong"), {
+                description: t("errors.tryAgain"),
             });
         } finally {
             isStreaming.value = false;

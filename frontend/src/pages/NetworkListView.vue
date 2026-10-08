@@ -5,7 +5,7 @@ import {useI18n} from "vue-i18n";
 import {networkService, type Organization, type OrganizationFilters} from "@/services/networkService.ts";
 import {US_STATES} from "@/lib/usStates.ts";
 import {useDirectoryFilters} from "@/composables/useDirectoryFilters.ts";
-import {fmtDate, telHref} from "@/lib/format.ts";
+import {fmtDate, fmtLanguages, telHref} from "@/lib/format.ts";
 import {selectClass, crossLinkClass} from "@/lib/directoryStyles.ts";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
@@ -292,6 +292,13 @@ function clearFilters() {
           class="mt-2.5 line-clamp-3 text-[13.5px] leading-5 text-muted-foreground"
         >
           {{ org.description }}
+        </p>
+
+        <p
+          v-if="org.languages?.length"
+          class="mt-2 text-[13px] leading-[18px] text-muted-foreground"
+        >
+          {{ t("resources.languages", {list: fmtLanguages(org.languages)}) }}
         </p>
 
         <div class="mt-3">

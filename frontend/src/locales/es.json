@@ -98,7 +98,10 @@
     "forbiddenBody": "No tienes permiso para ver esta página.",
     "notFoundBody": "La página que buscas no existe.",
     "slowLoad": "Si esto tarda demasiado, revisa tu conexión e inténtalo de nuevo.",
-    "profileLoad": "No se pudo cargar el usuario o el perfil"
+    "profileLoad": "No se pudo cargar el usuario o el perfil",
+    "notAllowed": "No tienes permiso para entrar ahí.",
+    "tryAgain": "Inténtalo de nuevo más tarde",
+    "somethingWrong": "Algo salió mal"
   },
   "conversations": {
     "title": "Conversaciones",
@@ -172,7 +175,8 @@
     "ctaBody": "Sin cuenta y sin guardar nada, a menos que tú lo pidas.",
     "ctaButton": "Empezar un chat gratis",
     "disclaimer": "Los listados provienen de las listas pro bono y de Reconocimiento y Acreditación del EOIR del DOJ. Comunícate directamente con la organización para confirmar su disponibilidad actual. Aparecer aquí no implica que la recomendemos.",
-    "loadError": "No se pudieron cargar las organizaciones. Inténtalo de nuevo."
+    "loadError": "No se pudieron cargar las organizaciones. Inténtalo de nuevo.",
+    "languages": "Idiomas: {list}"
   },
   "reps": {
     "eyebrow": [
