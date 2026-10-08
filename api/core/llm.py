@@ -247,8 +247,12 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
 
     Args:
         search_query: A standalone search query for the user's current
-            question. Include details from earlier in the conversation that
-            the question depends on, such as visa category or country.
+            question, written as a full natural-language sentence or question
+            (for example "What happens at a removal hearing in immigration
+            court?"), not a string of keywords: full sentences match the
+            corpus noticeably better. Include details from earlier in the
+            conversation that the question depends on, such as visa category
+            or country.
     """
     from core.embeddings import embed_query
     from knowledge.models import KnowledgeChunk
