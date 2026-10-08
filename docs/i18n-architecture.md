@@ -2,7 +2,7 @@
 
 Status: Phases 1 to 4 implemented (Phase 3 done through 3c); Phases 5 and 6 planned.
 Owner: VisaNav
-Last updated: 2026-09-23
+Last updated: 2026-10-08
 
 This document is the source of truth for how VisaNav supports multiple languages
 across its three deployed surfaces (the Vue app, the Astro marketing site, and the
@@ -178,7 +178,7 @@ are org-authored). Instead we surface the already-modeled `Organization.language
 
 - Wire it into the agent's `resource_lookup` tool so Javi prefers orgs that serve
   the user's language.
-- Surface it in the directory filter/UI.
+- Surface it in the directory UI (card text now; a filter once the data supports it).
 
 The data and a REST filter already exist.
 

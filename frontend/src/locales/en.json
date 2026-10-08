@@ -101,7 +101,8 @@
     "profileLoad": "Failed to load user/profile",
     "notAllowed": "You aren't allowed there!",
     "tryAgain": "Please try again later",
-    "somethingWrong": "Something went wrong"
+    "somethingWrong": "Something went wrong",
+    "assistantFailed": "The assistant failed to respond."
   },
   "conversations": {
     "title": "Conversations",

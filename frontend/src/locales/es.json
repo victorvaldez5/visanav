@@ -101,7 +101,8 @@
     "profileLoad": "No se pudo cargar el usuario o el perfil",
     "notAllowed": "No tienes permiso para entrar ahí.",
     "tryAgain": "Inténtalo de nuevo más tarde",
-    "somethingWrong": "Algo salió mal"
+    "somethingWrong": "Algo salió mal",
+    "assistantFailed": "El asistente no pudo responder."
   },
   "conversations": {
     "title": "Conversaciones",
