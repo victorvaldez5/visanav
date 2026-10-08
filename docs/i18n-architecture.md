@@ -1,6 +1,6 @@
 # Internationalization (i18n) architecture
 
-Status: Phases 1 and 2 implemented; Phase 3 in progress (3a, 3b done); Phases 4 to 6 planned.
+Status: Phases 1 and 2 implemented; Phase 3 in progress (3a to 3c done); Phases 4 to 6 planned.
 Owner: VisaNav
 Last updated: 2026-09-23
 
@@ -251,8 +251,10 @@ Build order front-loads the shared foundations so nothing is built twice.
    agent, plus the softened mirror-rule override.
 3. **App UI extraction** + promote the switcher (3a done: lazy catalogs, `?lang=`
    handoff, switcher, profile write-through, `Language` prune; 3b done: sidebar nav,
-   login/register, error pages, auth/profile store messages; 3c to do: resources,
-   representatives, forms, and profile pages).
+   login/register, error pages, auth/profile store messages; 3c done: resources,
+   representatives, forms and account pages, the shared filter/pagination/sheet
+   primitives; still English by design: US state names and the `forms.json`
+   titles, summaries and categories, which are content, not UI chrome).
 4. **Resource-directory language matching.**
 5. **Marketing i18n + SEO.**
 6. **Emails.**

@@ -2,12 +2,12 @@
   <div class="my-6 px-6 sm:px-8 lg:px-12">
     <div class="min-w-0 flex-1">
       <h2 class="text-2xl/7 font-semibold text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-        Account Settings
+        {{ t("profile.title") }}
       </h2>
     </div>
   </div>
   <div v-if="loading">
-    ...loading
+    {{ t("profile.loading") }}
   </div>
   <form
     v-else
@@ -20,10 +20,10 @@
       >
         <div>
           <h2 class="text-base/7 font-semibold text-foreground">
-            Profile
+            {{ t("profile.profileHeading") }}
           </h2>
           <p class="mt-1 text-sm/6 text-muted-foreground">
-            This information is used to communicate with you and to personalize the help and resources we surface for you.
+            {{ t("profile.profileDesc") }}
           </p>
         </div>
 
@@ -39,7 +39,7 @@
               :validate-on-blur="false"
             >
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>{{ t("profile.email") }}</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -59,7 +59,7 @@
               :validate-on-blur="false"
             >
               <FormItem>
-                <FormLabel>Phone number</FormLabel>
+                <FormLabel>{{ t("profile.phone") }}</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
@@ -78,7 +78,7 @@
               :validate-on-blur="false"
             >
               <FormItem class="flex flex-col">
-                <FormLabel>Preferred Language</FormLabel>
+                <FormLabel>{{ t("profile.preferredLanguage") }}</FormLabel>
                 <Combobox
                   v-model="values.preferred_language"
                   by="label"
@@ -89,7 +89,7 @@
                       <div class="relative w-full max-w-sm items-center">
                         <ComboboxInput
                           :display-value="(val) => val?.name || ''"
-                          placeholder="Select Preferred Language"
+                          :placeholder="t('profile.selectLanguage')"
                         />
                         <ComboboxTrigger
                           class="absolute end-0 inset-y-0 flex items-center justify-center px-3"
@@ -104,7 +104,7 @@
                     position="popper"
                   >
                     <ComboboxViewport>
-                      <ComboboxEmpty>No results found.</ComboboxEmpty>
+                      <ComboboxEmpty>{{ t("common.noResults") }}</ComboboxEmpty>
 
                       <ComboboxGroup>
                         <ComboboxItem
@@ -134,10 +134,10 @@
           <h2
             class="text-base/7 font-semibold text-foreground"
           >
-            Personal Information
+            {{ t("profile.personalHeading") }}
           </h2>
           <p class="mt-1 text-sm/6 text-muted-foreground">
-            Personal information that is used to personalize your AI experience and help us surface free and low-cost immigration resources near you
+            {{ t("profile.personalDesc") }}
           </p>
         </div>
 
@@ -153,7 +153,7 @@
               :validate-on-blur="false"
             >
               <FormItem>
-                <FormLabel>First name</FormLabel>
+                <FormLabel>{{ t("profile.firstName") }}</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
@@ -174,7 +174,7 @@
               :validate-on-blur="false"
             >
               <FormItem>
-                <FormLabel>Middle name</FormLabel>
+                <FormLabel>{{ t("profile.middleName") }}</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
@@ -195,7 +195,7 @@
               :validate-on-blur="false"
             >
               <FormItem>
-                <FormLabel>Last name</FormLabel>
+                <FormLabel>{{ t("profile.lastName") }}</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
@@ -215,7 +215,7 @@
               :validate-on-blur="false"
             >
               <FormItem class="flex flex-col">
-                <FormLabel>Country</FormLabel>
+                <FormLabel>{{ t("profile.country") }}</FormLabel>
                 <Combobox
                   v-model="values.country"
                   by="label"
@@ -226,7 +226,7 @@
                       <div class="relative w-full max-w-sm items-center">
                         <ComboboxInput
                           :display-value="(val) => val?.name || ''"
-                          placeholder="Select Country"
+                          :placeholder="t('profile.selectCountry')"
                         />
                         <ComboboxTrigger
                           class="absolute end-0 inset-y-0 flex items-center justify-center px-3"
@@ -241,7 +241,7 @@
                     position="popper"
                   >
                     <ComboboxViewport>
-                      <ComboboxEmpty>No results found.</ComboboxEmpty>
+                      <ComboboxEmpty>{{ t("common.noResults") }}</ComboboxEmpty>
 
                       <ComboboxGroup class="overflow-y-scroll">
                         <ComboboxItem
@@ -268,7 +268,7 @@
               :validate-on-blur="false"
             >
               <FormItem class="flex flex-col">
-                <FormLabel>State/Province</FormLabel>
+                <FormLabel>{{ t("profile.subdivision") }}</FormLabel>
                 <Combobox
                   v-model="values.subdivision"
                   by="label"
@@ -280,7 +280,7 @@
                       <div class="relative w-full max-w-sm items-center">
                         <ComboboxInput
                           :display-value="(val) => val?.name || ''"
-                          placeholder="Select State / Province"
+                          :placeholder="t('profile.selectSubdivision')"
                         />
                         <ComboboxTrigger
                           class="absolute end-0 inset-y-0 flex items-center justify-center px-3"
@@ -295,7 +295,7 @@
                     position="popper"
                   >
                     <ComboboxViewport>
-                      <ComboboxEmpty>No results found.</ComboboxEmpty>
+                      <ComboboxEmpty>{{ t("common.noResults") }}</ComboboxEmpty>
 
                       <ComboboxGroup class="overflow-y-scroll">
                         <ComboboxItem
@@ -325,7 +325,7 @@
               :validate-on-blur="false"
             >
               <FormItem>
-                <FormLabel>Postal code</FormLabel>
+                <FormLabel>{{ t("profile.postalCode") }}</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
@@ -346,10 +346,10 @@
           <h2
             class="text-base/7 font-semibold text-foreground"
           >
-            Notifications
+            {{ t("profile.notificationsHeading") }}
           </h2>
           <p class="mt-1 text-sm/6 text-muted-foreground">
-            Customize types of notifications you receive from us and how you receive them
+            {{ t("profile.notificationsDesc") }}
           </p>
         </div>
 
@@ -367,7 +367,7 @@
                   @update:model-value="handleChange"
                 />
               </FormControl>
-              <FormLabel>System Notifications</FormLabel>
+              <FormLabel>{{ t("profile.notifySystem") }}</FormLabel>
             </FormItem>
           </FormField>
           <FormField
@@ -383,7 +383,7 @@
                   @update:model-value="handleChange"
                 />
               </FormControl>
-              <FormLabel>Marketing Notifications</FormLabel>
+              <FormLabel>{{ t("profile.notifyMarketing") }}</FormLabel>
             </FormItem>
           </FormField>
         </div>
@@ -395,12 +395,12 @@
         type="button"
         variant="ghost"
       >
-        Cancel
+        {{ t("common.cancel") }}
       </Button>
       <Button
         type="submit"
       >
-        Save
+        {{ t("common.save") }}
       </Button>
     </div>
   </form>
@@ -415,6 +415,7 @@ import {Input} from "@/components/ui/input/index.js";
 import {Switch} from "@/components/ui/switch";
 import {FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form";
 import {useRoute} from "vue-router";
+import {useI18n} from "vue-i18n";
 import {computed, onMounted} from "vue";
 import {useProfileStore} from "@/stores/useProfileStore.ts";
 import {storeToRefs} from "pinia";
@@ -447,6 +448,7 @@ interface ProfileForm {
   notify_system: boolean | null
 }
 
+const {t} = useI18n();
 const route = useRoute();
 const profileStore = useProfileStore();
 const {user, profile, loading, countries, subdivisions, languages} = storeToRefs(profileStore);
@@ -457,7 +459,7 @@ const userId = computed<number | null>(() => {
 });
 
 const formSchema = toTypedSchema(z.object({
-  email: z.string().email().min(1, "Email is required"),
+  email: z.string().min(1, t("profile.emailRequired")).email(t("profile.emailInvalid")),
   phone_number: z.string().nullable().optional(),
   first_name: z.string().nullable().optional(),
   middle_name: z.string().nullable().optional(),
@@ -547,10 +549,10 @@ const onSubmit = handleSubmit(async (_values) => {
       notify_system: resp.notify_system
 
     })
-    toast.success("Profile updated successfully")
+    toast.success(t("profile.updated"))
   } catch (e) {
     console.error(e)
-    toast.error("Oops, an error occurred")
+    toast.error(t("common.genericError"))
   }
 }, (errors) => {
   console.error(errors)
@@ -565,7 +567,7 @@ async function handleCountrySelect(country: any, clearSubdivision = true) {
     await profileStore.loadSubdivisions(country.country_code)
   } catch (e) {
     console.error(e)
-    toast.error("Oops, an error occurred loading subdivisions")
+    toast.error(t("profile.subdivisionsError"))
   }
 }
 </script>

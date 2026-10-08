@@ -12,8 +12,10 @@ import {conversationService} from "@/services/conversationService.ts";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
 import {storeToRefs} from "pinia";
 import {useRoute} from "vue-router";
+import {useI18n} from "vue-i18n";
 import {usePagination} from "@/composables/usePagination.ts";
 
+const {t} = useI18n()
 const authStore = useAuthStore()
 const {isAuthenticated} = storeToRefs(authStore)
 const route = useRoute()
@@ -46,7 +48,7 @@ async function getConversations() {
 <template>
   <SidebarGroup v-if="conversations.length > 0">
     <SidebarGroupLabel class="text-sm font-semibold leading-loose tracking-wide">
-      Conversations
+      {{ t("conversations.title") }}
     </SidebarGroupLabel>
     <SidebarGroupContent>
       <SidebarMenu>
@@ -60,7 +62,7 @@ async function getConversations() {
             :is-active="convo.uuid === route.params.conversationUuid"
           >
             <RouterLink :to="`/conversations/${convo?.uuid}`">
-              {{ 'Conversation ' + convo?.id }}
+              {{ t("conversations.item", {id: convo?.id}) }}
             </RouterLink>
           </SidebarMenuButton>
         </SidebarMenuItem>

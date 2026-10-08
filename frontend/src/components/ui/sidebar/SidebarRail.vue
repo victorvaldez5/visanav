@@ -14,7 +14,7 @@ const { toggleSidebar } = useSidebar()
   <button
     data-sidebar="rail"
     data-slot="sidebar-rail"
-    aria-label="Toggle Sidebar"
+    :aria-label="$t('common.toggleSidebar')"
     :tabindex="-1"
     title="Toggle Sidebar"
     :class="cn(

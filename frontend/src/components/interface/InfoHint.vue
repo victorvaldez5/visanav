@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import LineIcon from "@/components/interface/LineIcon.vue";
+import {useI18n} from "vue-i18n";
 
 // A small info (ⓘ) affordance that reveals a tooltip on hover/focus — a visible
 // cue that a nearby label/control has an explanation worth reading.
 defineProps<{text: string; label?: string}>();
+const {t} = useI18n();
 </script>
 
 <template>
@@ -13,7 +15,7 @@ defineProps<{text: string; label?: string}>();
       <TooltipTrigger as-child>
         <button
           type="button"
-          :aria-label="label ?? 'More information'"
+          :aria-label="label ?? t('common.moreInfo')"
           class="inline-flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:shadow-glow-focus focus-visible:outline-none"
         >
           <LineIcon

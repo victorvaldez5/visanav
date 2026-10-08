@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
+import {useI18n} from "vue-i18n";
 import {networkService, type Organization, type OrganizationFilters} from "@/services/networkService.ts";
 import {US_STATES} from "@/lib/usStates.ts";
 import {useDirectoryFilters} from "@/composables/useDirectoryFilters.ts";
@@ -15,35 +16,30 @@ import LineIcon from "@/components/interface/LineIcon.vue";
 import FilterChips from "@/components/interface/FilterChips.vue";
 import FilterPanel from "@/components/interface/FilterPanel.vue";
 
-// org_type → label, from OrganizationType.choices in api/network/models.py.
-const TYPE_LABEL: Record<string, string> = {
-  "self-owned": "Self owned",
-  "public-company": "Public company",
-  "private-company": "Private company",
-  "partnership": "Partnership",
-  "educational": "Educational",
-  "referral-service": "Referral service",
-  "community-organization": "Community organization",
-  "non-profit": "Nonprofit",
-};
-const FEE_LABEL: Record<string, string> = {
-  free: "Free",
-  "sliding-scale": "Sliding scale",
-  "low-cost": "Low cost",
-  paid: "Paid",
-};
+// org_type values, from OrganizationType.choices in api/network/models.py; their
+// labels are in the catalog under directory.types.
+const TYPE_KEYS = [
+  "self-owned",
+  "public-company",
+  "private-company",
+  "partnership",
+  "educational",
+  "referral-service",
+  "community-organization",
+  "non-profit",
+];
+const FEE_KEYS = ["free", "sliding-scale", "low-cost", "paid"];
 // Server ordering behind each sort option (DRF OrderingFilter).
 const ORDERING: Record<string, string> = {
   name: "name",
   verified: "-last_verified",
   state: "address__subdivision__name,name",
 };
-const COST_ITEMS = [
-  {id: "pro_bono", label: "Pro bono"},
-  {id: "free", label: "Free"},
-  {id: "low-cost", label: "Low cost"},
-  {id: "sliding-scale", label: "Sliding scale"},
-];
+const COST_IDS = ["pro_bono", "free", "low-cost", "sliding-scale"];
+const {t, tm, rt} = useI18n();
+const costItems = computed(() => COST_IDS.map((id) => ({id, label: t(`resources.costItems.${id}`)})));
+const typeOptions = computed(() => TYPE_KEYS.map((value) => ({value, label: t(`directory.types.${value}`)})));
+const eyebrow = computed(() => (tm("resources.eyebrow") as Parameters<typeof rt>[0][]).map((m) => rt(m)));
 const route = useRoute();
 const router = useRouter();
 
@@ -75,15 +71,17 @@ const activeFilterCount = computed(
 const {items, page, count, loading, reload} = useDirectoryFilters<Organization, OrganizationFilters>({
   buildFilters,
   fetchPage: (p, f) => networkService.getOrganizations(p, f),
-  errorMessage: "Couldn't load organizations. Please try again.",
+  errorMessage: () => t("resources.loadError"),
 });
 
 function costLabel(org: Organization): string | null {
-  if (org.pro_bono) return "Pro bono";
-  return FEE_LABEL[org.fee_model] ?? null;
+  if (org.pro_bono) return t("directory.proBono");
+  return FEE_KEYS.includes(org.fee_model) ? t(`directory.fees.${org.fee_model}`) : null;
 }
 function typeLabel(org: Organization): string {
-  return TYPE_LABEL[org.organization_type] ?? org.organization_type;
+  return TYPE_KEYS.includes(org.organization_type)
+    ? t(`directory.types.${org.organization_type}`)
+    : org.organization_type;
 }
 function websiteHref(url: string): string {
   return /^https?:/.test(url) ? url : "https://" + url;
@@ -91,8 +89,8 @@ function websiteHref(url: string): string {
 function orgActions(org: Organization) {
   const acts: {icon: string; label: string; href: string; external?: boolean; tabular?: boolean}[] = [];
   if (org.phones.length) acts.push({icon: "phone", label: org.phones[0], href: telHref(org.phones[0]), tabular: true});
-  if (org.emails.length) acts.push({icon: "mail", label: "Email", href: "mailto:" + org.emails[0]});
-  if (org.websites.length) acts.push({icon: "globe", label: "Website", href: websiteHref(org.websites[0]), external: true});
+  if (org.emails.length) acts.push({icon: "mail", label: t("resources.email"), href: "mailto:" + org.emails[0]});
+  if (org.websites.length) acts.push({icon: "globe", label: t("resources.website"), href: websiteHref(org.websites[0]), external: true});
   return acts;
 }
 
@@ -112,13 +110,12 @@ function clearFilters() {
   <div class="mx-auto w-full max-w-[1180px] px-5 pb-10">
     <!-- Page head -->
     <header class="pb-[22px] pt-4">
-      <Eyebrow :parts="['Free', 'Private', 'Not a law firm']" />
+      <Eyebrow :parts="eyebrow" />
       <h1 class="mt-2.5 font-serif text-[30px] font-bold leading-[38px] max-sm:text-2xl max-sm:leading-8">
-        Find Free &amp; Low-Cost Immigration Help
+        {{ t("resources.title") }}
       </h1>
       <p class="mt-2.5 max-w-[66ch] text-base leading-[25px] text-muted-foreground">
-        Nonprofits, pro-bono providers and DOJ-recognized organizations — each one links back to the
-        official government roster it came from.
+        {{ t("resources.intro") }}
       </p>
     </header>
 
@@ -133,11 +130,10 @@ function clearFilters() {
       />
       <div>
         <h4 class="font-serif text-[14.5px] font-bold leading-[21px]">
-          Heads up — a notario is not a lawyer
+          {{ t("resources.notarioTitle") }}
         </h4>
         <p class="mt-0.5 text-[13.5px] leading-5">
-          Only a licensed attorney or a DOJ-accredited representative at a recognized organization can
-          give legal advice or represent you.
+          {{ t("resources.notarioBody") }}
         </p>
       </div>
     </div>
@@ -149,13 +145,13 @@ function clearFilters() {
           <label
             for="o-search"
             class="text-sm font-medium leading-none"
-          >Search by name</label>
+          >{{ t("resources.searchLabel") }}</label>
           <Input
             id="o-search"
             v-model="search"
             type="search"
             autocomplete="off"
-            placeholder="e.g. Catholic Charities"
+            :placeholder="t('resources.searchPlaceholder')"
             class="h-[38px] max-md:h-[46px]"
           />
         </div>
@@ -166,14 +162,14 @@ function clearFilters() {
           <label
             for="o-region"
             class="text-sm font-medium leading-none"
-          >State</label>
+          >{{ t("common.state") }}</label>
           <select
             id="o-region"
             v-model="region"
             :class="selectClass"
           >
             <option value="">
-              All states
+              {{ t("common.allStates") }}
             </option>
             <option
               v-for="s in US_STATES"
@@ -188,31 +184,31 @@ function clearFilters() {
           <label
             for="o-type"
             class="text-sm font-medium leading-none"
-          >Organization type</label>
+          >{{ t("resources.orgType") }}</label>
           <select
             id="o-type"
             v-model="orgType"
             :class="selectClass"
           >
             <option value="">
-              All types
+              {{ t("resources.allTypes") }}
             </option>
             <option
-              v-for="(label, value) in TYPE_LABEL"
-              :key="value"
-              :value="value"
+              v-for="opt in typeOptions"
+              :key="opt.value"
+              :value="opt.value"
             >
-              {{ label }}
+              {{ opt.label }}
             </option>
           </select>
         </div>
       </div>
       <div class="grid gap-[9px]">
-        <span class="text-xs font-bold uppercase tracking-[0.06em] text-muted-foreground">Cost</span>
+        <span class="text-xs font-bold uppercase tracking-[0.06em] text-muted-foreground">{{ t("common.cost") }}</span>
         <FilterChips
           v-model="cost"
-          :items="COST_ITEMS"
-          aria-label="Cost"
+          :items="costItems"
+          :aria-label="t('common.cost')"
         />
       </div>
     </FilterPanel>
@@ -220,25 +216,23 @@ function clearFilters() {
     <!-- Toolbar -->
     <div class="flex flex-wrap items-baseline justify-between gap-4 pb-4 pt-[26px] max-md:pt-4">
       <h2 class="font-serif text-[22px] font-bold leading-[30px] max-md:text-[20px] max-md:leading-[28px]">
-        {{ count }} organization{{ count === 1 ? "" : "s" }}<template v-if="region">
-          in {{ region }}
-        </template>
+        {{ region ? t("resources.countIn", {count, region}, count) : t("resources.count", count) }}
       </h2>
       <div class="flex items-center gap-2 text-sm text-muted-foreground max-md:grid max-md:w-full max-md:grid-cols-[auto_1fr]">
-        <label for="o-sort">Sort by</label>
+        <label for="o-sort">{{ t("common.sortBy") }}</label>
         <select
           id="o-sort"
           v-model="sort"
           :class="[selectClass, 'md:h-[34px] md:w-auto md:text-sm']"
         >
           <option value="name">
-            Name (A–Z)
+            {{ t("resources.sort.name") }}
           </option>
           <option value="verified">
-            Recently verified
+            {{ t("resources.sort.verified") }}
           </option>
           <option value="state">
-            State
+            {{ t("resources.sort.state") }}
           </option>
         </select>
       </div>
@@ -303,7 +297,7 @@ function clearFilters() {
         <div class="mt-3">
           <Eyebrow
             variant="muted"
-            :parts="[org.address?.subdivision?.code, org.last_verified ? 'Verified ' + fmtDate(org.last_verified) : null]"
+            :parts="[org.address?.subdivision?.code, org.last_verified ? t('resources.verified', {date: fmtDate(org.last_verified)}) : null]"
           />
         </div>
 
@@ -333,7 +327,7 @@ function clearFilters() {
             :class="crossLinkClass"
             @click="viewReps(org)"
           >
-            Representatives here <span aria-hidden="true">→</span>
+            {{ t("resources.repsHere") }} <span aria-hidden="true">→</span>
           </button>
         </div>
       </article>
@@ -345,24 +339,24 @@ function clearFilters() {
       class="mt-3.5 rounded-xl bg-card p-10 text-center shadow-elevation-1"
     >
       <h3 class="font-serif text-[17px] font-bold leading-[25px]">
-        No organizations match those filters
+        {{ t("resources.emptyTitle") }}
       </h3>
       <p class="mx-auto mt-2 max-w-[44ch] text-sm leading-[21px] text-muted-foreground">
-        Try clearing the state or cost filter. Search matches the organization's name only.
+        {{ t("resources.emptyBody") }}
       </p>
       <Button
         variant="outline"
         class="mt-3.5"
         @click="clearFilters"
       >
-        Clear filters
+        {{ t("common.clearFilters") }}
       </Button>
     </div>
     <p
       v-if="loading && !items.length"
       class="mt-6 text-center text-sm text-muted-foreground"
     >
-      Loading…
+      {{ t("common.loading") }}
     </p>
 
     <PaginationBar
@@ -379,13 +373,13 @@ function clearFilters() {
         <div>
           <Eyebrow
             variant="onband"
-            :parts="['Not sure who to call?']"
+            :parts="[t('resources.ctaEyebrow')]"
           />
           <h3 class="mt-2 max-w-[28ch] font-serif text-xl font-bold leading-7">
-            Describe your situation and Javi will point you to the right kind of help
+            {{ t("resources.ctaTitle") }}
           </h3>
           <p class="mt-2 max-w-[62ch] text-sm leading-6 text-band-quiet">
-            No account, nothing saved unless you ask.
+            {{ t("resources.ctaBody") }}
           </p>
         </div>
         <Button
@@ -395,15 +389,14 @@ function clearFilters() {
           class="bg-status text-status-foreground shadow-[var(--elevation-1-control),0_0_12px_2px_rgba(255,205,60,0.38)] max-md:w-full"
         >
           <RouterLink to="/">
-            Start a free chat
+            {{ t("resources.ctaButton") }}
           </RouterLink>
         </Button>
       </div>
     </div>
 
     <p class="mt-[22px] max-w-[80ch] text-xs leading-[18px] text-muted-foreground">
-      Listings are drawn from the DOJ EOIR pro-bono and Recognition &amp; Accreditation rosters. Contact
-      an organization directly to confirm current availability — a listing here isn't an endorsement.
+      {{ t("resources.disclaimer") }}
     </p>
   </div>
 </template>

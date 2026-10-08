@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import forms from "@/data/forms.json";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ interface FormEntry {
   fileOnline: boolean;
 }
 
+const { t } = useI18n();
 const all = forms as FormEntry[];
 const categories = Array.from(new Set(all.map((f) => f.category))).sort();
 
@@ -38,12 +40,10 @@ const filtered = computed(() => {
     <div class="mx-auto max-w-6xl">
       <header class="pt-2">
         <h2 class="text-2xl/7 font-semibold text-foreground sm:text-3xl sm:tracking-tight">
-          Immigration forms
+          {{ t("forms.title") }}
         </h2>
         <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Browse common USCIS forms and what each one is for, in plain language.
-          Free to look up — always download and file forms on the official USCIS
-          website, which never charges for its forms or online accounts.
+          {{ t("forms.intro") }}
         </p>
       </header>
 
@@ -53,16 +53,16 @@ const filtered = computed(() => {
           v-model="search"
           type="search"
           autocomplete="off"
-          placeholder="Search by number, name, or purpose — e.g. I-130, work permit"
+          :placeholder="t('forms.searchPlaceholder')"
           class="sm:flex-1"
         />
         <select
           v-model="category"
-          aria-label="Filter by category"
+          :aria-label="t('forms.categoryLabel')"
           class="h-10 rounded-lg border border-transparent bg-field px-3 text-sm text-foreground shadow-elevation-1-control outline-none focus-visible:outline-none focus-visible:shadow-glow-focus sm:w-64"
         >
           <option value="">
-            All categories
+            {{ t("forms.allCategories") }}
           </option>
           <option
             v-for="c in categories"
@@ -78,7 +78,7 @@ const filtered = computed(() => {
         class="mt-4 text-sm text-muted-foreground"
         aria-live="polite"
       >
-        {{ filtered.length }} form{{ filtered.length === 1 ? "" : "s" }}
+        {{ t("forms.count", filtered.length) }}
       </p>
 
       <!-- Results -->
@@ -99,7 +99,7 @@ const filtered = computed(() => {
               v-if="form.fileOnline"
               class="bg-primary font-medium text-primary-foreground"
             >
-              File online
+              {{ t("forms.fileOnline") }}
             </Badge>
           </div>
           <h3 class="mt-3 font-semibold text-foreground">
@@ -116,7 +116,7 @@ const filtered = computed(() => {
               rel="noopener noreferrer"
               class="shrink-0 text-sm font-semibold text-foreground underline underline-offset-4 hover:text-primary"
             >
-              Official form →
+              {{ t("forms.official") }} →
             </a>
           </div>
         </li>
@@ -126,7 +126,7 @@ const filtered = computed(() => {
         v-if="filtered.length === 0"
         class="mt-10 text-center text-muted-foreground"
       >
-        No forms match your search. Try a different term or category.
+        {{ t("forms.empty") }}
       </p>
     </div>
   </div>
