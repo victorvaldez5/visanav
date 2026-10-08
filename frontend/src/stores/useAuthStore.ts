@@ -4,7 +4,7 @@ import apiClient from "@/plugins/axios";
 import {authService} from "@/services/authService";
 import {useRouter} from "vue-router";
 import {toast} from "vue-sonner";
-import {currentLocale, hasSavedLocale} from "@/i18n";
+import {currentLocale, hasSavedLocale, i18n} from "@/i18n";
 import {syncLocaleOnLogin} from "@/services/profileLocale";
 
 interface JwtPayload {
@@ -79,7 +79,7 @@ export const useAuthStore = defineStore("auth", () => {
             await router.push({name: "Home"}); // remove if you prefer to navigate in the component
         } catch (e: any) {
             error.value =
-                e?.response?.data?.detail || "Invalid username or password.";
+                e?.response?.data?.detail || i18n.global.t("auth.invalidCredentials");
             throw e;
         } finally {
             loading.value = false;
@@ -94,13 +94,13 @@ export const useAuthStore = defineStore("auth", () => {
             // Registration creates an inactive account; the user must confirm
             // their email before they can sign in, so we don't log them in here.
             await authService.register(email, password, password2, turnstileToken);
-            toast("Account created", {
-                description: "Check your email to verify your account, then sign in.",
+            toast(i18n.global.t("auth.accountCreated"), {
+                description: i18n.global.t("auth.checkEmail"),
             });
             await router.push({name: "Login"});
         } catch (e: any) {
             error.value =
-                e?.response?.data?.detail || "Registration failed. Please try again.";
+                e?.response?.data?.detail || i18n.global.t("auth.registrationFailed");
             throw e;
         } finally {
             loading.value = false;

@@ -27,5 +27,55 @@
     "es": "Español",
     "loadError": "Couldn't switch the language. Please try again.",
     "saveError": "Couldn't save your language to your profile."
+  },
+  "common": {
+    "home": "Go Home",
+    "back": "Go Back",
+    "backHome": "Back to Home",
+    "loading": "Loading…",
+    "error": "Error"
+  },
+  "nav": {
+    "newChat": "New Chat",
+    "resources": "Public Resources",
+    "representatives": "Representatives",
+    "forms": "Forms",
+    "account": "Account",
+    "signIn": "Sign In",
+    "signOut": "Sign out",
+    "register": "Register",
+    "login": "Login",
+    "legal": "Legal",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "logoAlt": "VisaNav logo",
+    "themeLight": "Switch to light theme",
+    "themeDark": "Switch to dark theme"
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "registerTitle": "Register",
+    "email": "Email",
+    "password": "Password",
+    "verifyPassword": "Verify Password",
+    "logIn": "Log In",
+    "loggingIn": "Logging in…",
+    "createAccount": "Create Account",
+    "creatingAccount": "Creating Account...",
+    "invalidCredentials": "Invalid username or password.",
+    "registrationFailed": "Registration failed. Please try again.",
+    "accountCreated": "Account created",
+    "checkEmail": "Check your email to verify your account, then sign in.",
+    "passwordsMismatch": "Passwords do not match",
+    "invalidEmail": "Enter a valid email address.",
+    "passwordMin": "Password must be at least 8 characters.",
+    "required": "This field is required."
+  },
+  "errors": {
+    "forbiddenTitle": "Permission denied",
+    "forbiddenBody": "You don’t have permission to view this page.",
+    "notFoundBody": "The page you’re looking for doesn’t exist.",
+    "slowLoad": "If this takes too long, please check your connection and try again.",
+    "profileLoad": "Failed to load user/profile"
   }
 }

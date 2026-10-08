@@ -4,7 +4,7 @@
     @submit.prevent="onSubmit"
   >
     <h3 class="mb-4 text-center text-2xl font-medium text-foreground tracking-tight">
-      Register
+      {{ t("auth.registerTitle") }}
     </h3>
     <FormField
       v-slot="{ componentField }"
@@ -14,7 +14,7 @@
       validate-on-blur
     >
       <FormItem>
-        <FormLabel>Email</FormLabel>
+        <FormLabel>{{ t("auth.email") }}</FormLabel>
         <FormControl>
           <Input
             type="email"
@@ -33,7 +33,7 @@
       validate-on-blur
     >
       <FormItem>
-        <FormLabel>Password</FormLabel>
+        <FormLabel>{{ t("auth.password") }}</FormLabel>
         <FormControl>
           <Input
             type="password"
@@ -52,7 +52,7 @@
       validate-on-blur
     >
       <FormItem>
-        <FormLabel>Verify Password</FormLabel>
+        <FormLabel>{{ t("auth.verifyPassword") }}</FormLabel>
         <FormControl>
           <Input
             type="password"
@@ -69,13 +69,14 @@
     />
 
     <Button :disabled="loading">
-      {{ loading ? "Creating Account..." : "Create Account" }}
+      {{ loading ? t("auth.creatingAccount") : t("auth.createAccount") }}
     </Button>
   </form>
 </template>
 
 <script setup lang="ts">
 import {useTemplateRef} from "vue";
+import {useI18n} from "vue-i18n";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
@@ -92,16 +93,17 @@ interface RegisterForm {
   password2: string | null;
 }
 
+const {t} = useI18n();
 const authStore = useAuthStore();
 const {loading, error} = storeToRefs(authStore);
 const {register} = authStore;
 
 const formSchema = toTypedSchema(z.object({
-  email: z.string().email().nonempty(),
-  password: z.string().min(8),
-  password2: z.string().min(8),
+  email: z.string().nonempty(t("auth.required")).email(t("auth.invalidEmail")),
+  password: z.string().min(8, t("auth.passwordMin")),
+  password2: z.string().min(8, t("auth.passwordMin")),
 }).refine((data) => data.password === data.password2, {
-  message: "Passwords do not match",
+  message: t("auth.passwordsMismatch"),
   path: ["password2"],
 }));
 
@@ -115,7 +117,7 @@ const {token: turnstileToken, reset: resetTurnstile} = useTurnstile(turnstileEl)
 const onSubmit = handleSubmit(async (submitValues) => {
   try {
     if (submitValues.password !== submitValues.password2) {
-      error.value = "Passwords do not match";
+      error.value = t("auth.passwordsMismatch");
       return
     }
     await register(submitValues.email, submitValues.password, submitValues.password2, turnstileToken.value);

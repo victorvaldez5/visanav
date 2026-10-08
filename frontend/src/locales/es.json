@@ -27,5 +27,55 @@
     "es": "Español",
     "loadError": "No se pudo cambiar el idioma. Inténtalo de nuevo.",
     "saveError": "No se pudo guardar tu idioma en tu perfil."
+  },
+  "common": {
+    "home": "Ir al inicio",
+    "back": "Volver",
+    "backHome": "Volver al inicio",
+    "loading": "Cargando…",
+    "error": "Error"
+  },
+  "nav": {
+    "newChat": "Nuevo chat",
+    "resources": "Recursos públicos",
+    "representatives": "Representantes",
+    "forms": "Formularios",
+    "account": "Cuenta",
+    "signIn": "Iniciar sesión",
+    "signOut": "Cerrar sesión",
+    "register": "Registrarse",
+    "login": "Iniciar sesión",
+    "legal": "Legal",
+    "terms": "Términos",
+    "privacy": "Privacidad",
+    "logoAlt": "Logotipo de VisaNav",
+    "themeLight": "Cambiar al tema claro",
+    "themeDark": "Cambiar al tema oscuro"
+  },
+  "auth": {
+    "loginTitle": "Iniciar sesión",
+    "registerTitle": "Registrarse",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "verifyPassword": "Confirmar contraseña",
+    "logIn": "Iniciar sesión",
+    "loggingIn": "Iniciando sesión…",
+    "createAccount": "Crear cuenta",
+    "creatingAccount": "Creando cuenta...",
+    "invalidCredentials": "Usuario o contraseña incorrectos.",
+    "registrationFailed": "No se pudo completar el registro. Inténtalo de nuevo.",
+    "accountCreated": "Cuenta creada",
+    "checkEmail": "Revisa tu correo para verificar tu cuenta y luego inicia sesión.",
+    "passwordsMismatch": "Las contraseñas no coinciden",
+    "invalidEmail": "Ingresa un correo electrónico válido.",
+    "passwordMin": "La contraseña debe tener al menos 8 caracteres.",
+    "required": "Este campo es obligatorio."
+  },
+  "errors": {
+    "forbiddenTitle": "Permiso denegado",
+    "forbiddenBody": "No tienes permiso para ver esta página.",
+    "notFoundBody": "La página que buscas no existe.",
+    "slowLoad": "Si esto tarda demasiado, revisa tu conexión e inténtalo de nuevo.",
+    "profileLoad": "No se pudo cargar el usuario o el perfil"
   }
 }

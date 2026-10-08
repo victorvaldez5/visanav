@@ -5,10 +5,10 @@
         403
       </h1>
       <h2 class="mt-2 text-xl font-semibold">
-        Permission denied
+        {{ t("errors.forbiddenTitle") }}
       </h2>
       <p class="mt-3 text-gray-600">
-        You don’t have permission to view this page.
+        {{ t("errors.forbiddenBody") }}
       </p>
 
       <div class="mt-8 flex justify-center gap-3">
@@ -16,7 +16,7 @@
           to="/"
           class="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800 transition"
         >
-          Go Home
+          {{ t("common.home") }}
         </RouterLink>
       </div>
     </section>
@@ -24,4 +24,7 @@
 </template>
 
 <script setup lang="ts">
+import {useI18n} from "vue-i18n";
+
+const {t} = useI18n();
 </script>

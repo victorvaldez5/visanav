@@ -20,7 +20,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ConversationsSidebarGroup from "@/components/interface/ConversationsSidebarGroup.vue";
 import { useAuthStore } from "@/stores/useAuthStore.ts";
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import Icon from "@/components/ui/Icon.vue";
 import ThemeToggle from "@/components/interface/ThemeToggle.vue";
 import LanguageSwitcher from "@/components/interface/LanguageSwitcher.vue";
@@ -28,6 +30,7 @@ import { useTheme } from "@/composables/useTheme";
 import logoLight from "@/assets/VisaNav-Horizontal-Main.svg";
 import logoDark from "@/assets/VisaNav-Horizontal-OnDark.svg";
 
+const { t } = useI18n();
 const { isDark } = useTheme();
 
 const authStore = useAuthStore();
@@ -35,35 +38,35 @@ const { isAuthenticated, username, userId,  userEmail} = storeToRefs(authStore);
 const { logout } = authStore;
 const route = useRoute();
 
-const menuItems = [
+const menuItems = computed(() => [
     {
-        title: "New Chat",
+        title: t("nav.newChat"),
         icon: "icon-edit",
         href: "/",
     },
     {
-        title: "Public Resources",
+        title: t("nav.resources"),
         icon: "icon-scale",
         href: "/resources",
     },
     {
-        title: "Representatives",
+        title: t("nav.representatives"),
         icon: "icon-user-check",
         href: "/representatives",
     },
     {
-      title: "Forms",
+      title: t("nav.forms"),
       icon: "icon-folder",
       href: "/forms",
     },
-];
+]);
 </script>
 
 <template>
   <Sidebar>
     <SidebarHeader class="flex flex-row items-center justify-between py-6 px-4">
       <img
-        alt="Visanav logo"
+        :alt="t('nav.logoAlt')"
         class="h-7 w-fit"
         :src="isDark ? logoDark : logoLight"
       >
@@ -124,7 +127,7 @@ const menuItems = [
                 </div>
                 <template v-else>
                   <RouterLink to="Login">
-                    Sign In
+                    {{ t("nav.signIn") }}
                   </RouterLink>
                 </template>
               </SidebarMenuButton>
@@ -138,21 +141,21 @@ const menuItems = [
                 class="text-base"
               >
                 <RouterLink :to="`/profile/${userId}`">
-                  Account
+                  {{ t("nav.account") }}
                 </RouterLink>
               </DropdownMenuItem>
               <DropdownMenuItem
                 class="text-base"
                 @click="logout()"
               >
-                <span>Sign out</span>
+                <span>{{ t("nav.signOut") }}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <template v-else>
             <SidebarMenuButton as-child>
               <RouterLink to="register">
-                Register
+                {{ t("nav.register") }}
               </RouterLink>
             </SidebarMenuButton>
             <SidebarMenuButton as-child>
@@ -160,7 +163,7 @@ const menuItems = [
                 to="login"
                 class="sidebar-accent-foreground"
               >
-                Login
+                {{ t("nav.login") }}
               </RouterLink>
             </SidebarMenuButton>
           </template>
@@ -168,7 +171,7 @@ const menuItems = [
       </SidebarMenu>
       <LanguageSwitcher class="mt-2" />
       <nav
-        aria-label="Legal"
+        :aria-label="t('nav.legal')"
         class="mt-1 flex items-center justify-center gap-2 px-2 text-xs text-muted-foreground"
       >
         <a
@@ -176,14 +179,14 @@ const menuItems = [
           target="_blank"
           rel="noopener"
           class="hover:underline"
-        >Terms</a>
+        >{{ t("nav.terms") }}</a>
         <span aria-hidden="true">·</span>
         <a
           href="https://www.visanav.org/privacy"
           target="_blank"
           rel="noopener"
           class="hover:underline"
-        >Privacy</a>
+        >{{ t("nav.privacy") }}</a>
       </nav>
     </SidebarFooter>
   </Sidebar>
