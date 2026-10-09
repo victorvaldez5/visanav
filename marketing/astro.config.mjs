@@ -27,6 +27,13 @@ export default defineConfig({
       // twin. Pages with no translation (terms, privacy) get no alternates.
       i18n: { defaultLocale: "en", locales: { en: "en", es: "es" } },
       filter: (page) => !page.endsWith("/404/"),
+      // The integration emits no x-default; point it at the default-locale URL,
+      // as Base.astro does in the page head.
+      serialize(item) {
+        const fallback = item.links?.find((l) => l.lang === "en");
+        if (fallback) item.links?.push({ lang: "x-default", url: fallback.url });
+        return item;
+      },
     }),
   ],
   vite: {

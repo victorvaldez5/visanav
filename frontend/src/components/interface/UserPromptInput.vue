@@ -107,8 +107,10 @@ const props = withDefaults(
   defineProps<{
     /** True while Javi is answering: swaps Send for a Stop that aborts. */
     streaming?: boolean;
+    /** Text to start the composer with (a question handed off in the URL). */
+    initial?: string;
   }>(),
-  { streaming: false },
+  { streaming: false, initial: "" },
 );
 
 const emit = defineEmits<{
@@ -116,7 +118,7 @@ const emit = defineEmits<{
   (e: "stop"): void;
 }>();
 
-const prompt = ref("");
+const prompt = ref(props.initial);
 
 // Unique id so the visually-hidden <label> ties to this instance's textarea.
 const fieldId = `prompt-${Math.random().toString(36).slice(2, 9)}`;

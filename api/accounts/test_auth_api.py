@@ -12,7 +12,6 @@ Notes:
 """
 import pytest
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -21,6 +20,7 @@ from rest_framework.test import APIClient
 
 from accounts import views as account_views
 from accounts.models import Profile
+from accounts.tokens import email_verification_token
 from locations.models import Country, Language, Subdivision
 
 pytestmark = pytest.mark.django_db
@@ -41,7 +41,7 @@ def _verify_payload(user):
     core/mail.send_verification_email)."""
     return {
         "uid": urlsafe_base64_encode(force_bytes(str(user.pk))),
-        "token": PasswordResetTokenGenerator().make_token(user),
+        "token": email_verification_token.make_token(user),
     }
 
 
@@ -223,6 +223,17 @@ def test_verify_activates_account_and_returns_session(api_client, inactive_user)
         TOKEN_URL, {"username": inactive_user.username, "password": PW}, format="json"
     )
     assert login.status_code == status.HTTP_200_OK
+
+
+def test_verification_link_works_only_once(api_client, inactive_user):
+    """A leaked or replayed link must not mint a second session."""
+    payload = _verify_payload(inactive_user)
+    assert api_client.post(VERIFY_URL, payload, format="json").status_code == status.HTTP_200_OK
+
+    replay = api_client.post(VERIFY_URL, payload, format="json")
+
+    assert replay.status_code == status.HTTP_400_BAD_REQUEST
+    assert "access" not in replay.data
 
 
 def test_verify_tokens_carry_the_same_identity_claims_as_login(api_client, inactive_user):

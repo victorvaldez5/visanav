@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.db import transaction
 from django.utils.http import urlsafe_base64_decode
 from django.utils.translation import gettext as _
@@ -11,6 +10,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from core.mail import send_verification_email
 from .models import Profile
 from .serializers import CustomTokenObtainPairSerializer, RegisterSerializer, ProfileSerializer, UserSerializer
+from .tokens import email_verification_token
 
 User = get_user_model()
 
@@ -61,7 +61,7 @@ class VerifyEmailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not PasswordResetTokenGenerator().check_token(user, token):
+        if not email_verification_token.check_token(user, token):
             return Response(
                 {"detail": _("This verification link is invalid or has expired.")},
                 status=status.HTTP_400_BAD_REQUEST,

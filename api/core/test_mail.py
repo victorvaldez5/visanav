@@ -15,9 +15,7 @@ def mailtrap(monkeypatch):
     fake = mock.Mock()
     monkeypatch.setattr(mail.mt, "MailtrapClient", mock.Mock(return_value=fake))
     # The real generator needs a saved user; the token's value is irrelevant here.
-    monkeypatch.setattr(
-        mail, "PasswordResetTokenGenerator", lambda: SimpleNamespace(make_token=lambda user: "tok-123")
-    )
+    monkeypatch.setattr(mail, "email_verification_token", SimpleNamespace(make_token=lambda user: "tok-123"))
     return fake
 
 
@@ -64,6 +62,18 @@ def test_unsupported_locale_falls_back_rather_than_failing(mailtrap):
     mail.send_verification_email(_user(preferred="xx"), locale="fr")
 
     assert _sent(mailtrap).subject == "Verify your VisaNav account"
+
+
+def test_delivers_for_real_unless_a_sandbox_inbox_is_configured(mailtrap, settings):
+    settings.MAILTRAP_SANDBOX_INBOX_ID = ""
+    mail.send_verification_email(_user())
+    assert "sandbox" not in mail.mt.MailtrapClient.call_args.kwargs
+
+    settings.MAILTRAP_SANDBOX_INBOX_ID = "42"
+    mail.send_verification_email(_user())
+    assert mail.mt.MailtrapClient.call_args.kwargs["sandbox"] is True
+    assert mail.mt.MailtrapClient.call_args.kwargs["inbox_id"] == "42"
+    assert _sent(mailtrap).sender.email == settings.DEFAULT_FROM_EMAIL
 
 
 def test_does_not_leak_the_language_into_the_calling_thread(mailtrap):

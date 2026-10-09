@@ -10,8 +10,10 @@ ALLOWED_HOSTS = ["*"]
 # Open CORS in dev for ease of testing
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Emails to console in dev
+# Dev never delivers real mail: it goes to the team's Mailtrap sandbox inbox
+# unless MAILTRAP_SANDBOX_INBOX_ID names another one.
 MAILTRAP_API_KEY = os.environ.get("MAILTRAP_API_KEY")
+MAILTRAP_SANDBOX_INBOX_ID = os.environ.get("MAILTRAP_SANDBOX_INBOX_ID") or "3972833"
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 # Verbose app logs in dev, but keep base.py's third-party logger floors so even a

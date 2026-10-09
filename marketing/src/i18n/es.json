@@ -148,6 +148,7 @@
     "website": "Sitio web",
     "visitWebsite": "Visitar el sitio web",
     "askAbout": "Preguntar a VisaNav sobre esta organización",
+    "askPrompt": "Cuéntame sobre {name} y cómo me pueden ayudar.",
     "empty": "Ninguna organización coincide con tu búsqueda. Prueba con otro estado o quita los filtros.",
     "pagerLabel": "Páginas del directorio",
     "prev": "Anterior",

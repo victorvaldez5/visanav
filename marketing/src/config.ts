@@ -21,13 +21,11 @@ export const LANG_PARAM = "lang";
  * A link into the chat app. Every outbound link carries `?lang=<locale>`: the
  * origins differ, so localStorage can't cross, and this hands the language the
  * visitor was reading over to the app (precedence there: ?lang > saved > browser).
+ * `params.q` prefills the chat composer with a question.
  */
 export const appLink = (locale: Locale, params: Record<string, string> = {}) => {
   const query = new URLSearchParams({ ...params, [LANG_PARAM]: locale });
   return `${APP_URL}/?${query}`;
 };
-
-/** Deep-link into the chat app for a specific directory org (no account needed). */
-export const orgAppLink = (id: string, locale: Locale) => appLink(locale, { org: id });
 
 export const SUBMISSIONS_ENDPOINT = `${API_URL}/api/network/submissions/`;

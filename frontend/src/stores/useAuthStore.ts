@@ -66,8 +66,8 @@ export const useAuthStore = defineStore("auth", () => {
             if (userId.value !== id) return; // signed out or switched meanwhile
             // The users endpoint exposes the email but not the username.
             userEmail.value = user?.email || null;
-        } catch {
-            /* ignore */
+        } catch (e) {
+            console.warn("Could not load the signed-in user's identity:", e);
         }
     }
 

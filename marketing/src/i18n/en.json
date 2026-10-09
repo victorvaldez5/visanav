@@ -148,6 +148,7 @@
     "website": "Website",
     "visitWebsite": "Visit website",
     "askAbout": "Ask VisaNav about this org",
+    "askPrompt": "Tell me about {name} and how they can help me.",
     "empty": "No organizations match your search. Try a different state or clear the filters.",
     "pagerLabel": "Directory pages",
     "prev": "Prev",

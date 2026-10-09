@@ -202,8 +202,9 @@ at generation time.
   registering browser sent (`request.LANGUAGE_CODE`), else the profile's preferred
   language, else `en`, under an explicit `translation.override` so it never depends
   on the ambient language. The link carries `?lang=<code>` (the app's handoff
-  param), so it opens in that language on any device. Still to do before launch: the
-  sender and transport are the Mailtrap sandbox, not a real provider.
+  param), so it opens in that language on any device, and it works once. Delivery
+  is Mailtrap's sending API from `DEFAULT_FROM_EMAIL`; setting
+  `MAILTRAP_SANDBOX_INBOX_ID` (dev's default) captures mail in a sandbox inbox instead.
 
 ## Resource directory (language matching)
 
@@ -277,7 +278,9 @@ The three surfaces are different origins, so `localStorage` does not cross betwe
 them. When someone browsing `www.visanav.org/es/` clicks through to the app:
 
 - Marketing appends `?lang=<locale>` to every outbound `APP_URL` link
-  (`orgAppLink`, "Start a free chat").
+  (`appLink`: "Start a free chat", the home teaser, the directory's "ask about this
+  org"). A `?q=` on the same link prefills the chat composer; it is never sent
+  automatically.
 - The app validates `?lang` against the allowlist on boot, writes it to
   localStorage, then strips the param.
 
@@ -315,4 +318,5 @@ whole locale pipeline end to end.
 but a locale is only revealed in a given surface's switcher once that surface is
 fully translated and reviewed. This avoids shipping a half-Spanish page to a user
 who cannot read the English gaps, while still allowing incremental deploys behind
-the gate.
+the gate. Spanish cleared the gate on 2026-10-09 (app and marketing switchers
+tested by the maintainer).
