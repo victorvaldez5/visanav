@@ -1,35 +1,24 @@
 ---
-import Base from "../layouts/Base.astro";
-import Eyebrow from "../components/Eyebrow.astro";
-import { APP_URL } from "../config";
-import orgs from "../data/organizations.json";
+import Base from "../../layouts/Base.astro";
+import Eyebrow from "../../components/Eyebrow.astro";
+import { APP_URL, appLink } from "../../config";
+import orgs from "../../data/organizations.json";
+import { isLocale, DEFAULT_LOCALE, localePath, useTranslations } from "../../i18n";
+
+// One file serves every locale: `/` and `/es/` (see astro.config.mjs i18n).
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, { params: { lang: "es" } }];
+}
+const lang = Astro.params.lang;
+const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
+const t = useTranslations(locale);
 
 const total = orgs.length;
 const proBono = orgs.filter((o) => o.proBono).length;
 const states = new Set(orgs.map((o) => o.state).filter(Boolean)).size;
 
-const steps = [
-  {
-    title: "Ask in your own words",
-    body: "Describe your situation in plain language — no forms, no jargon, no account required.",
-  },
-  {
-    title: "Get clear answers with sources",
-    body: "VisaNav explains your options and points to official USCIS and government sources you can verify.",
-  },
-  {
-    title: "Find free help near you",
-    body: "Connect to recognized nonprofits and pro-bono providers in your state — not to anyone trying to sell you something.",
-  },
-];
-
-const trust = [
-  "100% free",
-  "No account needed",
-  "Personal details removed before sending",
-  "Encrypted, never sold",
-  "Not a law firm",
-];
+const steps = t.items<{ title: string; body: string }>("home.how.steps");
+const trust = t.list("home.trust");
 
 // The privacy promises below map to real features: client-side PII scrubbing
 // that runs in the browser before a message is sent (frontend/src/lib/pii.ts),
@@ -38,56 +27,41 @@ const trust = [
 // delete). Keep the copy in step with what the app does — in particular, the
 // scrubber strips identifiers (A-numbers, receipt/case numbers, SSNs, emails,
 // phones, addresses, dates), but NOT names, so don't claim otherwise here.
-const privacy = [
-  {
-    title: "We remove your personal details first",
-    body: "Before your message leaves your device, VisaNav removes personal details like A-numbers, receipt numbers, Social Security numbers, emails, phones, addresses and dates, so they never reach our servers or the AI. You'll see exactly what was removed.",
-    icon: "scrub",
-  },
-  {
-    title: "Anonymous by default",
-    body: "No account required, and we never store your IP address. Ask your questions without signing up or telling us who you are.",
-    icon: "user",
-  },
-  {
-    title: "Encrypted, and yours to delete",
-    body: "Your conversations are encrypted and kept only as long as needed — and you can delete your account and data whenever you want.",
-    icon: "lock",
-  },
-  {
-    title: "Never sold or shared",
-    body: "We don't sell your information or use it for advertising. Your questions are used only to answer you — nothing else.",
-    icon: "shield",
-  },
-];
+// (Copy lives in src/i18n/<locale>.json under home.privacy.items; icons are by
+// position.)
+const privacyIcons = ["scrub", "user", "lock", "shield"];
+const privacy = t
+  .items<{ title: string; body: string }>("home.privacy.items")
+  .map((item, i) => ({ ...item, icon: privacyIcons[i] }));
+const partnerCards = t.items<{ title: string; body: string }>("home.partners.cards");
+
+// The directory band's figures, bolded inside the translated sentence.
+const strong = (n: string | number) => `<strong class="font-bold text-vn-white">${n}</strong>`;
+const bandBody = t("home.band.body", {
+  total: strong(total.toLocaleString(locale)),
+  proBono: strong(proBono),
+  states: strong(states),
+});
 ---
 
-<Base
-  title="VisaNav — Free, private immigration help"
-  description="A free public tool, now in beta, that explains your immigration options in plain language and connects you to recognized nonprofits and pro-bono legal help near you. Personal details are removed from your question in your browser before it's sent. Anonymous, encrypted, no account, no cost, no data sold."
->
+<Base title={t("home.title")} description={t("home.description")}>
   <!-- Hero -->
   <section id="top" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
     <div class="flex flex-col gap-14 lg:flex-row lg:items-start lg:gap-16">
       <div class="lg:max-w-[620px] lg:shrink-0">
-        <Eyebrow
-          items={["BETA", "FREE PUBLIC TOOL", "NOT AFFILIATED WITH USCIS OR ICE"]}
-        />
+        <Eyebrow items={t.list("home.eyebrow")} />
 
         <h1 class="mt-6 text-4xl font-bold leading-[1.08] text-foreground sm:text-5xl sm:leading-[1.04]">
-          Immigration is confusing. Getting help shouldn't be.
+          {t("home.h1")}
         </h1>
 
         <p class="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          VisaNav answers your immigration questions in plain language, cites
-          official sources, and points you to trustworthy free and low-cost help
-          near you. Ask anonymously, with no account and no cost, and personal
-          details are removed from your question before it's ever sent.
+          {t("home.lead")}
         </p>
 
         <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <a href={APP_URL} class="vn-btn vn-btn-primary h-12 px-6 text-base">Start a free chat</a>
-          <a href="/directory" class="vn-btn vn-btn-raised h-12 px-6 text-base">Find help near you</a>
+          <a href={appLink(locale)} class="vn-btn vn-btn-primary h-12 px-6 text-base">{t("home.ctaChat")}</a>
+          <a href={localePath(locale, "/directory")} class="vn-btn vn-btn-raised h-12 px-6 text-base">{t("home.ctaFind")}</a>
         </div>
 
         <ul class="mt-8 flex flex-col gap-y-2.5 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-x-7">
@@ -114,28 +88,29 @@ const privacy = [
           <span class="text-sm font-semibold tracking-tight text-foreground">VisaNav</span>
         </div>
 
-        <h2 class="mt-5 text-2xl font-bold text-foreground">Ask in your own words</h2>
+        <h2 class="mt-5 text-2xl font-bold text-foreground">{t("home.teaser.title")}</h2>
         <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-          No forms, no jargon, no account. Write the way you would tell a friend.
+          {t("home.teaser.body")}
         </p>
 
         <form action={APP_URL} method="get" class="mt-6">
-          <label for="q" class="block text-sm font-medium text-foreground">Your question</label>
+          <input type="hidden" name="lang" value={locale} />
+          <label for="q" class="block text-sm font-medium text-foreground">{t("home.teaser.label")}</label>
           <input
             id="q"
             name="q"
             type="text"
-            placeholder="My work permit expires in three months."
+            placeholder={t("home.teaser.placeholder")}
             class="vn-field mt-2 h-11 px-3 text-base"
           />
           <button type="submit" class="vn-btn vn-btn-primary mt-4 h-11 w-full text-[15px]">
-            Ask anonymously
+            {t("home.teaser.submit")}
           </button>
         </form>
 
         <div class="mt-6">
           <Eyebrow
-            items={["ANONYMOUS", "ENCRYPTED", "YOURS TO DELETE"]}
+            items={t.list("home.teaser.eyebrow")}
             class="!text-muted-foreground"
           />
         </div>
@@ -147,10 +122,9 @@ const privacy = [
   <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
     <div class="flex flex-col gap-10 lg:flex-row lg:gap-24">
       <div class="lg:w-[396px] lg:shrink-0">
-        <h2 class="text-3xl font-bold text-foreground">How VisaNav helps</h2>
+        <h2 class="text-3xl font-bold text-foreground">{t("home.how.title")}</h2>
         <p class="mt-4 leading-relaxed text-muted-foreground">
-          Three steps, in plain language, from your first question to real help
-          near you.
+          {t("home.how.body")}
         </p>
       </div>
 
@@ -183,13 +157,9 @@ const privacy = [
 
   <!-- Privacy -->
   <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-    <h2 class="text-3xl font-bold text-foreground">Your privacy comes first</h2>
+    <h2 class="text-3xl font-bold text-foreground">{t("home.privacy.title")}</h2>
     <p class="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
-      Immigration questions are personal. Ask a chatbot like ChatGPT directly
-      and your exact words, and who you are, can be stored and tied to you.
-      VisaNav removes personal details in your browser before your question
-      is ever sent, so you can ask freely without wondering where your
-      information goes.
+      {t("home.privacy.intro")}
     </p>
     <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {
@@ -225,17 +195,11 @@ const privacy = [
     <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-12">
         <div class="max-w-3xl">
-          <h2 class="text-3xl font-bold text-vn-white">A directory of real, trustworthy help</h2>
-          <p class="mt-3 leading-relaxed text-band-muted">
-            Browse <strong class="font-bold text-vn-white">{total.toLocaleString()}</strong> nonprofit
-            and pro-bono organizations — including{" "}
-            <strong class="font-bold text-vn-white">{proBono}</strong> pro-bono legal providers —
-            across <strong class="font-bold text-vn-white">{states}</strong> states, drawn from
-            official DOJ/EOIR recognized-organization data.
-          </p>
+          <h2 class="text-3xl font-bold text-vn-white">{t("home.band.title")}</h2>
+          <p class="mt-3 leading-relaxed text-band-muted" set:html={bandBody} />
         </div>
-        <a href="/directory" class="vn-btn vn-btn-secondary h-12 shrink-0 px-6 text-base">
-          Browse the directory
+        <a href={localePath(locale, "/directory")} class="vn-btn vn-btn-secondary h-12 shrink-0 px-6 text-base">
+          {t("home.band.cta")}
         </a>
       </div>
     </div>
@@ -246,32 +210,21 @@ const privacy = [
     <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <div class="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-24">
         <div class="lg:w-[520px] lg:shrink-0">
-          <Eyebrow items={["FOR ORGANIZATIONS", "REVIEWED BEFORE LISTING"]} />
+          <Eyebrow items={t.list("home.partners.eyebrow")} />
           <h2 class="mt-5 text-3xl font-bold text-foreground">
-            Do you run an organization that helps immigrants?
+            {t("home.partners.title")}
           </h2>
           <p class="mt-3 leading-relaxed text-muted-foreground">
-            Ask to be listed as a trusted resource, or partner with us to offer
-            VisaNav to the people you serve. Every request is reviewed before
-            it's listed.
+            {t("home.partners.body")}
           </p>
-          <a href="/partners" class="vn-btn vn-btn-raised mt-7 h-12 px-6 text-base">
-            Request to be included
+          <a href={localePath(locale, "/partners")} class="vn-btn vn-btn-raised mt-7 h-12 px-6 text-base">
+            {t("home.partners.cta")}
           </a>
         </div>
 
         <ul class="flex flex-1 flex-col gap-4">
           {
-            [
-              {
-                title: "Get listed in the directory",
-                body: "Ask to be added as a trusted resource, so people in your state can find your organization.",
-              },
-              {
-                title: "Partner with us",
-                body: "Offer VisaNav to the people you serve — free, anonymous and with no account to set up.",
-              },
-            ].map((c) => (
+            partnerCards.map((c) => (
               <li class="vn-card flex items-start gap-4 p-6">
                 <span aria-hidden="true" class="mt-[11px] h-2.5 w-2.5 shrink-0 rotate-45 bg-vn-sunflower-400" />
                 <div>

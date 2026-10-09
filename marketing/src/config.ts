@@ -12,7 +12,20 @@ export const API_URL = import.meta.env.PUBLIC_API_URL ?? "https://api.visanav.or
 export const TURNSTILE_SITE_KEY =
   import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
 
+/** The query param the app reads on boot to adopt a locale (see frontend/src/i18n). */
+export const LANG_PARAM = "lang";
+
+/**
+ * A link into the chat app. Every outbound link carries `?lang=<locale>`: the
+ * origins differ, so localStorage can't cross, and this hands the language the
+ * visitor was reading over to the app (precedence there: ?lang > saved > browser).
+ */
+export const appLink = (locale: string, params: Record<string, string> = {}) => {
+  const query = new URLSearchParams({ ...params, [LANG_PARAM]: locale });
+  return `${APP_URL}/?${query}`;
+};
+
 /** Deep-link into the chat app for a specific directory org (no account needed). */
-export const orgAppLink = (id: string) => `${APP_URL}/?org=${encodeURIComponent(id)}`;
+export const orgAppLink = (id: string, locale: string) => appLink(locale, { org: id });
 
 export const SUBMISSIONS_ENDPOINT = `${API_URL}/api/network/submissions/`;

@@ -15,6 +15,16 @@ can't deliver.
 - `/partners` — the moderated NGO "request to be included" form. Posts to the
   API; **nothing is auto-listed** — an admin reviews each submission at `/nimda/`.
 
+## Languages
+
+English is the default and keeps its bare URLs; Spanish lives under `/es/`
+(`astro.config.mjs` `i18n`). Copy is in `src/i18n/<code>.json` and each page is a
+single `src/pages/[...lang]/*.astro` serving both locales. To add a locale, follow
+"Adding a locale" in `docs/i18n-architecture.md` (add `src/i18n/<code>.json`, the
+locale to `SUPPORTED_LOCALES` and to the `i18n`/sitemap config). `terms` and `privacy`
+are English only on purpose. `node scripts/check_i18n_parity.mjs` (repo root) checks
+the lists and catalogs.
+
 ## Develop
 
 ```bash

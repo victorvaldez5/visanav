@@ -119,6 +119,14 @@ if (existsSync(feI18n)) {
   if (def) assertDefault("frontend DEFAULT_LOCALE", def[1]);
 }
 
+const mkI18n = join(ROOT, "marketing", "src", "i18n", "index.ts");
+if (existsSync(mkI18n)) {
+  const list = extract(mkI18n, "SUPPORTED_LOCALES", /SUPPORTED_LOCALES\s*=\s*\[([^\]]*)\]/);
+  if (list) assertSameSet("marketing SUPPORTED_LOCALES", quoted(list[1]));
+  const def = extract(mkI18n, "DEFAULT_LOCALE", /DEFAULT_LOCALE\s*(?::\s*\w+\s*)?=\s*["'`]([^"'`]+)["'`]/);
+  if (def) assertDefault("marketing DEFAULT_LOCALE", def[1]);
+}
+
 const beSettings = join(ROOT, "api", "api_project", "base.py");
 if (existsSync(beSettings)) {
   const list = extract(beSettings, "LANGUAGES", /^LANGUAGES\s*=\s*\[([\s\S]*?)\]/m);

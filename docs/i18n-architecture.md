@@ -1,6 +1,6 @@
 # Internationalization (i18n) architecture
 
-Status: Phases 1 to 4 and 6 implemented (Phase 3 done through 3c); Phase 5 planned.
+Status: Phases 1 to 6 implemented (Phase 3 done through 3c).
 Owner: VisaNav
 Last updated: 2026-10-09
 
@@ -157,7 +157,24 @@ at generation time.
 - **URL is authoritative:** no `Accept-Language` auto-redirect on bare visits (it
   hurts SEO and surprises users). The switcher in `Header.astro` navigates between
   localized paths.
-- **Copy** is extracted from the 4 inline `.astro` templates into catalogs.
+- **Copy** lives in `marketing/src/i18n/<code>.json` (parity-checked like the app's),
+  read through `useTranslations(locale)` in `src/i18n/index.ts`. Each page is one
+  `src/pages/[...lang]/<page>.astro` that serves `/` and `/es/` from the same file, so
+  there is no second copy of a page to drift. Strings that client scripts write
+  (directory counts and pager, the partner form's errors) are rendered per locale at
+  build time into a `data-strings` attribute the script reads.
+- **Implemented:** `hreflang` alternates plus `x-default` and a per-locale canonical in
+  `Base.astro`, `og:locale`, sitemap alternates (`@astrojs/sitemap` `i18n`), a
+  `robots.txt`, a language link in the header (to the same page in the other locale), and
+  `?lang=<locale>` on every outbound app link (every locale, so the app opens in the
+  language the visitor was just reading). The partner form sends `Accept-Language`, so
+  the API's validation errors come back in the page's language.
+- **Terms and Privacy stay English only**, at `/terms` and `/privacy` with no `/es/`
+  twins, no `hreflang` alternates, and an "English only" note on their footer links in
+  other locales. A machine translation of legal text without legal review would be
+  worse than none; add real translations here only after review.
+- **404** is one bilingual page: a static host serves a single `404.html` for every
+  missing path, so it cannot know the visitor's language.
 
 ## Backend (`api.visanav.org`, Django) with gettext
 
@@ -284,7 +301,7 @@ Build order front-loads the shared foundations so nothing is built twice.
    primitives; still English by design: US state names and the `forms.json`
    titles, summaries and categories, which are content, not UI chrome).
 4. **Resource-directory language matching** (done; see above).
-5. **Marketing i18n + SEO.**
+5. **Marketing i18n + SEO** (done; see above).
 6. **Emails** (done: translated per recipient; real delivery is separate).
 
 **First release = Phase 1 + Phase 2** (foundations plus Javi reliably answering in

@@ -1,7 +1,16 @@
 ---
-import Base from "../layouts/Base.astro";
-import Eyebrow from "../components/Eyebrow.astro";
-import { TURNSTILE_SITE_KEY } from "../config";
+import Base from "../../layouts/Base.astro";
+import Eyebrow from "../../components/Eyebrow.astro";
+import { TURNSTILE_SITE_KEY } from "../../config";
+import { isLocale, DEFAULT_LOCALE, useTranslations } from "../../i18n";
+
+// One file serves every locale: `/partners` and `/es/partners`.
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, { params: { lang: "es" } }];
+}
+const lang = Astro.params.lang;
+const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
+const t = useTranslations(locale);
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
@@ -14,22 +23,27 @@ const inputClass = "vn-field mt-2 h-10 px-3 text-sm";
 const labelClass = "block text-sm font-medium leading-none text-foreground";
 ---
 
-<Base
-  title="For organizations — get listed or partner with VisaNav"
-  description="Nonprofits and pro-bono immigration providers can request to be listed in the VisaNav directory or partner to offer VisaNav to the people they serve. Every request is reviewed."
-  canonicalPath="/partners"
->
-  <section class="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-    <Eyebrow items={["FOR ORGANIZATIONS", "REVIEWED BEFORE LISTING"]} />
+<Base title={t("partners.title")} description={t("partners.description")} canonicalPath="/partners">
+  <section
+    class="mx-auto max-w-3xl px-4 py-14 sm:px-6"
+    id="partners-page"
+    data-strings={JSON.stringify({
+      locale,
+      submit: t("partners.submit"),
+      submitting: t("partners.submitting"),
+      errCaptcha: t("partners.errCaptcha"),
+      errTooMany: t("partners.errTooMany"),
+      errGeneric: t("partners.errGeneric"),
+      errNetwork: t("partners.errNetwork"),
+    })}
+  >
+    <Eyebrow items={t.list("partners.eyebrow")} />
 
     <h1 class="mt-5 text-4xl font-bold text-foreground">
-      For organizations that help immigrants
+      {t("partners.h1")}
     </h1>
     <p class="mt-3 leading-relaxed text-muted-foreground">
-      VisaNav is a free public tool, currently in beta. If your organization
-      provides immigration help, you can ask to be listed as a trusted resource,
-      or partner with us to offer VisaNav to the people you serve. We review every
-      request before anything is listed — this keeps the directory trustworthy.
+      {t("partners.intro")}
     </p>
 
     <!-- Success panel (revealed after submit) -->
@@ -37,10 +51,9 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
       <div class="flex items-start gap-3">
         <span aria-hidden="true" class="mt-1.5 h-2.5 w-2.5 shrink-0 rotate-45 bg-vn-sunflower-400"></span>
         <div>
-          <h2 class="text-lg font-bold text-foreground">Thank you — we've got your request</h2>
+          <h2 class="text-lg font-bold text-foreground">{t("partners.successTitle")}</h2>
           <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-            A person will review it before anything is published. We'll reach out
-            at the email you provided if we need anything else.
+            {t("partners.successBody")}
           </p>
         </div>
       </div>
@@ -49,67 +62,67 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
     <form id="partner-form" class="vn-card mt-8 space-y-6 p-6 sm:p-8" novalidate>
       <!-- Honeypot: hidden from people, catnip for bots. Do not remove. -->
       <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;">
-        <label>Website (leave blank)
+        <label>{t("partners.honeypot")}
           <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
         </label>
       </div>
 
       <div>
-        <label for="organization_name" class={labelClass}>Organization name <span class="text-link">*</span></label>
+        <label for="organization_name" class={labelClass}>{t("partners.orgName")} <span class="text-link">*</span></label>
         <input id="organization_name" name="organization_name" type="text" required class={inputClass} />
       </div>
 
       <div class="grid gap-6 sm:grid-cols-2">
         <div>
-          <label for="contact_name" class={labelClass}>Your name</label>
+          <label for="contact_name" class={labelClass}>{t("partners.contactName")}</label>
           <input id="contact_name" name="contact_name" type="text" autocomplete="name" class={inputClass} />
         </div>
         <div>
-          <label for="contact_email" class={labelClass}>Contact email <span class="text-link">*</span></label>
+          <label for="contact_email" class={labelClass}>{t("partners.contactEmail")} <span class="text-link">*</span></label>
           <input id="contact_email" name="contact_email" type="email" required autocomplete="email" class={inputClass} />
         </div>
       </div>
 
       <div class="grid gap-6 sm:grid-cols-2">
         <div>
-          <label for="contact_phone" class={labelClass}>Phone</label>
+          <label for="contact_phone" class={labelClass}>{t("partners.phone")}</label>
           <input id="contact_phone" name="contact_phone" type="tel" autocomplete="tel" class={inputClass} />
         </div>
         <div>
-          <label for="website" class={labelClass}>Website</label>
+          <label for="website" class={labelClass}>{t("partners.website")}</label>
           <input id="website" name="website" type="url" placeholder="https://…" class={inputClass} />
         </div>
       </div>
 
       <div class="grid gap-6 sm:grid-cols-2">
         <div>
-          <label for="city" class={labelClass}>City</label>
+          <label for="city" class={labelClass}>{t("partners.city")}</label>
           <input id="city" name="city" type="text" class={inputClass} />
         </div>
         <div>
-          <label for="state" class={labelClass}>State</label>
+          <label for="state" class={labelClass}>{t("partners.state")}</label>
           <select id="state" name="state" class={inputClass}>
-            <option value="">Select…</option>
+            <option value="">{t("partners.select")}</option>
             {US_STATES.map((s) => <option value={s}>{s}</option>)}
           </select>
         </div>
       </div>
 
       <fieldset>
-        <legend class={labelClass}>What are you asking for?</legend>
+        <legend class={labelClass}>{t("partners.intentLegend")}</legend>
         <div class="mt-3 space-y-3">
           <label class="flex items-start gap-3.5 rounded-[8px] bg-background p-4">
             <input type="radio" name="intent" value="listing" checked class="mt-1 h-[18px] w-[18px] accent-vn-ocean-700" />
             <span class="text-sm leading-relaxed text-muted-foreground">
-              <strong class="block font-serif text-base font-bold text-foreground">List us as a public resource</strong>
-              Add our organization to the VisaNav directory so people can find us.
+              <strong class="block font-serif text-base font-bold text-foreground">{t("partners.intentListingTitle")}</strong>
+              {t("partners.intentListingBody")}
             </span>
           </label>
           <label class="flex items-start gap-3.5 rounded-[8px] bg-background p-4">
             <input type="radio" name="intent" value="partner" class="mt-1 h-[18px] w-[18px] accent-vn-ocean-700" />
             <span class="text-sm leading-relaxed text-muted-foreground">
-              <strong class="block font-serif text-base font-bold text-foreground">Partner with us</strong>
-              We'd like to offer VisaNav to the people we serve (a pilot).
+              <strong class="block font-serif text-base font-bold text-foreground">{t("partners.intentPartnerTitle")}</strong>
+              {t("partners.intentPartnerBody")}
             </span>
           </label>
         </div>
@@ -117,11 +130,11 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
 
       <label class="flex items-center gap-2.5 text-sm font-medium text-foreground">
         <input type="checkbox" name="offers_pro_bono" class="h-[18px] w-[18px] accent-vn-ocean-700" />
-        We provide free (pro-bono) legal help
+        {t("partners.proBono")}
       </label>
 
       <div>
-        <label for="message" class={labelClass}>Anything else we should know?</label>
+        <label for="message" class={labelClass}>{t("partners.message")}</label>
         <textarea id="message" name="message" rows="4" class="vn-field mt-2 px-3 py-2.5 text-sm leading-5"></textarea>
       </div>
 
@@ -136,11 +149,10 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
         type="submit"
         class="vn-btn vn-btn-primary h-12 px-6 text-base"
       >
-        Submit request
+        {t("partners.submit")}
       </button>
       <p class="text-xs leading-relaxed text-muted-foreground">
-        By submitting you confirm the information is accurate. Submissions are
-        reviewed before listing.
+        {t("partners.fineprint")}
       </p>
     </form>
 
@@ -151,7 +163,10 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
 </Base>
 
 <script>
-  import { SUBMISSIONS_ENDPOINT, TURNSTILE_SITE_KEY } from "../config";
+  import { SUBMISSIONS_ENDPOINT, TURNSTILE_SITE_KEY } from "../../config";
+
+  // Copy for the strings this script writes, rendered per locale at build time.
+  const strings = JSON.parse(document.getElementById("partners-page")!.dataset.strings ?? "{}");
 
   const form = document.getElementById("partner-form") as HTMLFormElement;
   const success = document.getElementById("success") as HTMLElement;
@@ -177,7 +192,7 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
       }
       if (parts.length) return parts.join("  ");
     }
-    return "Something went wrong. Please check your entries and try again.";
+    return strings.errGeneric;
   }
 
   form.addEventListener("submit", async (e) => {
@@ -195,7 +210,7 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
     // Turnstile usually solves silently on load; if it hasn't yet, ask the
     // user to wait rather than submitting a request the API will reject.
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      showError("Please complete the verification challenge, then submit again.");
+      showError(strings.errCaptcha);
       return;
     }
 
@@ -215,11 +230,16 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
     };
 
     submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting…";
+    submitBtn.textContent = strings.submitting;
     try {
       const res = await fetch(SUBMISSIONS_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          // So the API's validation errors come back in the page's language.
+          "Accept-Language": strings.locale,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -231,7 +251,7 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
       }
       resetTurnstile(); // any non-2xx consumed the token; get a fresh one
       if (res.status === 429) {
-        showError("Too many submissions from this network right now. Please try again later.");
+        showError(strings.errTooMany);
       } else {
         let data: unknown = null;
         try {
@@ -243,10 +263,10 @@ const labelClass = "block text-sm font-medium leading-none text-foreground";
       }
     } catch {
       resetTurnstile();
-      showError("We couldn't reach the server. Check your connection and try again.");
+      showError(strings.errNetwork);
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Submit request";
+      submitBtn.textContent = strings.submit;
     }
   });
 </script>

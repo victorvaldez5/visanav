@@ -1,0 +1,204 @@
+{
+  "meta": {
+    "siteName": "VisaNav"
+  },
+  "layout": {
+    "skipToContent": "Skip to content",
+    "homeLabel": "VisaNav home",
+    "beta": "BETA",
+    "openMenu": "Open menu",
+    "primaryNav": "Primary",
+    "footerNav": "Footer",
+    "language": "Language"
+  },
+  "nav": {
+    "home": "Home",
+    "findHelp": "Find help",
+    "forOrgs": "For organizations",
+    "startChat": "Start free chat"
+  },
+  "footer": {
+    "tagline": "A free, public-interest tool that helps immigrants understand their options and find trustworthy, low-cost help.",
+    "directory": "Resource directory",
+    "terms": "Terms of use",
+    "privacy": "Privacy",
+    "englishOnly": "English only",
+    "notLawFirm": "VisaNav is not a law firm and does not provide legal advice.",
+    "disclaimer": "Information here is general and may not fit your situation. Always confirm with a qualified, accredited representative or attorney before acting. VisaNav is free — no one should ever ask you to pay to use it.",
+    "copyright": "© {year} VisaNav. Built as a public good."
+  },
+  "home": {
+    "title": "VisaNav — Free, private immigration help",
+    "description": "A free public tool, now in beta, that explains your immigration options in plain language and connects you to recognized nonprofits and pro-bono legal help near you. Personal details are removed from your question in your browser before it's sent. Anonymous, encrypted, no account, no cost, no data sold.",
+    "eyebrow": [
+      "BETA",
+      "FREE PUBLIC TOOL",
+      "NOT AFFILIATED WITH USCIS OR ICE"
+    ],
+    "h1": "Immigration is confusing. Getting help shouldn't be.",
+    "lead": "VisaNav answers your immigration questions in plain language, cites official sources, and points you to trustworthy free and low-cost help near you. Ask anonymously, with no account and no cost, and personal details are removed from your question before it's ever sent.",
+    "ctaChat": "Start a free chat",
+    "ctaFind": "Find help near you",
+    "trust": [
+      "100% free",
+      "No account needed",
+      "Personal details removed before sending",
+      "Encrypted, never sold",
+      "Not a law firm"
+    ],
+    "teaser": {
+      "title": "Ask in your own words",
+      "body": "No forms, no jargon, no account. Write the way you would tell a friend.",
+      "label": "Your question",
+      "placeholder": "My work permit expires in three months.",
+      "submit": "Ask anonymously",
+      "eyebrow": [
+        "ANONYMOUS",
+        "ENCRYPTED",
+        "YOURS TO DELETE"
+      ]
+    },
+    "how": {
+      "title": "How VisaNav helps",
+      "body": "Three steps, in plain language, from your first question to real help near you.",
+      "steps": [
+        {
+          "title": "Ask in your own words",
+          "body": "Describe your situation in plain language — no forms, no jargon, no account required."
+        },
+        {
+          "title": "Get clear answers with sources",
+          "body": "VisaNav explains your options and points to official USCIS and government sources you can verify."
+        },
+        {
+          "title": "Find free help near you",
+          "body": "Connect to recognized nonprofits and pro-bono providers in your state — not to anyone trying to sell you something."
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Your privacy comes first",
+      "intro": "Immigration questions are personal. Ask a chatbot like ChatGPT directly and your exact words, and who you are, can be stored and tied to you. VisaNav removes personal details in your browser before your question is ever sent, so you can ask freely without wondering where your information goes.",
+      "items": [
+        {
+          "title": "We remove your personal details first",
+          "body": "Before your message leaves your device, VisaNav removes personal details like A-numbers, receipt numbers, Social Security numbers, emails, phones, addresses and dates, so they never reach our servers or the AI. You'll see exactly what was removed."
+        },
+        {
+          "title": "Anonymous by default",
+          "body": "No account required, and we never store your IP address. Ask your questions without signing up or telling us who you are."
+        },
+        {
+          "title": "Encrypted, and yours to delete",
+          "body": "Your conversations are encrypted and kept only as long as needed — and you can delete your account and data whenever you want."
+        },
+        {
+          "title": "Never sold or shared",
+          "body": "We don't sell your information or use it for advertising. Your questions are used only to answer you — nothing else."
+        }
+      ]
+    },
+    "band": {
+      "title": "A directory of real, trustworthy help",
+      "body": "Browse {total} nonprofit and pro-bono organizations — including {proBono} pro-bono legal providers — across {states} states, drawn from official DOJ/EOIR recognized-organization data.",
+      "cta": "Browse the directory"
+    },
+    "partners": {
+      "eyebrow": [
+        "FOR ORGANIZATIONS",
+        "REVIEWED BEFORE LISTING"
+      ],
+      "title": "Do you run an organization that helps immigrants?",
+      "body": "Ask to be listed as a trusted resource, or partner with us to offer VisaNav to the people you serve. Every request is reviewed before it's listed.",
+      "cta": "Request to be included",
+      "cards": [
+        {
+          "title": "Get listed in the directory",
+          "body": "Ask to be added as a trusted resource, so people in your state can find your organization."
+        },
+        {
+          "title": "Partner with us",
+          "body": "Offer VisaNav to the people you serve — free, anonymous and with no account to set up."
+        }
+      ]
+    }
+  },
+  "directory": {
+    "title": "Find free immigration help near you — VisaNav directory",
+    "description": "Search a directory of nonprofit and pro-bono immigration organizations across the U.S., drawn from official DOJ/EOIR recognized-organization data. Free to browse, no account needed.",
+    "eyebrow": [
+      "FREE TO BROWSE",
+      "NO ACCOUNT NEEDED",
+      "DOJ/EOIR DATA"
+    ],
+    "h1": "Find trustworthy immigration help",
+    "intro": "{total} nonprofit and pro-bono organizations — including {proBono} pro-bono legal providers — from official DOJ/EOIR recognized-organization data. Free to browse. Being listed here is not an endorsement; always verify an organization before sharing personal details.",
+    "searchLabel": "Search by name or city",
+    "searchPlaceholder": "e.g. Catholic Charities, Houston…",
+    "state": "State",
+    "allStates": "All states",
+    "proBonoOnly": "Pro-bono only",
+    "showing": {
+      "one": "Showing {count} organization",
+      "other": "Showing {count} organizations"
+    },
+    "range": {
+      "one": "Showing {from}–{to} of {count} organization",
+      "other": "Showing {from}–{to} of {count} organizations"
+    },
+    "none": "No organizations found",
+    "proBono": "Pro bono",
+    "phone": "Phone",
+    "website": "Website",
+    "visitWebsite": "Visit website",
+    "askAbout": "Ask VisaNav about this org",
+    "empty": "No organizations match your search. Try a different state or clear the filters.",
+    "pagerLabel": "Directory pages",
+    "prev": "Prev",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}"
+  },
+  "partners": {
+    "title": "For organizations — get listed or partner with VisaNav",
+    "description": "Nonprofits and pro-bono immigration providers can request to be listed in the VisaNav directory or partner to offer VisaNav to the people they serve. Every request is reviewed.",
+    "eyebrow": [
+      "FOR ORGANIZATIONS",
+      "REVIEWED BEFORE LISTING"
+    ],
+    "h1": "For organizations that help immigrants",
+    "intro": "VisaNav is a free public tool, currently in beta. If your organization provides immigration help, you can ask to be listed as a trusted resource, or partner with us to offer VisaNav to the people you serve. We review every request before anything is listed — this keeps the directory trustworthy.",
+    "successTitle": "Thank you — we've got your request",
+    "successBody": "A person will review it before anything is published. We'll reach out at the email you provided if we need anything else.",
+    "honeypot": "Website (leave blank)",
+    "orgName": "Organization name",
+    "contactName": "Your name",
+    "contactEmail": "Contact email",
+    "phone": "Phone",
+    "website": "Website",
+    "city": "City",
+    "state": "State",
+    "select": "Select…",
+    "intentLegend": "What are you asking for?",
+    "intentListingTitle": "List us as a public resource",
+    "intentListingBody": "Add our organization to the VisaNav directory so people can find us.",
+    "intentPartnerTitle": "Partner with us",
+    "intentPartnerBody": "We'd like to offer VisaNav to the people we serve (a pilot).",
+    "proBono": "We provide free (pro-bono) legal help",
+    "message": "Anything else we should know?",
+    "submit": "Submit request",
+    "submitting": "Submitting…",
+    "fineprint": "By submitting you confirm the information is accurate. Submissions are reviewed before listing.",
+    "errCaptcha": "Please complete the verification challenge, then submit again.",
+    "errTooMany": "Too many submissions from this network right now. Please try again later.",
+    "errGeneric": "Something went wrong. Please check your entries and try again.",
+    "errNetwork": "We couldn't reach the server. Check your connection and try again."
+  },
+  "notFound": {
+    "title": "Page not found — VisaNav",
+    "description": "The page you're looking for doesn't exist.",
+    "heading": "We couldn't find that page",
+    "body": "The page may have moved. Try the directory or start a free chat.",
+    "home": "Go home",
+    "findHelp": "Find help"
+  }
+}
