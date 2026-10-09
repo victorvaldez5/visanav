@@ -11,7 +11,11 @@
           class="mr-2 h-5"
         />
       </header>
-      <RouterView />
+      <!-- The shell is bound to the viewport so the chat can scroll only its
+           conversation; every other page scrolls inside this region instead. -->
+      <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <RouterView />
+      </div>
       <slot />
     </SidebarInset>
   </SidebarProvider>

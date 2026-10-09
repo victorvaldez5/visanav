@@ -647,3 +647,67 @@ def test_download_ra_rosters_matches_links_by_text(tmp_path, monkeypatch):
         "recognized_org_and_accredited_rep_roster_by_state_and_city.pdf",
     ]
     assert (tmp_path / "raroster-reps.pdf").read_bytes().startswith(b"%PDF")
+
+
+# --- resource_lookup: language preference ---------------------------------
+
+def _lang_ctx(locale="es"):
+    return SimpleNamespace(deps=SimpleNamespace(namespace="us", locale=locale))
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_prefers_orgs_serving_the_user_language():
+    """Soft preference: a Spanish-serving org outranks an equally contactable
+    pro-bono one, and the non-serving org is still returned."""
+    _make_org("english-only", pro_bono=True, phones=["+1-555-000-0001"])
+    _make_org("spanish-help", pro_bono=False, phones=["+1-555-000-0002"], languages=["es"])
+
+    result = asyncio.run(resource_lookup(_lang_ctx("es")))
+
+    assert [m["name"] for m in result["matches"]] == ["Spanish Help", "English Only"]
+    assert result["matches"][0]["languages"] == ["es"]
+    assert "first" in result["note"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_language_note_when_no_org_is_tagged():
+    _make_org("untagged", pro_bono=True, phones=["+1-555-000-0003"])
+
+    result = asyncio.run(resource_lookup(_lang_ctx("es")))
+
+    assert [m["name"] for m in result["matches"]] == ["Untagged"]
+    assert "Do not claim" in result["note"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_default_language_adds_no_note():
+    _make_org("untagged", pro_bono=True, phones=["+1-555-000-0003"])
+
+    result = asyncio.run(resource_lookup(_lang_ctx("en")))
+
+    assert result["note"] is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_explicit_language_overrides_locale_and_strips_script():
+    _make_org("english-only", pro_bono=True, phones=["+1-555-000-0001"])
+    _make_org("chinese-help", pro_bono=False, phones=["+1-555-000-0004"], languages=["zh"])
+
+    # An English-UI user asking for Chinese-language help.
+    result = asyncio.run(resource_lookup(_lang_ctx("en"), language="zh"))
+    assert result["matches"][0]["name"] == "Chinese Help"
+
+    # A zh-Hans locale maps onto the bare "zh" the directory stores.
+    result = asyncio.run(resource_lookup(_lang_ctx("zh-Hans")))
+    assert result["matches"][0]["name"] == "Chinese Help"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resource_lookup_language_org_outside_the_first_60_still_surfaces():
+    for i in range(65):
+        _make_org(f"a-filler-{i:02d}", pro_bono=True, phones=["+1-555-000-9999"])
+    _make_org("zz-spanish", pro_bono=True, phones=["+1-555-000-0005"], languages=["es"])
+
+    result = asyncio.run(resource_lookup(_lang_ctx("es")))
+
+    assert result["matches"][0]["name"] == "Zz Spanish"

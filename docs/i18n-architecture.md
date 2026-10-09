@@ -1,8 +1,8 @@
 # Internationalization (i18n) architecture
 
-Status: Phases 1 and 2 implemented; Phase 3 in progress (3a done); Phases 4 to 6 planned.
+Status: Phases 1 to 4 implemented (Phase 3 done through 3c); Phases 5 and 6 planned.
 Owner: VisaNav
-Last updated: 2026-09-23
+Last updated: 2026-10-08
 
 This document is the source of truth for how VisaNav supports multiple languages
 across its three deployed surfaces (the Vue app, the Astro marketing site, and the
@@ -132,8 +132,9 @@ at generation time.
 - **Store and service strings** (Pinia toasts, error fallbacks) are routed through
   the exported global `i18n.global.t`, since they live outside component setup.
 - **Extraction** proceeds feature by feature, not big-bang.
-- **Switcher:** `LanguageSwitcher.vue` in the sidebar footer (moved out of
-  `BetaBanner.vue`), visible to anonymous and authenticated users, each option
+- **Switcher:** `LanguageMenu.vue` (an icon button opening `LanguageMenuItems.vue`) in
+  the sidebar header (previously a footer toggle, `LanguageSwitcher.vue`, moved out of
+  `BetaBanner.vue`; the theme toggle now lives in the account / Register-Login menus), visible to anonymous and authenticated users, each option
   labelled in its own language. On change: `setLocale()` (load catalog + set +
   persist localStorage + sync `<html lang>`), and if authenticated, write through
   to `Profile.preferred_language` (`useLocaleSync`).
@@ -178,9 +179,19 @@ are org-authored). Instead we surface the already-modeled `Organization.language
 
 - Wire it into the agent's `resource_lookup` tool so Javi prefers orgs that serve
   the user's language.
-- Surface it in the directory filter/UI.
+- Surface it in the directory UI (card text now; a filter once the data supports it).
 
-The data and a REST filter already exist; they are just unused by the agent today.
+The data and a REST filter already exist.
+
+Done: `resource_lookup` ranks orgs known to serve the user's language first. The
+language is the interface locale (`Deps.locale`, script stripped: `zh-Hans` is `zh`)
+unless the model passes `language`. It is a **soft preference**, never a filter,
+because the directory records languages for almost no one (3 of 994 active orgs when
+this shipped; the DOJ rosters carry no language data). Each match returns `languages`,
+and the result `note` tells Javi to say that language support is unknown rather than
+claim it. Cards in the directory show an org's languages when it has any. A language
+filter chip in the UI is deliberately not built until the data is there, since today it
+would return almost nothing; filling that data is the real follow-up.
 
 ## Translation workflow and cross-catalog consistency
 
@@ -250,8 +261,12 @@ Build order front-loads the shared foundations so nothing is built twice.
 2. **Chat locale** (done): thread `request.LANGUAGE_CODE` into `Deps` and the
    agent, plus the softened mirror-rule override.
 3. **App UI extraction** + promote the switcher (3a done: lazy catalogs, `?lang=`
-   handoff, switcher, profile write-through, `Language` prune).
-4. **Resource-directory language matching.**
+   handoff, switcher, profile write-through, `Language` prune; 3b done: sidebar nav,
+   login/register, error pages, auth/profile store messages; 3c done: resources,
+   representatives, forms and account pages, the shared filter/pagination/sheet
+   primitives; still English by design: US state names and the `forms.json`
+   titles, summaries and categories, which are content, not UI chrome).
+4. **Resource-directory language matching** (done; see above).
 5. **Marketing i18n + SEO.**
 6. **Emails.**
 

@@ -1,6 +1,6 @@
 import {authService} from "@/services/authService";
 import {API_BASE_URL} from "@/plugins/axios";
-import {currentLocale} from "@/i18n";
+import {currentLocale, i18n} from "@/i18n";
 
 export interface MessagePayload {
     user_message: string;
@@ -65,7 +65,7 @@ function parseFrame(raw: string, handlers: StreamHandlers) {
             handlers.onDone?.(data);
             break;
         case "error":
-            handlers.onError?.(data.detail ?? "The assistant failed to respond.");
+            handlers.onError?.(data.detail ?? i18n.global.t("errors.assistantFailed"));
             break;
     }
 }

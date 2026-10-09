@@ -13,7 +13,14 @@ vi.mock("vue", async (importOriginal) => {
 // under test. `push` is created via vi.hoisted so the factory can close over it.
 const { push } = vi.hoisted(() => ({ push: vi.fn(() => Promise.resolve()) }));
 vi.mock("vue-router", () => ({ useRouter: () => ({ push }) }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ locale: { value: "en" } }) }));
+// `t` resolves against the real English catalog, so assertions stay on the
+// user-visible text and a renamed key fails here.
+vi.mock("vue-i18n", async () => {
+  const en = (await import("@/locales/en.json")).default as Record<string, unknown>;
+  const t = (key: string) =>
+    key.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], en) as string;
+  return { useI18n: () => ({ t, locale: { value: "en" } }) };
+});
 
 const { toast } = vi.hoisted(() => ({ toast: vi.fn() }));
 vi.mock("vue-sonner", () => ({ toast }));

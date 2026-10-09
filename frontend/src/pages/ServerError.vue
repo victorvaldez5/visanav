@@ -4,13 +4,13 @@
     <section class="text-center">
       <div class="mx-auto mb-4 h-10 w-10 rounded-full border-2 border-gray-300 border-t-black animate-spin" />
       <h2 class="text-xl font-semibold">
-        Loading…
+        {{ t("common.loading") }}
       </h2>
       <p
         v-if="!minimal"
         class="text-gray-600 mt-2"
       >
-        If this takes too long, please check your connection and try again.
+        {{ t("errors.slowLoad") }}
       </p>
 
       <div
@@ -25,7 +25,7 @@
           to="/"
           class="text-sm text-blue-600 hover:underline"
         >
-          Back to Home
+          {{ t("common.backHome") }}
         </RouterLink>
       </div>
     </section>
@@ -34,12 +34,14 @@
 
 <script setup lang="ts">
 import {computed} from 'vue'
+import {useI18n} from 'vue-i18n'
 
 interface Props {
   error?: unknown
   minimal?: boolean
 }
 
+const {t} = useI18n()
 const props = defineProps<Props>()
 
 const errorMessage = computed(() => {

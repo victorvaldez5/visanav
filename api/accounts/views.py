@@ -5,7 +5,6 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from core.mail import send_verification_email
@@ -69,7 +68,9 @@ class VerifyEmailView(APIView):
         user.is_verified = True
         user.save(update_fields=["is_active", "is_verified"])
 
-        refresh = RefreshToken.for_user(user)
+        # Same builder as login, so the token carries the username/email claims the
+        # app reads to label the signed-in user (for_user() alone omits them).
+        refresh = CustomTokenObtainPairSerializer.get_token(user)
         return Response(
             {
                 "userId": user.id,

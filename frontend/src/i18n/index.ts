@@ -4,7 +4,7 @@ import en from "@/locales/en.json";
 /**
  * App i18n. The initial locale is resolved once at boot (see `resolveLocale`),
  * persisted per-viewer in localStorage, and switchable from the sidebar's
- * LanguageSwitcher. `setLocale` is the single writer.
+ * language menu in the sidebar. `setLocale` is the single writer.
  *
  * SUPPORTED_LOCALES and DEFAULT_LOCALE mirror /i18n/supported-locales.json, and
  * each locale's catalog lives in src/locales/<code>.json. CI

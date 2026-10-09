@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
+import {useI18n} from "vue-i18n";
 import {networkService, type Representative, type RepresentativeFilters} from "@/services/networkService.ts";
 import {US_STATES} from "@/lib/usStates.ts";
 import {useDirectoryFilters} from "@/composables/useDirectoryFilters.ts";
@@ -22,18 +23,12 @@ const REP_ORDERING: Record<string, string> = {
   name: "name",
   org: "organization__name,name",
 };
-const SCOPE_ITEMS = [
-  {
-    id: "full",
-    label: "Full accreditation",
-    hint: "Can appear for you before USCIS and in the immigration courts (EOIR) and the Board of Immigration Appeals.",
-  },
-  {
-    id: "dhs",
-    label: "USCIS only",
-    hint: "Can file with USCIS — applications, petitions, renewals — but not appear in immigration court or before the BIA.",
-  },
-];
+const {t, tm, rt} = useI18n();
+const scopeItems = computed(() => [
+  {id: "full", label: t("reps.scopeFull"), hint: t("reps.scopeFullHint")},
+  {id: "dhs", label: t("reps.scopeDhs"), hint: t("reps.scopeDhsHint")},
+]);
+const eyebrow = computed(() => (tm("reps.eyebrow") as Parameters<typeof rt>[0][]).map((m) => rt(m)));
 const route = useRoute();
 const router = useRouter();
 
@@ -64,7 +59,7 @@ const activeFilterCount = computed(() => {
 const {items, page, count, loading, reload} = useDirectoryFilters<Representative, RepresentativeFilters>({
   buildFilters,
   fetchPage: (p, f) => networkService.getRepresentatives(p, f),
-  errorMessage: "Couldn't load representatives. Please try again.",
+  errorMessage: () => t("reps.loadError"),
 });
 
 function repLocation(rep: Representative): string | null {
@@ -73,9 +68,8 @@ function repLocation(rep: Representative): string | null {
   return rep.organization_state || rep.organization_city || null;
 }
 function expiryLabel(days: number): string {
-  if (days <= 0) return "Expires today";
-  if (days === 1) return "Expires in 1 day";
-  return `Expires in ${days} days`;
+  if (days <= 0) return t("reps.expiresToday");
+  return t("reps.expiresIn", {n: days}, days);
 }
 function viewOrg(rep: Representative) {
   if (rep.organization_name) router.push({name: "Resources", query: {q: rep.organization_name}});
@@ -92,13 +86,12 @@ function clearFilters() {
   <div class="mx-auto w-full max-w-[1180px] px-5 pb-10">
     <!-- Page head -->
     <header class="pb-[22px] pt-4">
-      <Eyebrow :parts="['DOJ accredited', 'Not attorneys', 'Reached through their organization']" />
+      <Eyebrow :parts="eyebrow" />
       <h1 class="mt-2.5 font-serif text-[30px] font-bold leading-[38px] max-sm:text-2xl max-sm:leading-8">
-        DOJ-Accredited Representatives
+        {{ t("reps.title") }}
       </h1>
       <p class="mt-2.5 max-w-[66ch] text-base leading-[25px] text-muted-foreground">
-        Not lawyers, but the Department of Justice authorizes them to represent you. Reach each one
-        through their recognized organization.
+        {{ t("reps.intro") }}
       </p>
     </header>
 
@@ -109,13 +102,13 @@ function clearFilters() {
           <label
             for="r-search"
             class="text-sm font-medium leading-none"
-          >Search by name or organization</label>
+          >{{ t("reps.searchLabel") }}</label>
           <Input
             id="r-search"
             v-model="search"
             type="search"
             autocomplete="off"
-            placeholder="e.g. Jewish Family Service"
+            :placeholder="t('reps.searchPlaceholder')"
             class="h-[38px] max-md:h-[46px]"
           />
         </div>
@@ -125,14 +118,14 @@ function clearFilters() {
         <label
           for="r-state"
           class="text-sm font-medium leading-none"
-        >State</label>
+        >{{ t("common.state") }}</label>
         <select
           id="r-state"
           v-model="region"
           :class="selectClass"
         >
           <option value="">
-            All states
+            {{ t("common.allStates") }}
           </option>
           <option
             v-for="s in US_STATES"
@@ -145,16 +138,16 @@ function clearFilters() {
       </div>
       <div class="grid gap-[9px]">
         <div class="flex items-center gap-1.5">
-          <span class="text-xs font-bold uppercase tracking-[0.06em] text-muted-foreground">Scope</span>
+          <span class="text-xs font-bold uppercase tracking-[0.06em] text-muted-foreground">{{ t("common.scope") }}</span>
           <InfoHint
-            label="About accreditation scope"
-            text="“Full accreditation” can represent you in immigration court (EOIR &amp; the BIA) and before USCIS. “USCIS only” can file with USCIS — applications, petitions, renewals — but can't appear in court."
+            :label="t('reps.scopeHintLabel')"
+            :text="t('reps.scopeHint')"
           />
         </div>
         <FilterChips
           v-model="scope"
-          :items="SCOPE_ITEMS"
-          aria-label="Scope"
+          :items="scopeItems"
+          :aria-label="t('common.scope')"
         />
       </div>
     </FilterPanel>
@@ -162,25 +155,23 @@ function clearFilters() {
     <!-- Toolbar -->
     <div class="flex flex-wrap items-baseline justify-between gap-4 pb-4 pt-[26px] max-md:pt-4">
       <h2 class="font-serif text-[22px] font-bold leading-[30px] max-md:text-[20px] max-md:leading-[28px]">
-        {{ count }} representative{{ count === 1 ? "" : "s" }}<template v-if="region">
-          in {{ region }}
-        </template>
+        {{ region ? t("reps.countIn", {count, region}, count) : t("reps.count", count) }}
       </h2>
       <div class="flex items-center gap-2 text-sm text-muted-foreground max-md:grid max-md:w-full max-md:grid-cols-[auto_1fr]">
-        <label for="r-sort">Sort by</label>
+        <label for="r-sort">{{ t("common.sortBy") }}</label>
         <select
           id="r-sort"
           v-model="sort"
           :class="[selectClass, 'md:h-[34px] md:w-auto md:text-sm']"
         >
           <option value="expiry">
-            Accreditation expiry (latest)
+            {{ t("reps.sort.expiry") }}
           </option>
           <option value="name">
-            Name (A–Z)
+            {{ t("reps.sort.name") }}
           </option>
           <option value="org">
-            Organization
+            {{ t("reps.sort.org") }}
           </option>
         </select>
       </div>
@@ -211,7 +202,7 @@ function clearFilters() {
           </div>
           <div class="flex max-w-[52%] flex-none flex-wrap justify-end gap-1.5 max-md:max-w-full max-md:justify-start">
             <Badge :variant="rep.dhs_only ? 'info' : 'status'">
-              {{ rep.dhs_only ? "USCIS only" : "Full accreditation" }}
+              {{ rep.dhs_only ? t("reps.scopeDhs") : t("reps.scopeFull") }}
             </Badge>
             <Badge
               v-if="rep.days_left !== null && rep.days_left <= 90"
@@ -225,17 +216,16 @@ function clearFilters() {
         <div class="mt-3.5">
           <Eyebrow
             variant="muted"
-            :parts="[repLocation(rep), rep.accreditation_expiration ? 'Accredited through ' + fmtDate(rep.accreditation_expiration) : null]"
+            :parts="[repLocation(rep), rep.accreditation_expiration ? t('reps.accreditedThrough', {date: fmtDate(rep.accreditation_expiration)}) : null]"
           />
         </div>
 
         <p class="mt-3 text-[13px] leading-[19px] text-muted-foreground">
           <template v-if="rep.organization_phone">
-            The number is their organization's — the roster lists no direct line for the
-            representative, so ask for them by name.
+            {{ t("reps.orgPhoneNote") }}
           </template>
           <template v-else>
-            The roster lists no direct phone or email — reach them through their organization.
+            {{ t("reps.noDirect") }}
           </template>
         </p>
 
@@ -261,7 +251,7 @@ function clearFilters() {
             :class="crossLinkClass"
             @click="viewOrg(rep)"
           >
-            View organization <span aria-hidden="true">→</span>
+            {{ t("reps.viewOrg") }} <span aria-hidden="true">→</span>
           </button>
         </div>
       </article>
@@ -273,24 +263,24 @@ function clearFilters() {
       class="mt-3.5 rounded-xl bg-card p-10 text-center shadow-elevation-1"
     >
       <h3 class="font-serif text-[17px] font-bold leading-[25px]">
-        No representatives match those filters
+        {{ t("reps.emptyTitle") }}
       </h3>
       <p class="mx-auto mt-2 max-w-[44ch] text-sm leading-[21px] text-muted-foreground">
-        Try another state or clear the scope filter.
+        {{ t("reps.emptyBody") }}
       </p>
       <Button
         variant="outline"
         class="mt-3.5"
         @click="clearFilters"
       >
-        Clear filters
+        {{ t("common.clearFilters") }}
       </Button>
     </div>
     <p
       v-if="loading && !items.length"
       class="mt-6 text-center text-sm text-muted-foreground"
     >
-      Loading…
+      {{ t("common.loading") }}
     </p>
 
     <PaginationBar
@@ -312,12 +302,10 @@ function clearFilters() {
       />
       <div>
         <h4 class="font-serif text-[14.5px] font-bold leading-[21px]">
-          Expired accreditations are hidden here
+          {{ t("reps.expiredTitle") }}
         </h4>
         <p class="mt-0.5 text-[13.5px] leading-5">
-          A lapsed accreditation can't be used to represent you, so this directory hides expired
-          entries and flags any that lapse within 90 days. Always confirm a representative's current
-          standing on the official DOJ roster.
+          {{ t("reps.expiredBody") }}
         </p>
       </div>
     </div>
@@ -328,13 +316,13 @@ function clearFilters() {
         <div>
           <Eyebrow
             variant="onband"
-            :parts="['Before you hand over documents']"
+            :parts="[t('reps.rosterEyebrow')]"
           />
           <h3 class="mt-2 max-w-[34ch] font-serif text-xl font-bold leading-7">
-            Check any representative against the official DOJ roster
+            {{ t("reps.rosterTitle") }}
           </h3>
           <p class="mt-2 max-w-[62ch] text-sm leading-6 text-band-quiet">
-            Every listing on this page was pulled from it. If a name isn't on the roster, walk away.
+            {{ t("reps.rosterBody") }}
           </p>
         </div>
         <Button
@@ -347,14 +335,13 @@ function clearFilters() {
             :href="EOIR_ROSTER_URL"
             target="_blank"
             rel="noopener noreferrer"
-          >Open the DOJ roster</a>
+          >{{ t("reps.rosterButton") }}</a>
         </Button>
       </div>
     </div>
 
     <p class="mt-[22px] max-w-[80ch] text-xs leading-[18px] text-muted-foreground">
-      Representatives come from the DOJ EOIR Recognition &amp; Accreditation roster. A representative
-      has no direct phone or email of their own — reach them through their recognized organization.
+      {{ t("reps.disclaimer") }}
     </p>
   </div>
 </template>

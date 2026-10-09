@@ -259,9 +259,12 @@ KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
 # in [0,1] (1 = identical). A match below this is treated as "not a confident
 # official source": its text is withheld from the model and Javi must fall back
 # to pointing at the official site / a representative rather than answering from
-# general knowledge. 0.5 is a conservative starting point for voyage-3; tune it
-# against the retrieval scores now logged by semantic_search (see core/llm.py).
-RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE") or "0.5")
+# general knowledge. Tuned against voyage-3 on the us corpus: on-topic questions
+# score about 0.43 to 0.56 and an off-topic control about 0.22, so 0.40 keeps the
+# guard against irrelevant hits without rejecting real matches. Re-tune against
+# the retrieval scores logged by semantic_search (see core/llm.py) if the corpus
+# or embedding model changes.
+RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE") or "0.40")
 # Where the ingest command reads curated Markdown from. Defaults to the repo's
 # data/countries (reachable from a full checkout; ingestion is not run in the
 # slim prod web image).

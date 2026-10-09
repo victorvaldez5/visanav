@@ -11,7 +11,7 @@ import {usePagination, type PaginatedResponse} from "@/composables/usePagination
 export function useDirectoryFilters<T, F>(opts: {
   buildFilters: () => F;
   fetchPage: (page: number, filters: F) => Promise<PaginatedResponse<T>>;
-  errorMessage: string;
+  errorMessage: () => string;
 }) {
   const {items, load, page, count, loading} = usePagination<T>({
     fetchPage: (p) => opts.fetchPage(p, opts.buildFilters()),
@@ -20,7 +20,7 @@ export function useDirectoryFilters<T, F>(opts: {
   function reload(p = 1) {
     load(p).catch((e) => {
       console.error(e);
-      toast.error(opts.errorMessage);
+      toast.error(opts.errorMessage());
     });
   }
 

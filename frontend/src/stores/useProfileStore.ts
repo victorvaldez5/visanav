@@ -4,6 +4,7 @@ import {authService} from "@/services/authService";
 import {locationService} from '@/services/locationService';
 import {toast} from "vue-sonner";
 import {useRouter} from "vue-router";
+import {i18n} from "@/i18n";
 
 
 interface ListItem {
@@ -70,8 +71,8 @@ export const useProfileStore = defineStore("profile", () => {
             countries.value = _countries;
             languages.value = _languages;
         } catch (e: any) {
-            error.value = e?.message ?? "Failed to load user/profile";
-            toast.error("Failed to load user/profile");
+            error.value = e?.message ?? i18n.global.t("errors.profileLoad");
+            toast.error(i18n.global.t("errors.profileLoad"));
         } finally {
             loading.value = false;
         }

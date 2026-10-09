@@ -4,7 +4,7 @@ import LineIcon from "@/components/interface/LineIcon.vue";
 
 // Persistent (non-dismissible) beta + legal-information disclaimer. The
 // "accredited representative" phrase links to the official DOJ EOIR roster.
-// The language switcher lives in the sidebar footer (LanguageSwitcher.vue).
+// The language switcher lives in the sidebar header (LanguageMenu.vue).
 </script>
 
 <template>
