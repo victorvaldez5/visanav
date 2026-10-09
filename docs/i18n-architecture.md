@@ -1,8 +1,8 @@
 # Internationalization (i18n) architecture
 
-Status: Phases 1 to 4 implemented (Phase 3 done through 3c); Phases 5 and 6 planned.
+Status: Phases 1 to 4 and 6 implemented (Phase 3 done through 3c); Phase 5 planned.
 Owner: VisaNav
-Last updated: 2026-10-08
+Last updated: 2026-10-09
 
 This document is the source of truth for how VisaNav supports multiple languages
 across its three deployed surfaces (the Vue app, the Astro marketing site, and the
@@ -161,15 +161,31 @@ at generation time.
 
 ## Backend (`api.visanav.org`, Django) with gettext
 
-- Turn on Django's gettext machinery: add `LocaleMiddleware`, `LOCALE_PATHS`, and
-  the `LANGUAGES` allowlist. User-facing API strings get wrapped in `gettext` (`_()`)
-  incrementally.
+- Django's gettext machinery is on: `LocaleMiddleware`, `LOCALE_PATHS` and the
+  `LANGUAGES` allowlist. Every user-facing API string (auth and account errors, the
+  chat endpoint's errors, the Turnstile failure, the verification email) is wrapped
+  in `gettext as _`. Admin-only text and the tool results handed to the model are
+  deliberately not translated. Strings Django, DRF and SimpleJWT raise themselves
+  (e.g. password validators) come from their own catalogs.
 - We chose server-side gettext (over returning locale-neutral error codes the
   frontend maps) because the API is intended to be openly consumable, so it should
   return already-localized strings negotiated via `Accept-Language`.
+- **Catalogs:** `api/locale/<code>/LC_MESSAGES/django.po` is the source and `django.mo`
+  the compiled form Django loads. Both are committed, because the API image has no
+  gettext toolchain and a missing `.mo` silently falls back to English.
+  `just messages` extracts (`--no-location --no-wrap`, to keep diffs small),
+  `just compile-messages` compiles, `scripts/check_i18n_parity.mjs` rejects missing,
+  fuzzy or obsolete entries in CI, and `core/test_catalogs.py` fails if a `.mo` is
+  missing or out of date.
+- **Async views:** the chat view translates its messages up front, in the request's
+  language, because the SSE generator runs after the view has returned.
 - **Email:** the verification email
-  ([`api/core/mail.py`](../api/core/mail.py)) is rendered per the recipient's
-  profile locale (fallback `en`).
+  ([`api/core/mail.py`](../api/core/mail.py)) is written in the language the
+  registering browser sent (`request.LANGUAGE_CODE`), else the profile's preferred
+  language, else `en`, under an explicit `translation.override` so it never depends
+  on the ambient language. The link carries `?lang=<code>` (the app's handoff
+  param), so it opens in that language on any device. Still to do before launch: the
+  sender and transport are the Mailtrap sandbox, not a real provider.
 
 ## Resource directory (language matching)
 
@@ -228,7 +244,8 @@ contributor volume justifies it, not a launch dependency.
    migration does not run again on existing databases.
 4. Add its catalogs: `frontend/src/locales/<code>.json` (picked up and
    lazy-loaded automatically), plus
-   `api/locale/<code>/LC_MESSAGES/django.po` once the API has translated strings.
+   `api/locale/<code>/LC_MESSAGES/django.po` (then `just messages`, translate, and
+   `just compile-messages`; commit the `.mo` too).
 5. Reveal it in a surface's switcher only after that surface is fully translated
    and reviewed (the launch gate below).
 
@@ -268,7 +285,7 @@ Build order front-loads the shared foundations so nothing is built twice.
    titles, summaries and categories, which are content, not UI chrome).
 4. **Resource-directory language matching** (done; see above).
 5. **Marketing i18n + SEO.**
-6. **Emails.**
+6. **Emails** (done: translated per recipient; real delivery is separate).
 
 **First release = Phase 1 + Phase 2** (foundations plus Javi reliably answering in
 the chosen language): the biggest user win for the least code, and it validates the

@@ -1,0 +1,89 @@
+# Spanish translations for the VisaNav API.
+# Terms follow /i18n/GLOSSARY.md. Regenerate with:
+#   cd api && uv run python manage.py makemessages -l es --no-location --no-wrap --ignore ".venv/*"
+# then translate new entries and run: uv run python manage.py compilemessages
+msgid ""
+msgstr ""
+"Project-Id-Version: VisaNav API\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2026-10-09 00:00+0000\n"
+"Last-Translator: VisaNav contributors\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Email already exists."
+msgstr "Ya existe una cuenta con ese correo electrónico."
+
+msgid "Passwords do not match."
+msgstr "Las contraseñas no coinciden."
+
+msgid "Account created. Check your email to verify your account."
+msgstr "Cuenta creada. Revisa tu correo electrónico para verificar tu cuenta."
+
+msgid "Invalid verification link."
+msgstr "El enlace de verificación no es válido."
+
+msgid "This verification link is invalid or has expired."
+msgstr "Este enlace de verificación no es válido o ha caducado."
+
+msgid "Password is incorrect."
+msgstr "La contraseña es incorrecta."
+
+msgid "Some of your conversations are under a legal hold and cannot be deleted right now. They will be removed once the hold is lifted."
+msgstr "Algunas de tus conversaciones están bajo retención legal y no se pueden eliminar por ahora. Se eliminarán cuando se levante la retención."
+
+msgid "Your account and all associated data have been permanently deleted."
+msgstr "Tu cuenta y todos los datos asociados se han eliminado de forma permanente."
+
+msgid "Method not allowed"
+msgstr "Método no permitido"
+
+msgid "Invalid JSON body"
+msgstr "El cuerpo de la solicitud no es un JSON válido"
+
+msgid "user_message is required"
+msgstr "user_message es obligatorio"
+
+#, python-format
+msgid "Message too long (max %(max)d characters)."
+msgstr "El mensaje es demasiado largo (máximo %(max)d caracteres)."
+
+msgid "conversation must be a conversation uuid"
+msgstr "conversation debe ser el uuid de una conversación"
+
+msgid "Invalid or expired token"
+msgstr "Token no válido o caducado"
+
+msgid "Rate limit exceeded. Please wait a moment and try again."
+msgstr "Has superado el límite de solicitudes. Espera un momento e inténtalo de nuevo."
+
+msgid "Conversation not found"
+msgstr "No se encontró la conversación"
+
+msgid "Forbidden"
+msgstr "Acceso denegado"
+
+msgid "The assistant failed to respond. Please try again."
+msgstr "El asistente no pudo responder. Inténtalo de nuevo."
+
+msgid "Verify your VisaNav account"
+msgstr "Verifica tu cuenta de VisaNav"
+
+msgid "Hello,"
+msgstr "Hola:"
+
+msgid "Thanks for signing up for VisaNav. Please verify your account by opening the link below:"
+msgstr "Gracias por registrarte en VisaNav. Verifica tu cuenta abriendo el siguiente enlace:"
+
+msgid "If you did not create this account, you can ignore this email."
+msgstr "Si no creaste esta cuenta, puedes ignorar este correo."
+
+msgid "Bot verification failed. Please try again."
+msgstr "La verificación anti-bots falló. Inténtalo de nuevo."
+
+msgid "Invalid submission."
+msgstr "Envío no válido."

@@ -123,7 +123,8 @@ def test_register_creates_inactive_user_and_sends_verification(api_client, stub_
     assert created.is_active is False  # gated until verification
     assert created.check_password(PW)  # password is hashed, not stored raw
     assert Profile.objects.filter(user=created).exists()  # profile auto-created
-    stub_verification_email.assert_called_once_with(created)
+    # No Accept-Language, so the default language is what the email is written in.
+    stub_verification_email.assert_called_once_with(created, locale="en")
 
 
 def test_register_rejects_duplicate_email(api_client, user):
@@ -374,3 +375,48 @@ def test_profile_patch_is_atomic_across_user_and_profile(api_client, user, local
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
     user.profile.refresh_from_db()
     assert user.profile.preferred_language_id is None
+
+
+# --- localization ------------------------------------------------------------
+
+
+def test_register_replies_and_emails_in_the_request_language(api_client, stub_verification_email):
+    resp = api_client.post(
+        REGISTER_URL,
+        {"email": "nueva@example.com", "password": PW, "password2": PW},
+        format="json",
+        headers={"Accept-Language": "es"},
+    )
+
+    assert resp.status_code == status.HTTP_201_CREATED
+    assert resp.data["detail"] == "Cuenta creada. Revisa tu correo electrónico para verificar tu cuenta."
+    # The verification email is written in the language the browser registered in.
+    assert stub_verification_email.call_args.kwargs["locale"] == "es"
+
+
+def test_register_falls_back_to_english_for_an_unsupported_language(api_client, stub_verification_email):
+    resp = api_client.post(
+        REGISTER_URL,
+        {"email": "nouvelle@example.com", "password": PW, "password2": PW},
+        format="json",
+        headers={"Accept-Language": "fr"},
+    )
+
+    assert resp.data["detail"].startswith("Account created.")
+    assert stub_verification_email.call_args.kwargs["locale"] == "en"
+
+
+def test_validation_and_verify_errors_are_localized(api_client, user):
+    dup = api_client.post(
+        REGISTER_URL,
+        {"email": user.email, "password": PW, "password2": PW},
+        format="json",
+        headers={"Accept-Language": "es-MX"},  # a regional variant maps onto es
+    )
+    assert dup.data["email"] == ["Ya existe una cuenta con ese correo electrónico."]
+
+    bad_link = api_client.post(
+        VERIFY_URL, {"uid": "!!", "token": "x"}, format="json", headers={"Accept-Language": "es"}
+    )
+    assert bad_link.status_code == status.HTTP_400_BAD_REQUEST
+    assert bad_link.data["detail"] == "El enlace de verificación no es válido."

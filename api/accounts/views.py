@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.db import transaction
 from django.utils.http import urlsafe_base64_decode
+from django.utils.translation import gettext as _
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,8 +31,10 @@ class RegisterView(generics.CreateAPIView):
         # login and on every authenticated request, so we issue no session here.
         user.is_active = False
         user.save(update_fields=["is_active"])
-        send_verification_email(user)
-        resp.data["detail"] = "Account created. Check your email to verify your account."
+        # The registering browser's language (negotiated from Accept-Language by
+        # LocaleMiddleware): the new account has no profile language yet.
+        send_verification_email(user, locale=request.LANGUAGE_CODE)
+        resp.data["detail"] = _("Account created. Check your email to verify your account.")
         return resp
 
 
@@ -54,13 +57,13 @@ class VerifyEmailView(APIView):
             user = User.objects.get(pk=pk)
         except (ValueError, TypeError, OverflowError, User.DoesNotExist):
             return Response(
-                {"detail": "Invalid verification link."},
+                {"detail": _("Invalid verification link.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not PasswordResetTokenGenerator().check_token(user, token):
             return Response(
-                {"detail": "This verification link is invalid or has expired."},
+                {"detail": _("This verification link is invalid or has expired.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -103,7 +106,7 @@ class AccountErasureView(APIView):
         password = request.data.get("password") or ""
         if not user.check_password(password):
             return Response(
-                {"detail": "Password is incorrect."},
+                {"detail": _("Password is incorrect.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -112,7 +115,7 @@ class AccountErasureView(APIView):
         if held_count:
             return Response(
                 {
-                    "detail": (
+                    "detail": _(
                         "Some of your conversations are under a legal hold and "
                         "cannot be deleted right now. They will be removed once "
                         "the hold is lifted."
@@ -126,8 +129,10 @@ class AccountErasureView(APIView):
         user.delete()
         return Response(
             {
-                "detail": "Your account and all associated data have been "
-                "permanently deleted.",
+                "detail": _(
+                    "Your account and all associated data have been "
+                    "permanently deleted."
+                ),
                 "conversations_deleted": conversations_deleted,
             },
             status=status.HTTP_200_OK,

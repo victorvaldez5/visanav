@@ -221,7 +221,7 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   `request.LANGUAGE_CODE` is always an allowlisted code (falling back to `en`). There are no
   `i18n_patterns`, so no URL-prefix redirects.
 - **Catalogs:** the frontend's vue-i18n messages are `src/locales/<code>.json`; Django gettext
-  catalogs go under `api/locale/` (empty until API strings are wrapped in `_()`); shared domain
+  catalogs are `api/locale/<code>/LC_MESSAGES/django.{po,mo}` (both committed; `just messages` extracts, `just compile-messages` compiles, and `core/test_catalogs.py` fails on a missing or stale `.mo`). User-facing API strings use `gettext as _`, and the verification email is written in the registering browser's language; shared domain
   terms are in `i18n/GLOSSARY.md`.
 
 ## Gotchas
