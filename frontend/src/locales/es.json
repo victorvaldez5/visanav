@@ -72,7 +72,8 @@
     "privacy": "Privacidad",
     "logoAlt": "Logotipo de VisaNav",
     "themeLight": "Cambiar al tema claro",
-    "themeDark": "Cambiar al tema oscuro"
+    "themeDark": "Cambiar al tema oscuro",
+    "registerLogin": "Registrarse / Iniciar sesión"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",

@@ -6,12 +6,17 @@
       </h2>
     </div>
   </div>
-  <div v-if="loading">
+  <div
+    v-if="loading"
+    class="px-6 sm:px-8 lg:px-12"
+  >
     {{ t("profile.loading") }}
   </div>
+  <!-- box-content: the gutters add to the 3xl cap instead of eating into it, so wide
+       screens keep the same form width and narrow ones get the header's gutters. -->
   <form
     v-else
-    class="max-w-3xl mx-auto py-4"
+    class="box-content max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-4"
     @submit.prevent="onSubmit"
   >
     <div class="space-y-12">

@@ -36,6 +36,8 @@ export const useAuthStore = defineStore("auth", () => {
 
     // getters
     const isAuthenticated = computed(() => !!accessToken.value);
+    // What to call the signed-in user: their username, else their email.
+    const displayName = computed(() => username.value || userEmail.value || "");
 
     // helpers
     function setFromToken(token: string) {
@@ -45,6 +47,23 @@ export const useAuthStore = defineStore("auth", () => {
         userId.value = payload?.user_id ?? null;
         userEmail.value = payload?.email ?? null;
         username.value = payload?.username ?? null;
+        // A token minted without the identity claims (older sessions) would leave
+        // the account menu blank, so look the user up instead.
+        if (userId.value !== null && !userEmail.value && !username.value) {
+            void loadIdentity(userId.value);
+        }
+    }
+
+    // Best effort: a failed lookup just leaves the menu on its fallback label.
+    async function loadIdentity(id: number) {
+        try {
+            const user = await authService.getUser(id);
+            if (userId.value !== id) return; // signed out or switched meanwhile
+            username.value = user?.username || null;
+            userEmail.value = user?.email || null;
+        } catch {
+            /* ignore */
+        }
     }
 
     // actions
@@ -131,6 +150,7 @@ export const useAuthStore = defineStore("auth", () => {
 
         // getters
         isAuthenticated,
+        displayName,
 
         // actions
         init,

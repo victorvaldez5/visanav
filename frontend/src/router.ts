@@ -2,6 +2,7 @@ import {createRouter, createWebHistory} from "vue-router";
 import {authService} from "@/services/authService.ts";
 import {currentLocale, HANDOFF_PARAM, hasSavedLocale} from "@/i18n";
 import {syncLocaleOnLogin} from "@/services/profileLocale";
+import {useAuthStore} from "@/stores/useAuthStore.ts";
 
 const routes = [
     {
@@ -40,6 +41,10 @@ const routes = [
                 // Activates the account and signs the user in (stores the
                 // returned tokens), then routes to their profile.
                 const {userId} = await authService.verify(uid, token);
+                // verify() stores the tokens but not in the auth store, which is
+                // otherwise read once at boot. Without this the sidebar keeps
+                // showing the signed-out menu on the profile page.
+                useAuthStore().init();
                 if (userId) {
                     // A brand-new profile has no language yet: record the one
                     // they signed up in. Best effort, never throws.

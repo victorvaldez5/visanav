@@ -132,8 +132,9 @@ at generation time.
 - **Store and service strings** (Pinia toasts, error fallbacks) are routed through
   the exported global `i18n.global.t`, since they live outside component setup.
 - **Extraction** proceeds feature by feature, not big-bang.
-- **Switcher:** `LanguageSwitcher.vue` in the sidebar footer (moved out of
-  `BetaBanner.vue`), visible to anonymous and authenticated users, each option
+- **Switcher:** `LanguageMenu.vue` (an icon button opening `LanguageMenuItems.vue`) in
+  the sidebar header (previously a footer toggle, `LanguageSwitcher.vue`, moved out of
+  `BetaBanner.vue`; the theme toggle now lives in the account / Register-Login menus), visible to anonymous and authenticated users, each option
   labelled in its own language. On change: `setLocale()` (load catalog + set +
   persist localStorage + sync `<html lang>`), and if authenticated, write through
   to `Profile.preferred_language` (`useLocaleSync`).

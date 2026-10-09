@@ -72,7 +72,8 @@
     "privacy": "Privacy",
     "logoAlt": "VisaNav logo",
     "themeLight": "Switch to light theme",
-    "themeDark": "Switch to dark theme"
+    "themeDark": "Switch to dark theme",
+    "registerLogin": "Register / Login"
   },
   "auth": {
     "loginTitle": "Login",
