@@ -1,0 +1,204 @@
+{
+  "meta": {
+    "siteName": "VisaNav"
+  },
+  "layout": {
+    "skipToContent": "Saltar al contenido",
+    "homeLabel": "Inicio de VisaNav",
+    "beta": "BETA",
+    "openMenu": "Abrir el menú",
+    "primaryNav": "Principal",
+    "footerNav": "Pie de página",
+    "language": "Idioma"
+  },
+  "nav": {
+    "home": "Inicio",
+    "findHelp": "Buscar ayuda",
+    "forOrgs": "Para organizaciones",
+    "startChat": "Empezar un chat gratis"
+  },
+  "footer": {
+    "tagline": "Una herramienta gratuita, de interés público, que ayuda a los inmigrantes a entender sus opciones y a encontrar ayuda confiable y de bajo costo.",
+    "directory": "Directorio de recursos",
+    "terms": "Términos de uso",
+    "privacy": "Privacidad",
+    "englishOnly": "solo en inglés",
+    "notLawFirm": "VisaNav no es un bufete de abogados y no ofrece asesoría legal.",
+    "disclaimer": "La información de aquí es general y puede que no se ajuste a tu situación. Confírmala siempre con un representante acreditado o un abogado calificado antes de actuar. VisaNav es gratis: nadie debería pedirte dinero por usarlo.",
+    "copyright": "© {year} VisaNav. Creado como un bien público."
+  },
+  "home": {
+    "title": "VisaNav — Ayuda de inmigración gratuita y privada",
+    "description": "Una herramienta pública y gratuita, ahora en beta, que explica tus opciones de inmigración en lenguaje sencillo y te conecta con organizaciones sin fines de lucro reconocidas y ayuda legal pro bono cerca de ti. Los datos personales se eliminan de tu pregunta en tu navegador antes de enviarla. Anónimo, cifrado, sin cuenta, sin costo y sin vender tus datos.",
+    "eyebrow": [
+      "BETA",
+      "HERRAMIENTA PÚBLICA GRATUITA",
+      "SIN AFILIACIÓN CON USCIS NI ICE"
+    ],
+    "h1": "La inmigración es confusa. Conseguir ayuda no debería serlo.",
+    "lead": "VisaNav responde tus preguntas de inmigración en lenguaje sencillo, cita fuentes oficiales y te orienta hacia ayuda gratuita y de bajo costo en la que puedes confiar, cerca de ti. Pregunta de forma anónima, sin cuenta y sin costo, y tus datos personales se eliminan de la pregunta antes de que se envíe.",
+    "ctaChat": "Empezar un chat gratis",
+    "ctaFind": "Buscar ayuda cerca de ti",
+    "trust": [
+      "100 % gratis",
+      "No necesitas cuenta",
+      "Datos personales eliminados antes de enviar",
+      "Cifrado y nunca vendido",
+      "No es un bufete de abogados"
+    ],
+    "teaser": {
+      "title": "Pregunta con tus propias palabras",
+      "body": "Sin formularios, sin tecnicismos, sin cuenta. Escribe como si le contaras a un amigo.",
+      "label": "Tu pregunta",
+      "placeholder": "Mi permiso de trabajo vence en tres meses.",
+      "submit": "Preguntar de forma anónima",
+      "eyebrow": [
+        "ANÓNIMO",
+        "CIFRADO",
+        "TÚ DECIDES SI SE ELIMINA"
+      ]
+    },
+    "how": {
+      "title": "Cómo te ayuda VisaNav",
+      "body": "Tres pasos, en lenguaje sencillo, desde tu primera pregunta hasta una ayuda real cerca de ti.",
+      "steps": [
+        {
+          "title": "Pregunta con tus propias palabras",
+          "body": "Describe tu situación en lenguaje sencillo: sin formularios, sin tecnicismos y sin necesidad de cuenta."
+        },
+        {
+          "title": "Recibe respuestas claras, con fuentes",
+          "body": "VisaNav te explica tus opciones y te señala fuentes oficiales de USCIS y del gobierno que puedes verificar."
+        },
+        {
+          "title": "Encuentra ayuda gratuita cerca de ti",
+          "body": "Conéctate con organizaciones sin fines de lucro reconocidas y proveedores pro bono de tu estado, no con alguien que quiera venderte algo."
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Tu privacidad es lo primero",
+      "intro": "Las preguntas de inmigración son personales. Si le preguntas directamente a un chatbot como ChatGPT, tus palabras exactas y quién eres pueden guardarse y vincularse contigo. VisaNav elimina los datos personales en tu navegador antes de enviar tu pregunta, para que puedas preguntar con libertad sin dudar a dónde va tu información.",
+      "items": [
+        {
+          "title": "Primero eliminamos tus datos personales",
+          "body": "Antes de que tu mensaje salga de tu dispositivo, VisaNav elimina datos personales como números A, números de recibo, números de Seguro Social, correos, teléfonos, direcciones y fechas, para que nunca lleguen a nuestros servidores ni a la IA. Verás exactamente qué se eliminó."
+        },
+        {
+          "title": "Anónimo por defecto",
+          "body": "No necesitas cuenta y nunca guardamos tu dirección IP. Haz tus preguntas sin registrarte ni decirnos quién eres."
+        },
+        {
+          "title": "Cifrado, y tú decides si se elimina",
+          "body": "Tus conversaciones se cifran y se conservan solo el tiempo necesario, y puedes eliminar tu cuenta y tus datos cuando quieras."
+        },
+        {
+          "title": "Nunca se venden ni se comparten",
+          "body": "No vendemos tu información ni la usamos para publicidad. Tus preguntas se usan solo para responderte, nada más."
+        }
+      ]
+    },
+    "band": {
+      "title": "Un directorio de ayuda real y confiable",
+      "body": "Explora {total} organizaciones sin fines de lucro y de servicios pro bono, entre ellas {proBono} proveedores legales pro bono, en {states} estados, a partir de los datos oficiales de organizaciones reconocidas del DOJ/EOIR.",
+      "cta": "Explorar el directorio"
+    },
+    "partners": {
+      "eyebrow": [
+        "PARA ORGANIZACIONES",
+        "REVISADAS ANTES DE PUBLICARSE"
+      ],
+      "title": "¿Diriges una organización que ayuda a inmigrantes?",
+      "body": "Pide que te incluyamos como recurso confiable, o súmate como aliado para ofrecer VisaNav a las personas a las que atiendes. Revisamos cada solicitud antes de publicarla.",
+      "cta": "Solicitar que nos incluyan",
+      "cards": [
+        {
+          "title": "Aparece en el directorio",
+          "body": "Pide que te agreguemos como recurso confiable para que las personas de tu estado encuentren tu organización."
+        },
+        {
+          "title": "Sé nuestro aliado",
+          "body": "Ofrece VisaNav a las personas a las que atiendes: gratis, anónimo y sin cuentas que configurar."
+        }
+      ]
+    }
+  },
+  "directory": {
+    "title": "Encuentra ayuda de inmigración gratuita cerca de ti — Directorio de VisaNav",
+    "description": "Busca en un directorio de organizaciones de inmigración sin fines de lucro y pro bono en todo Estados Unidos, a partir de los datos oficiales de organizaciones reconocidas del DOJ/EOIR. Gratis, sin necesidad de cuenta.",
+    "eyebrow": [
+      "EXPLORA GRATIS",
+      "SIN NECESIDAD DE CUENTA",
+      "DATOS DEL DOJ/EOIR"
+    ],
+    "h1": "Encuentra ayuda de inmigración confiable",
+    "intro": "{total} organizaciones sin fines de lucro y de servicios pro bono, entre ellas {proBono} proveedores legales pro bono, a partir de los datos oficiales de organizaciones reconocidas del DOJ/EOIR. Explorar es gratis. Aparecer aquí no implica una recomendación; verifica siempre una organización antes de compartir datos personales.",
+    "searchLabel": "Buscar por nombre o ciudad",
+    "searchPlaceholder": "p. ej. Catholic Charities, Houston…",
+    "state": "Estado",
+    "allStates": "Todos los estados",
+    "proBonoOnly": "Solo pro bono",
+    "showing": {
+      "one": "Mostrando {count} organización",
+      "other": "Mostrando {count} organizaciones"
+    },
+    "range": {
+      "one": "Mostrando {from}–{to} de {count} organización",
+      "other": "Mostrando {from}–{to} de {count} organizaciones"
+    },
+    "none": "No se encontraron organizaciones",
+    "proBono": "Pro bono",
+    "phone": "Teléfono",
+    "website": "Sitio web",
+    "visitWebsite": "Visitar el sitio web",
+    "askAbout": "Preguntar a VisaNav sobre esta organización",
+    "empty": "Ninguna organización coincide con tu búsqueda. Prueba con otro estado o quita los filtros.",
+    "pagerLabel": "Páginas del directorio",
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "pageOf": "Página {page} de {pages}"
+  },
+  "partners": {
+    "title": "Para organizaciones — aparece en el directorio o sé aliado de VisaNav",
+    "description": "Las organizaciones sin fines de lucro y los proveedores de inmigración pro bono pueden pedir que los incluyamos en el directorio de VisaNav o sumarse como aliados para ofrecer VisaNav a las personas que atienden. Revisamos cada solicitud.",
+    "eyebrow": [
+      "PARA ORGANIZACIONES",
+      "REVISADAS ANTES DE PUBLICARSE"
+    ],
+    "h1": "Para organizaciones que ayudan a inmigrantes",
+    "intro": "VisaNav es una herramienta pública y gratuita, actualmente en beta. Si tu organización ofrece ayuda de inmigración, puedes pedir que te incluyamos como recurso confiable o sumarte como aliado para ofrecer VisaNav a las personas a las que atiendes. Revisamos cada solicitud antes de publicar nada; así el directorio se mantiene confiable.",
+    "successTitle": "Gracias: recibimos tu solicitud",
+    "successBody": "Una persona la revisará antes de publicar nada. Si necesitamos algo más, nos comunicaremos al correo que nos diste.",
+    "honeypot": "Sitio web (déjalo en blanco)",
+    "orgName": "Nombre de la organización",
+    "contactName": "Tu nombre",
+    "contactEmail": "Correo de contacto",
+    "phone": "Teléfono",
+    "website": "Sitio web",
+    "city": "Ciudad",
+    "state": "Estado",
+    "select": "Selecciona…",
+    "intentLegend": "¿Qué nos pides?",
+    "intentListingTitle": "Incluirnos como recurso público",
+    "intentListingBody": "Agrega nuestra organización al directorio de VisaNav para que la gente pueda encontrarnos.",
+    "intentPartnerTitle": "Ser aliados",
+    "intentPartnerBody": "Queremos ofrecer VisaNav a las personas a las que atendemos (un piloto).",
+    "proBono": "Ofrecemos ayuda legal gratuita (pro bono)",
+    "message": "¿Algo más que debamos saber?",
+    "submit": "Enviar solicitud",
+    "submitting": "Enviando…",
+    "fineprint": "Al enviar, confirmas que la información es correcta. Las solicitudes se revisan antes de publicarse.",
+    "errCaptcha": "Completa el desafío de verificación y vuelve a enviar.",
+    "errTooMany": "Hay demasiados envíos desde esta red en este momento. Inténtalo de nuevo más tarde.",
+    "errGeneric": "Algo salió mal. Revisa lo que escribiste e inténtalo de nuevo.",
+    "errNetwork": "No pudimos comunicarnos con el servidor. Revisa tu conexión e inténtalo de nuevo."
+  },
+  "notFound": {
+    "title": "Página no encontrada — VisaNav",
+    "description": "La página que buscas no existe.",
+    "heading": "No pudimos encontrar esa página",
+    "body": "Puede que la página se haya movido. Prueba el directorio o empieza un chat gratis.",
+    "home": "Ir al inicio",
+    "findHelp": "Buscar ayuda"
+  }
+}

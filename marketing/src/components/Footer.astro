@@ -1,6 +1,19 @@
 ---
+import { DEFAULT_LOCALE, localePath, useTranslations } from "../i18n";
+import type { Locale } from "../i18n";
 import Logo from "./Logo.astro";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
 const year = new Date().getFullYear();
+// The legal pages are English only (an unreviewed machine translation of legal
+// text would be worse than none), so they stay on the bare URLs in every locale
+// and are labelled as such outside English.
+const legalNote = locale === DEFAULT_LOCALE ? "" : ` (${t("footer.englishOnly")})`;
+const link = "text-vn-ocean-100 transition-colors hover:text-vn-white";
 ---
 
 <footer class="bg-band text-band-foreground">
@@ -9,34 +22,31 @@ const year = new Date().getFullYear();
       <div class="max-w-sm">
         <Logo class="text-vn-ocean-50" diamond="var(--vn-sunflower-400)" />
         <p class="mt-4 text-sm leading-relaxed text-band-muted">
-          A free, public-interest tool that helps immigrants understand their
-          options and find trustworthy, low-cost help.
+          {t("footer.tagline")}
         </p>
       </div>
 
       <nav
-        aria-label="Footer"
+        aria-label={t("layout.footerNav")}
         class="grid grid-cols-2 gap-x-16 gap-y-3 text-sm"
       >
-        <a href="/" class="text-vn-ocean-100 transition-colors hover:text-vn-white">Home</a>
-        <a href="/directory" class="text-vn-ocean-100 transition-colors hover:text-vn-white">Find help</a>
-        <a href="/partners" class="text-vn-ocean-100 transition-colors hover:text-vn-white">For organizations</a>
-        <a href="/directory" class="text-vn-ocean-100 transition-colors hover:text-vn-white">Resource directory</a>
-        <a href="/terms" class="text-vn-ocean-100 transition-colors hover:text-vn-white">Terms of use</a>
-        <a href="/privacy" class="text-vn-ocean-100 transition-colors hover:text-vn-white">Privacy</a>
+        <a href={localePath(locale, "/")} class={link}>{t("nav.home")}</a>
+        <a href={localePath(locale, "/directory")} class={link}>{t("nav.findHelp")}</a>
+        <a href={localePath(locale, "/partners")} class={link}>{t("nav.forOrgs")}</a>
+        <a href={localePath(locale, "/directory")} class={link}>{t("footer.directory")}</a>
+        <a href="/terms" class={link}>{t("footer.terms")}{legalNote}</a>
+        <a href="/privacy" class={link}>{t("footer.privacy")}{legalNote}</a>
       </nav>
     </div>
 
     <div class="mt-10 max-w-3xl text-xs leading-relaxed">
       <p class="text-[13px] font-bold leading-5 text-vn-white">
-        VisaNav is not a law firm and does not provide legal advice.
+        {t("footer.notLawFirm")}
       </p>
       <p class="mt-1.5 text-band-muted">
-        Information here is general and may not fit your situation. Always
-        confirm with a qualified, accredited representative or attorney before
-        acting. VisaNav is free — no one should ever ask you to pay to use it.
+        {t("footer.disclaimer")}
       </p>
-      <p class="mt-5 text-vn-ocean-300">&copy; {year} VisaNav. Built as a public good.</p>
+      <p class="mt-5 text-vn-ocean-300">{t("footer.copyright", { year })}</p>
     </div>
   </div>
 </footer>
