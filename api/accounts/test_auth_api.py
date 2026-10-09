@@ -224,6 +224,18 @@ def test_verify_activates_account_and_returns_session(api_client, inactive_user)
     assert login.status_code == status.HTTP_200_OK
 
 
+def test_verify_tokens_carry_the_same_identity_claims_as_login(api_client, inactive_user):
+    """The app labels the signed-in user from the token's username/email claims, so a
+    session started by the emailed link must carry them just like a password login."""
+    from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+
+    resp = api_client.post(VERIFY_URL, _verify_payload(inactive_user), format="json")
+
+    for token in (AccessToken(resp.data["access"]), RefreshToken(resp.data["refresh"])):
+        assert token["username"] == inactive_user.username
+        assert token["email"] == inactive_user.email
+
+
 def test_verify_rejects_a_bad_token(api_client, inactive_user):
     payload = {
         "uid": urlsafe_base64_encode(force_bytes(str(inactive_user.pk))),
