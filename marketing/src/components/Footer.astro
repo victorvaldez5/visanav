@@ -34,8 +34,8 @@ const link = "text-vn-ocean-100 transition-colors hover:text-vn-white";
         <a href={localePath(locale, "/directory")} class={link}>{t("nav.findHelp")}</a>
         <a href={localePath(locale, "/partners")} class={link}>{t("nav.forOrgs")}</a>
         <a href={localePath(locale, "/directory")} class={link}>{t("footer.directory")}</a>
-        <a href="/terms" class={link}>{t("footer.terms")}{legalNote}</a>
-        <a href="/privacy" class={link}>{t("footer.privacy")}{legalNote}</a>
+        <a href={localePath(DEFAULT_LOCALE, "/terms")} class={link}>{t("footer.terms")}{legalNote}</a>
+        <a href={localePath(DEFAULT_LOCALE, "/privacy")} class={link}>{t("footer.privacy")}{legalNote}</a>
       </nav>
     </div>
 

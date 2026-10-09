@@ -1,16 +1,13 @@
 ---
 import Base from "../../layouts/Base.astro";
 import Eyebrow from "../../components/Eyebrow.astro";
-import { orgAppLink } from "../../config";
+import { appLink } from "../../config";
 import orgs from "../../data/organizations.json";
-import { isLocale, DEFAULT_LOCALE, localePath, useTranslations } from "../../i18n";
+import { localeFromParam, localePath, localeStaticPaths, useTranslations } from "../../i18n";
 
 // One file serves every locale: `/directory` and `/es/directory`.
-export function getStaticPaths() {
-  return [{ params: { lang: undefined } }, { params: { lang: "es" } }];
-}
-const lang = Astro.params.lang;
-const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
+export const getStaticPaths = localeStaticPaths;
+const locale = localeFromParam(Astro.params.lang);
 const t = useTranslations(locale);
 
 const total = orgs.length;
@@ -129,7 +126,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
             </dl>
 
             <a
-              href={orgAppLink(o.id, locale)}
+              href={appLink(locale, { q: t("directory.askPrompt", { name: o.name }) })}
               class="vn-link mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold"
             >
               {t("directory.askAbout")}

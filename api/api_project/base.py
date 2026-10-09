@@ -237,6 +237,11 @@ CORS_ALLOW_ALL_ORIGINS = False  # dev.py opens this; prod.py keeps it locked
 
 # MAILTRAP SETTINGS
 MAILTRAP_API_KEY = os.environ.get("MAILTRAP_API_KEY")
+# Sender of transactional mail; its domain must be verified in Mailtrap.
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@visanav.org")
+# Set to a Mailtrap sandbox inbox id to capture mail there instead of delivering
+# it (local dev, staging). Empty means real delivery.
+MAILTRAP_SANDBOX_INBOX_ID = os.environ.get("MAILTRAP_SANDBOX_INBOX_ID", "")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 # VECTOR STORE / EMBEDDINGS (pgvector + Voyage AI)

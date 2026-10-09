@@ -97,6 +97,8 @@ other. Run them from a full checkout (local/CI), not the prod web image.
 ### Translations (i18n)
 ```bash
 just check-i18n     # = node scripts/check_i18n_parity.mjs: locale lists + defaults + catalog parity (CI: the `i18n` job in `ci.yml`)
+just messages           # extract new API `_()` strings into api/locale/*/django.po
+just compile-messages   # compile the .mo files Django loads (commit both)
 ```
 
 ### Deploy
@@ -220,7 +222,7 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
 - **Transport:** `LocaleMiddleware` maps the `Accept-Language` header onto `LANGUAGES`, so
   `request.LANGUAGE_CODE` is always an allowlisted code (falling back to `en`). There are no
   `i18n_patterns`, so no URL-prefix redirects.
-- **Catalogs:** the frontend's vue-i18n messages are `src/locales/<code>.json`; Django gettext
+- **Catalogs:** the frontend's vue-i18n messages are `src/locales/<code>.json`; the marketing site's are `marketing/src/i18n/<code>.json` (Astro, Spanish under `/es/`); Django gettext
   catalogs are `api/locale/<code>/LC_MESSAGES/django.{po,mo}` (both committed; `just messages` extracts, `just compile-messages` compiles, and `core/test_catalogs.py` fails on a missing or stale `.mo`). User-facing API strings use `gettext as _`, and the verification email is written in the registering browser's language; shared domain
   terms are in `i18n/GLOSSARY.md`.
 

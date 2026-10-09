@@ -8,10 +8,9 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 
-// The language control, as the tail of a dropdown (the account menu when signed
-// in, the Register / Login menu when signed out). Each option is labelled in its
-// own language (`lang.<code>`), so a user can find theirs whatever the current UI
-// language is. Place it inside a DropdownMenuContent.
+// The language options of the sidebar header's language menu (LanguageMenu.vue).
+// Each option is labelled in its own language (`lang.<code>`), so a user can find
+// theirs whatever the current UI language is. Place it inside a DropdownMenuContent.
 const { locale } = useI18n();
 const { changeLocale } = useLocaleSync();
 

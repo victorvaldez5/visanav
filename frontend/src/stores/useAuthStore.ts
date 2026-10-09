@@ -44,11 +44,16 @@ export const useAuthStore = defineStore("auth", () => {
         accessToken.value = token;
         apiClient.defaults.headers["Authorization"] = `Bearer ${token}`;
         const payload = decodeJwt(token);
+        const sameUser = userId.value !== null && userId.value === payload?.user_id;
         userId.value = payload?.user_id ?? null;
-        userEmail.value = payload?.email ?? null;
-        username.value = payload?.username ?? null;
-        // A token minted without the identity claims (older sessions) would leave
-        // the account menu blank, so look the user up instead.
+        // A token minted without the identity claims (older sessions) keeps what
+        // is already known about the same user, so a refresh doesn't blank the
+        // account menu; with nothing known yet, look the user up instead.
+        const hasClaims = !!(payload?.email || payload?.username);
+        if (hasClaims || !sameUser) {
+            userEmail.value = payload?.email ?? null;
+            username.value = payload?.username ?? null;
+        }
         if (userId.value !== null && !userEmail.value && !username.value) {
             void loadIdentity(userId.value);
         }
@@ -59,10 +64,10 @@ export const useAuthStore = defineStore("auth", () => {
         try {
             const user = await authService.getUser(id);
             if (userId.value !== id) return; // signed out or switched meanwhile
-            username.value = user?.username || null;
+            // The users endpoint exposes the email but not the username.
             userEmail.value = user?.email || null;
-        } catch {
-            /* ignore */
+        } catch (e) {
+            console.warn("Could not load the signed-in user's identity:", e);
         }
     }
 

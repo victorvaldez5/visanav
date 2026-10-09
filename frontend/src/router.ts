@@ -1,6 +1,7 @@
+import {h} from "vue";
 import {createRouter, createWebHistory} from "vue-router";
 import {authService} from "@/services/authService.ts";
-import {currentLocale, HANDOFF_PARAM, hasSavedLocale} from "@/i18n";
+import {currentLocale, HANDOFF_PARAM, hasSavedLocale, i18n, initLocale} from "@/i18n";
 import {syncLocaleOnLogin} from "@/services/profileLocale";
 import {useAuthStore} from "@/stores/useAuthStore.ts";
 
@@ -24,7 +25,7 @@ const routes = [
         path: "/verify",
         name: "Verify",
         // Lightweight inline component; page will immediately redirect in beforeEnter
-        component: {template: "<div>Verifying your account...</div>"},
+        component: {render: () => h("div", i18n.global.t("auth.verifying"))},
         beforeEnter: async (to: any, _from: any, next: any) => {
             const uidParam = to.query.uid;
             const tokenParam = to.query.token;
@@ -47,7 +48,9 @@ const routes = [
                 useAuthStore().init();
                 if (userId) {
                     // A brand-new profile has no language yet: record the one
-                    // they signed up in. Best effort, never throws.
+                    // they signed up in. Best effort, never throws. This guard
+                    // can run before boot has resolved the locale, so wait for it.
+                    await initLocale();
                     await syncLocaleOnLogin(userId, hasSavedLocale(), currentLocale());
                     return next({name: "Profile", params: {userId}});
                 }

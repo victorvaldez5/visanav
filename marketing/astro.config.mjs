@@ -13,6 +13,9 @@ import tailwindcss from "@tailwindcss/vite";
 // src/i18n/index.ts and docs/i18n-architecture.md.
 export default defineConfig({
   site: "https://www.visanav.org",
+  // Pages are served at /directory/ (directory/index.html); the slashless form
+  // redirects. "always" keeps dev, links, canonical and the sitemap on one form.
+  trailingSlash: "always",
   i18n: {
     defaultLocale: "en",
     locales: ["en", "es"],
@@ -24,6 +27,13 @@ export default defineConfig({
       // twin. Pages with no translation (terms, privacy) get no alternates.
       i18n: { defaultLocale: "en", locales: { en: "en", es: "es" } },
       filter: (page) => !page.endsWith("/404/"),
+      // The integration emits no x-default; point it at the default-locale URL,
+      // as Base.astro does in the page head.
+      serialize(item) {
+        const fallback = item.links?.find((l) => l.lang === "en");
+        if (fallback) item.links?.push({ lang: "x-default", url: fallback.url });
+        return item;
+      },
     }),
   ],
   vite: {

@@ -3,14 +3,11 @@ import Base from "../../layouts/Base.astro";
 import Eyebrow from "../../components/Eyebrow.astro";
 import { APP_URL, appLink } from "../../config";
 import orgs from "../../data/organizations.json";
-import { isLocale, DEFAULT_LOCALE, localePath, useTranslations } from "../../i18n";
+import { localeFromParam, localePath, localeStaticPaths, useTranslations } from "../../i18n";
 
 // One file serves every locale: `/` and `/es/` (see astro.config.mjs i18n).
-export function getStaticPaths() {
-  return [{ params: { lang: undefined } }, { params: { lang: "es" } }];
-}
-const lang = Astro.params.lang;
-const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
+export const getStaticPaths = localeStaticPaths;
+const locale = localeFromParam(Astro.params.lang);
 const t = useTranslations(locale);
 
 const total = orgs.length;
