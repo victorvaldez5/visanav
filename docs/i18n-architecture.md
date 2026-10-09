@@ -151,9 +151,10 @@ at generation time.
 - **Astro i18n routing with `prefixDefaultLocale: false`:** English keeps today's
   bare URLs (no redirects, existing backlinks and sitemap stay valid), Spanish
   lives under `/es/`, later `/zh-Hans/`.
-- **SEO:** extend `marketing/src/layouts/Base.astro` to emit `hreflang` alternates
-  (`en` / `es` / `x-default`) and a per-locale canonical, turn on sitemap locale
-  alternates, and add the `robots.txt` that is currently missing.
+- **SEO:** `marketing/src/layouts/Base.astro` emits `hreflang` alternates
+  (`en` / `es` / `x-default`) and a per-locale canonical, the sitemap carries locale
+  alternates, and there is a `robots.txt`. URLs always end in a slash
+  (`trailingSlash: "always"`), so the canonical, the alternates and the sitemap agree.
 - **URL is authoritative:** no `Accept-Language` auto-redirect on bare visits (it
   hurts SEO and surprises users). The switcher in `Header.astro` navigates between
   localized paths.
@@ -238,10 +239,10 @@ Django `.po`), on three deploys, sharing no code. We keep them consistent with:
 - **CI parity checks** ([`scripts/check_i18n_parity.mjs`](../scripts/check_i18n_parity.mjs),
   run by the `i18n` job in `ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
   - every surface's declared locale list and default match the canonical file;
-  - every JSON catalog (the frontend now, marketing once it has one) has exactly
-    the keys of the default-locale catalog, so no key is missing or orphaned;
-  - every Django `.po` catalog, once the API has any, covers each non-default
-    locale with no missing, fuzzy, or obsolete entries.
+  - every JSON catalog (the frontend's and marketing's) has exactly the keys of
+    the default-locale catalog, so no key is missing or orphaned;
+  - every Django `.po` catalog covers each non-default locale with no missing,
+    fuzzy, or obsolete entries.
 
 **Production flow:** machine-first (Claude generates the first pass), then
 contributor (open-source community refines via PR editing each surface's native
@@ -254,13 +255,15 @@ contributor volume justifies it, not a launch dependency.
 1. In [`i18n/supported-locales.json`](../i18n/supported-locales.json), move the
    locale from `planned` to `locales`, and add its column to
    [`i18n/GLOSSARY.md`](../i18n/GLOSSARY.md).
-2. Add it to Django `LANGUAGES` in `api/api_project/base.py` and to
-   `SUPPORTED_LOCALES` in `frontend/src/i18n/index.ts` (and to Astro
-   `i18n.locales` once marketing has i18n).
+2. Add it to Django `LANGUAGES` in `api/api_project/base.py`, to
+   `SUPPORTED_LOCALES` in `frontend/src/i18n/index.ts`, and on the marketing site to
+   `SUPPORTED_LOCALES`, `LOCALE_NAMES` and `OG_LOCALE` in `marketing/src/i18n/index.ts`
+   plus the `i18n.locales` and sitemap `i18n` entries in `marketing/astro.config.mjs`.
 3. Add a data migration that creates its `locations.Language` row. The populate
    migration does not run again on existing databases.
 4. Add its catalogs: `frontend/src/locales/<code>.json` (picked up and
-   lazy-loaded automatically), plus
+   lazy-loaded automatically), `marketing/src/i18n/<code>.json` (imported in
+   `marketing/src/i18n/index.ts`), plus
    `api/locale/<code>/LC_MESSAGES/django.po` (then `just messages`, translate, and
    `just compile-messages`; commit the `.mo` too).
 5. Reveal it in a surface's switcher only after that surface is fully translated

@@ -63,7 +63,6 @@
     "representatives": "Representantes",
     "forms": "Formularios",
     "account": "Cuenta",
-    "signIn": "Iniciar sesión",
     "signOut": "Cerrar sesión",
     "register": "Registrarse",
     "login": "Iniciar sesión",
@@ -76,6 +75,7 @@
     "registerLogin": "Registrarse / Iniciar sesión"
   },
   "auth": {
+    "verifying": "Verificando tu cuenta...",
     "loginTitle": "Iniciar sesión",
     "registerTitle": "Registrarse",
     "email": "Correo electrónico",

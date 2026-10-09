@@ -1,6 +1,6 @@
 ---
 import { appLink } from "../config";
-import { DEFAULT_LOCALE, LOCALE_NAMES, SUPPORTED_LOCALES, localePath, useTranslations } from "../i18n";
+import { LOCALE_NAMES, SUPPORTED_LOCALES, localePath, useTranslations } from "../i18n";
 import type { Locale } from "../i18n";
 import Logo from "./Logo.astro";
 
@@ -22,10 +22,14 @@ const nav = [
 const isActive = (match: string) => (match === "/" ? path === "/" : path.startsWith(match));
 const chatHref = appLink(locale);
 
-// The language link: the same page in the other locale, or that locale's home
-// when this page has no translation (terms, privacy are English only).
-const other = SUPPORTED_LOCALES.find((l) => l !== locale) ?? DEFAULT_LOCALE;
-const otherHref = localePath(other, translated ? path : "/");
+// Language links: this page in each other locale, or that locale's home when this
+// page has no translation (terms, privacy are English only). Each is labelled in
+// its own language.
+const languageLinks = SUPPORTED_LOCALES.filter((l) => l !== locale).map((l) => ({
+  code: l,
+  name: LOCALE_NAMES[l],
+  href: localePath(l, translated ? path : "/"),
+}));
 ---
 
 <header class="sticky top-0 z-40 bg-card/95 shadow-[var(--elevation-1)] backdrop-blur">
@@ -63,13 +67,18 @@ const otherHref = localePath(other, translated ? path : "/");
           </a>
         ))
       }
-      <a
-        href={otherHref}
-        hreflang={other}
-        lang={other}
-        class="ml-1 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >{LOCALE_NAMES[other]}</a
-      >
+      {
+        languageLinks.map((l) => (
+          <a
+            href={l.href}
+            hreflang={l.code}
+            lang={l.code}
+            class="ml-1 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {l.name}
+          </a>
+        ))
+      }
       <a href={chatHref} class="vn-btn vn-btn-primary ml-1 h-9 px-4 text-sm">
         {t("nav.startChat")}
       </a>
@@ -106,14 +115,18 @@ const otherHref = localePath(other, translated ? path : "/");
             </a>
           ))
         }
-        <a
-          href={otherHref}
-          hreflang={other}
-          lang={other}
-          class="rounded-[4px] px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          {LOCALE_NAMES[other]}
-        </a>
+        {
+          languageLinks.map((l) => (
+            <a
+              href={l.href}
+              hreflang={l.code}
+              lang={l.code}
+              class="rounded-[4px] px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              {l.name}
+            </a>
+          ))
+        }
         <a href={chatHref} class="vn-btn vn-btn-primary mt-1 h-10 px-4 text-sm">
           {t("nav.startChat")}
         </a>

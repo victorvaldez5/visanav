@@ -4,12 +4,13 @@ from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from django.utils import translation
 
 from core import mail
 
 
 @pytest.fixture
-def client(monkeypatch):
+def mailtrap(monkeypatch):
     """Capture the Mailtrap Mail instead of sending it."""
     fake = mock.Mock()
     monkeypatch.setattr(mail.mt, "MailtrapClient", mock.Mock(return_value=fake))
@@ -25,26 +26,26 @@ def _user(preferred=None):
     return SimpleNamespace(pk=7, email="ana@example.com", profile=profile)
 
 
-def _sent(client):
-    return client.send.call_args.args[0]
+def _sent(mailtrap):
+    return mailtrap.send.call_args.args[0]
 
 
 def _link(text):
     return next(line for line in text.splitlines() if line.startswith("http"))
 
 
-def test_defaults_to_english(client):
+def test_defaults_to_english(mailtrap):
     mail.send_verification_email(_user())
 
-    sent = _sent(client)
+    sent = _sent(mailtrap)
     assert sent.subject == "Verify your VisaNav account"
     assert "verify your account" in sent.text
 
 
-def test_explicit_locale_wins_and_is_translated(client):
+def test_explicit_locale_wins_and_is_translated(mailtrap):
     mail.send_verification_email(_user(preferred="en"), locale="es")
 
-    sent = _sent(client)
+    sent = _sent(mailtrap)
     assert sent.subject == "Verifica tu cuenta de VisaNav"
     assert "Gracias por registrarte" in sent.text
     # The link hands the language to the app, so it opens in Spanish on any device.
@@ -53,22 +54,20 @@ def test_explicit_locale_wins_and_is_translated(client):
     assert set(query) == {"uid", "token", "lang"}
 
 
-def test_falls_back_to_the_profile_language(client):
+def test_falls_back_to_the_profile_language(mailtrap):
     mail.send_verification_email(_user(preferred="es"))
 
-    assert _sent(client).subject == "Verifica tu cuenta de VisaNav"
+    assert _sent(mailtrap).subject == "Verifica tu cuenta de VisaNav"
 
 
-def test_unsupported_locale_falls_back_rather_than_failing(client):
+def test_unsupported_locale_falls_back_rather_than_failing(mailtrap):
     mail.send_verification_email(_user(preferred="xx"), locale="fr")
 
-    assert _sent(client).subject == "Verify your VisaNav account"
+    assert _sent(mailtrap).subject == "Verify your VisaNav account"
 
 
-def test_does_not_leak_the_language_into_the_calling_thread(client):
-    from django.utils import translation
+def test_does_not_leak_the_language_into_the_calling_thread(mailtrap):
+    with translation.override("en"):
+        mail.send_verification_email(_user(), locale="es")
 
-    translation.activate("en")
-    mail.send_verification_email(_user(), locale="es")
-
-    assert translation.get_language() == "en"
+        assert translation.get_language() == "en"

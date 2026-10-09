@@ -1,6 +1,6 @@
-from django.utils.translation import gettext as _
 from datetime import date
 
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from core.utils import assert_turnstile

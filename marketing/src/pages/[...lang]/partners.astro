@@ -2,14 +2,11 @@
 import Base from "../../layouts/Base.astro";
 import Eyebrow from "../../components/Eyebrow.astro";
 import { TURNSTILE_SITE_KEY } from "../../config";
-import { isLocale, DEFAULT_LOCALE, useTranslations } from "../../i18n";
+import { localeFromParam, localeStaticPaths, useTranslations } from "../../i18n";
 
 // One file serves every locale: `/partners` and `/es/partners`.
-export function getStaticPaths() {
-  return [{ params: { lang: undefined } }, { params: { lang: "es" } }];
-}
-const lang = Astro.params.lang;
-const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
+export const getStaticPaths = localeStaticPaths;
+const locale = localeFromParam(Astro.params.lang);
 const t = useTranslations(locale);
 
 const US_STATES = [

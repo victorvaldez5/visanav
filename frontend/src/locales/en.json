@@ -63,7 +63,6 @@
     "representatives": "Representatives",
     "forms": "Forms",
     "account": "Account",
-    "signIn": "Sign In",
     "signOut": "Sign out",
     "register": "Register",
     "login": "Login",
@@ -76,6 +75,7 @@
     "registerLogin": "Register / Login"
   },
   "auth": {
+    "verifying": "Verifying your account...",
     "loginTitle": "Login",
     "registerTitle": "Register",
     "email": "Email",

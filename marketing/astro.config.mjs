@@ -13,6 +13,9 @@ import tailwindcss from "@tailwindcss/vite";
 // src/i18n/index.ts and docs/i18n-architecture.md.
 export default defineConfig({
   site: "https://www.visanav.org",
+  // Pages are served at /directory/ (directory/index.html); the slashless form
+  // redirects. "always" keeps dev, links, canonical and the sitemap on one form.
+  trailingSlash: "always",
   i18n: {
     defaultLocale: "en",
     locales: ["en", "es"],

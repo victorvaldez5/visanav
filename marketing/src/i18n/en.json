@@ -1,15 +1,11 @@
 {
-  "meta": {
-    "siteName": "VisaNav"
-  },
   "layout": {
     "skipToContent": "Skip to content",
     "homeLabel": "VisaNav home",
     "beta": "BETA",
     "openMenu": "Open menu",
     "primaryNav": "Primary",
-    "footerNav": "Footer",
-    "language": "Language"
+    "footerNav": "Footer"
   },
   "nav": {
     "home": "Home",

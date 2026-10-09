@@ -26,6 +26,7 @@ vi.mock("@/services/authService", () => ({
     logout: vi.fn(),
     refreshToken: vi.fn(),
     getAccessToken: vi.fn(),
+    getUser: vi.fn(),
   },
 }));
 
@@ -179,6 +180,45 @@ describe("useAuthStore.refresh", () => {
     expect(store.isAuthenticated).toBe(true);
     expect(store.userEmail).toBe("r@b.com");
     expect(headers()["Authorization"]).toMatch(/^Bearer /);
+  });
+});
+
+describe("useAuthStore: tokens without identity claims", () => {
+  it("looks the user up by id and shows their email", async () => {
+    svc.getAccessToken.mockReturnValue(jwt({ user_id: 7 }));
+    svc.getUser.mockResolvedValue({ email: "a@b.com" });
+    const store = useAuthStore();
+
+    store.init();
+    await vi.waitFor(() => expect(store.userEmail).toBe("a@b.com"));
+
+    expect(svc.getUser).toHaveBeenCalledWith(7);
+    expect(store.displayName).toBe("a@b.com");
+  });
+
+  it("keeps the known identity when the same user's token is refreshed", async () => {
+    svc.getAccessToken.mockReturnValue(jwt({ user_id: 7, email: "a@b.com", username: "ana" }));
+    svc.refreshToken.mockResolvedValue({ access: jwt({ user_id: 7 }) });
+    const store = useAuthStore();
+    store.init();
+
+    await store.refresh();
+
+    expect(store.displayName).toBe("ana");
+    expect(svc.getUser).not.toHaveBeenCalled();
+  });
+
+  it("drops the previous identity when the token belongs to someone else", async () => {
+    svc.getAccessToken.mockReturnValue(jwt({ user_id: 7, email: "a@b.com", username: "ana" }));
+    svc.refreshToken.mockResolvedValue({ access: jwt({ user_id: 8 }) });
+    svc.getUser.mockResolvedValue({ email: "c@d.com" });
+    const store = useAuthStore();
+    store.init();
+
+    await store.refresh();
+    await vi.waitFor(() => expect(store.userEmail).toBe("c@d.com"));
+
+    expect(store.username).toBe(null);
   });
 });
 

@@ -1,7 +1,7 @@
 # Spanish translations for the VisaNav API.
 # Terms follow /i18n/GLOSSARY.md. Regenerate with:
-#   cd api && uv run python manage.py makemessages -l es --no-location --no-wrap --ignore ".venv/*"
-# then translate new entries and run: uv run python manage.py compilemessages
+#   just messages
+# then translate new entries and run: just compile-messages
 msgid ""
 msgstr ""
 "Project-Id-Version: VisaNav API\n"

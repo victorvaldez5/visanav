@@ -1,15 +1,11 @@
 ---
 import Base from "../layouts/Base.astro";
-import { localePath, useTranslations } from "../i18n";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, localePath, useTranslations } from "../i18n";
 
 // A static host serves one 404 for every missing path, whatever its prefix, so
-// this page can't know which language the visitor wanted: it shows both.
-const en = useTranslations("en");
-const es = useTranslations("es");
-const copies = [
-  { t: en, lang: "en" as const },
-  { t: es, lang: "es" as const },
-];
+// this page can't know which language the visitor wanted: it shows every locale.
+const en = useTranslations(DEFAULT_LOCALE);
+const copies = SUPPORTED_LOCALES.map((lang) => ({ t: useTranslations(lang), lang }));
 ---
 
 <Base title={en("notFound.title")} description={en("notFound.description")} translated={false}>

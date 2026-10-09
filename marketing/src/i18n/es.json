@@ -1,15 +1,11 @@
 {
-  "meta": {
-    "siteName": "VisaNav"
-  },
   "layout": {
     "skipToContent": "Saltar al contenido",
     "homeLabel": "Inicio de VisaNav",
     "beta": "BETA",
     "openMenu": "Abrir el menú",
     "primaryNav": "Principal",
-    "footerNav": "Pie de página",
-    "language": "Idioma"
+    "footerNav": "Pie de página"
   },
   "nav": {
     "home": "Inicio",
@@ -28,7 +24,7 @@
     "copyright": "© {year} VisaNav. Creado como un bien público."
   },
   "home": {
-    "title": "VisaNav — Ayuda de inmigración gratuita y privada",
+    "title": "VisaNav: ayuda de inmigración gratuita y privada",
     "description": "Una herramienta pública y gratuita, ahora en beta, que explica tus opciones de inmigración en lenguaje sencillo y te conecta con organizaciones sin fines de lucro reconocidas y ayuda legal pro bono cerca de ti. Los datos personales se eliminan de tu pregunta en tu navegador antes de enviarla. Anónimo, cifrado, sin cuenta, sin costo y sin vender tus datos.",
     "eyebrow": [
       "BETA",
@@ -124,7 +120,7 @@
     }
   },
   "directory": {
-    "title": "Encuentra ayuda de inmigración gratuita cerca de ti — Directorio de VisaNav",
+    "title": "Encuentra ayuda de inmigración gratuita cerca de ti | Directorio de VisaNav",
     "description": "Busca en un directorio de organizaciones de inmigración sin fines de lucro y pro bono en todo Estados Unidos, a partir de los datos oficiales de organizaciones reconocidas del DOJ/EOIR. Gratis, sin necesidad de cuenta.",
     "eyebrow": [
       "EXPLORA GRATIS",
@@ -159,7 +155,7 @@
     "pageOf": "Página {page} de {pages}"
   },
   "partners": {
-    "title": "Para organizaciones — aparece en el directorio o sé aliado de VisaNav",
+    "title": "Para organizaciones: aparece en el directorio o sé aliado de VisaNav",
     "description": "Las organizaciones sin fines de lucro y los proveedores de inmigración pro bono pueden pedir que los incluyamos en el directorio de VisaNav o sumarse como aliados para ofrecer VisaNav a las personas que atienden. Revisamos cada solicitud.",
     "eyebrow": [
       "PARA ORGANIZACIONES",
@@ -194,7 +190,7 @@
     "errNetwork": "No pudimos comunicarnos con el servidor. Revisa tu conexión e inténtalo de nuevo."
   },
   "notFound": {
-    "title": "Página no encontrada — VisaNav",
+    "title": "Página no encontrada | VisaNav",
     "description": "La página que buscas no existe.",
     "heading": "No pudimos encontrar esa página",
     "body": "Puede que la página se haya movido. Prueba el directorio o empieza un chat gratis.",
