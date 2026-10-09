@@ -1,3 +1,4 @@
+from django.utils.translation import gettext as _
 from datetime import date
 
 from rest_framework import serializers
@@ -109,7 +110,7 @@ class OrganizationSubmissionSerializer(serializers.ModelSerializer):
     def validate_hp_website(self, value):
         if value:
             # A filled honeypot means a bot; reject without revealing why.
-            raise serializers.ValidationError("Invalid submission.")
+            raise serializers.ValidationError(_("Invalid submission."))
         return value
 
     def validate(self, attrs):

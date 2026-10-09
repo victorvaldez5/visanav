@@ -350,3 +350,28 @@ async def test_tool_calls_limit_breach_ends_with_content_free_error(anon_conv, m
         Message.objects.filter(conversation_id=anon_conv.id).count
     )()
     assert count == 0
+
+
+# --- localized errors ---------------------------------------------------------
+
+
+async def test_validation_errors_follow_accept_language():
+    es = await AsyncClient().post(
+        CHAT_URL, data="{not json", content_type="application/json", headers={"Accept-Language": "es"}
+    )
+    en = await AsyncClient().post(CHAT_URL, data="{not json", content_type="application/json")
+
+    assert es.json()["detail"] == "El cuerpo de la solicitud no es un JSON válido"
+    assert en.json()["detail"] == "Invalid JSON body"
+
+
+async def test_too_long_message_error_interpolates_the_limit_in_spanish(anon_conv):
+    with override_settings(CHAT_MAX_MESSAGE_CHARS=10):
+        resp = await AsyncClient().post(
+            CHAT_URL,
+            data=body(anon_conv.uuid, message="x" * 11),
+            content_type="application/json",
+            headers={"Accept-Language": "es"},
+        )
+
+    assert resp.json()["detail"] == "El mensaje es demasiado largo (máximo 10 caracteres)."

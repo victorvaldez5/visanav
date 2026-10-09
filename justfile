@@ -55,6 +55,12 @@ db:
 manage *args: db
     cd api && uv run python manage.py {{args}}
 
+# Refresh the API's gettext catalogs: extract new `_()` strings into the .po files,
+# then (after translating them) compile the .mo files that Django actually loads.
+# Both are committed; a test fails if a .mo is missing or stale.
+messages: (manage "makemessages" "-a" "--no-location" "--no-wrap" "--ignore" ".venv/*")
+compile-messages: (manage "compilemessages")
+
 migrate: (manage "migrate")
 
 makemigrations *args: (manage "makemigrations" args)
