@@ -91,6 +91,7 @@ just corpus-pull         # fetch every source's JSONL feeds from R2 (needs R2 re
 just corpus-ingest       # embed + upsert the scraped corpus, every source, from those feeds
 just corpus-ingest --dry # preview chunk counts per source (no keys, no writes)
 just corpus-ingest ecfr  # narrow pull or ingest to named sources
+just corpus-ingest ecfr --force  # other flags pass through to the command (also: just ingest us --force)
 just corpus-refresh      # what production's scheduler runs: ingest whatever is due, feeds read from R2
 just db-status           # chunk counts per country / corpus / topic + each corpus's last ingestion
 ```
@@ -108,7 +109,9 @@ changed `EMBEDDING_MODEL` re-embeds everything); a corpus is never replaced by n
 nor by one under `INGEST_MIN_KEEP_RATIO` (0.7) of its current size without `--force`;
 and a Postgres advisory lock keeps two runs from overlapping. `--only-due` skips a
 corpus whose marker (newest feed name, or a fingerprint of the curated chunks) matches
-its last successful run.
+its last successful run, unless `EMBEDDING_MODEL` changed since that run. An attempt
+that fails before a corpus is read (the feeds cannot be listed, R2 is not configured)
+is recorded as a failed `IngestRun` too.
 
 **Production ingests itself.** The hourly `visanav-ingest` Railway cron service runs
 `manage.py refresh_corpus`: curated `data/` when a deploy changed it, and each scrape

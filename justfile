@@ -106,21 +106,32 @@ db-status: db
 corpus-refresh *args: db
     cd api && uv run python manage.py refresh_corpus {{args}}
 
-# Embed + upsert the curated data/ corpus for a country (dry run: add --dry)
+# Embed + upsert the curated data/ corpus for a country (dry run: add --dry; other flags, such as --force, pass through)
 ingest cc="us" *flags: db
-    cd api && uv run python manage.py ingest {{cc}} {{ if flags == "--dry" { "" } else { "--upsert" } }}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mode="--upsert"; flags=()
+    for arg in {{flags}}; do
+        if [ "$arg" = "--dry" ]; then mode=""; else flags+=("$arg"); fi
+    done
+    # (macOS bash 3.2 rejects an empty array under `set -u`, hence the guard.)
+    cd api && uv run python manage.py ingest {{cc}} $mode ${flags[@]+"${flags[@]}"}
 
 # Download the crawls' JSONL feeds from R2, every source or just those named (needs R2 read credentials in config/.env)
 corpus-pull *sources:
     cd scrapers/uscis_scraper && uv run python pull_feeds.py {{sources}}
 
-# Embed + upsert the scraped corpus from the pulled feeds: every source, or just those named (dry run: add --dry)
+# Embed + upsert the scraped corpus from the pulled feeds: every source, or just those named (dry run: add --dry; other flags, such as --force, pass through)
 corpus-ingest *args: db
     #!/usr/bin/env bash
     set -euo pipefail
     mode="--upsert"; sources=()
     for arg in {{args}}; do
-        if [ "$arg" = "--dry" ]; then mode=""; else sources+=(--source "$arg"); fi
+        case "$arg" in
+            --dry) mode="" ;;
+            --*) sources+=("$arg") ;;
+            *) sources+=(--source "$arg") ;;
+        esac
     done
     # (macOS bash 3.2 rejects an empty array under `set -u`, hence the guard.)
     cd api && uv run python manage.py ingest_scrape ../{{feeds}} $mode ${sources[@]+"${sources[@]}"}

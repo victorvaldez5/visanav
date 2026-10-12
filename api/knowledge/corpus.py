@@ -7,7 +7,7 @@ an IngestRun.
 
 - Due: a corpus is due when what is on offer (its *marker*: the newest feed's
   name, or a fingerprint of the curated chunks) differs from the marker of its
-  last successful run.
+  last successful run, or when that run used another embedding model.
 - Shrink guard: a corpus is never replaced by nothing, nor (unless forced) by
   one much smaller than it is now.
 - Embedding reuse: a chunk id is derived from the chunk's text, so a chunk whose
@@ -77,14 +77,22 @@ def last_success(country: str, corpus: str) -> IngestRun | None:
 
 
 def is_due(country: str, corpus: str, marker: str) -> bool:
-    """True unless the last successful run ingested exactly this marker.
+    """True unless the last successful run ingested exactly this marker with
+    the current embedding model.
+
+    Vectors from another model cannot be compared with the queries, so a changed
+    EMBEDDING_MODEL makes every corpus due even though no feed or chunk changed.
 
     A failed or guard-skipped run does not settle anything: the corpus stays due
     and the next scheduled run tries (and, if nothing changed, fails) again,
     which keeps the problem visible until someone deals with it.
     """
     last = last_success(country, corpus)
-    return last is None or last.marker != marker
+    return (
+        last is None
+        or last.marker != marker
+        or last.embedding_model != settings.EMBEDDING_MODEL
+    )
 
 
 def fingerprint(records: list[dict]) -> str:
@@ -192,6 +200,20 @@ def replace_corpus(
         run.save()
 
 
+def record_failure(country: str, corpus: str, exc: Exception, marker: str = "") -> IngestRun:
+    """Record an attempt that failed before `replace_corpus` could record it
+    (the feeds could not be listed, the bucket is not configured, ...), so that
+    `corpus_status` shows it. The marker is empty when it never got that far.
+    """
+    now = timezone.now()
+    return IngestRun.objects.create(
+        country=country, corpus=corpus, marker=marker, status=IngestRun.FAILED,
+        previous_chunks=KnowledgeChunk.objects.filter(country=country, corpus=corpus).count(),
+        embedding_model=settings.EMBEDDING_MODEL, error=repr(exc)[:2000],
+        started_at=now, finished_at=now,
+    )
+
+
 def _preview(records: list[dict], out) -> None:
     for r in records[:3]:
         text = r["text"][:100].replace("\n", " ")
@@ -201,6 +223,7 @@ def _preview(records: list[dict], out) -> None:
 def refresh_curated(country: str, *, upsert: bool, only_due: bool = False,
                     force: bool = False, out=print) -> Result:
     """Ingest the curated data/ corpus for one country."""
+    recorded = False
     try:
         records = records_for_country(country)
         marker = fingerprint(records)
@@ -211,6 +234,7 @@ def refresh_curated(country: str, *, upsert: bool, only_due: bool = False,
         if not upsert:
             _preview(records, out)
             return Result(CURATED, DRY_RUN)
+        recorded = True  # from here on replace_corpus records the attempt itself
         run = replace_corpus(
             country=country, corpus=CURATED, marker=marker, build=lambda: records,
             force=force, out=out,
@@ -218,6 +242,8 @@ def refresh_curated(country: str, *, upsert: bool, only_due: bool = False,
         return Result(CURATED, run.status)
     except Exception as exc:  # one corpus must not take the others down
         out(f"{CURATED}: FAILED, rows left as they are: {exc!r}")
+        if upsert and not recorded:
+            record_failure(country, CURATED, exc)
         return Result(CURATED, FAILED)
 
 
@@ -227,6 +253,7 @@ def refresh_scraped(store, names: list[str], country: str, *, upsert: bool,
     results = []
     for name in dict.fromkeys(names):
         corpus = SOURCES[name].corpus
+        recorded = False
         try:
             newest = store.newest(name)
             if newest is None:
@@ -253,11 +280,14 @@ def refresh_scraped(store, names: list[str], country: str, *, upsert: bool,
                 _preview(build(), out)
                 results.append(Result(corpus, DRY_RUN))
                 continue
+            recorded = True  # from here on replace_corpus records the attempt itself
             run = replace_corpus(
                 country=country, corpus=corpus, marker=newest, build=build, force=force, out=out
             )
             results.append(Result(corpus, run.status))
         except Exception as exc:  # one source must not take the others down
             out(f"{name}: FAILED, rows left as they are: {exc!r}")
+            if upsert and not recorded:
+                record_failure(country, corpus, exc)
             results.append(Result(corpus, FAILED))
     return results

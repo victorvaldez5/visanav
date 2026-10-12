@@ -20,7 +20,14 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from knowledge.corpus import FAILED, Result, ingest_lock, refresh_curated, refresh_scraped
+from knowledge.corpus import (
+    FAILED,
+    Result,
+    ingest_lock,
+    record_failure,
+    refresh_curated,
+    refresh_scraped,
+)
 from knowledge.feed_store import R2Feeds
 from knowledge.scrape_utils import SOURCES
 
@@ -51,7 +58,9 @@ class Command(BaseCommand):
                     store = R2Feeds.from_settings(Path(workdir))
                 except Exception as exc:
                     out(f"scrape sources: FAILED, cannot read feeds: {exc!r}")
-                    results.append(Result("scrape sources", FAILED))
+                    for source in SOURCES.values():
+                        record_failure(country, source.corpus, exc)
+                        results.append(Result(source.corpus, FAILED))
                 else:
                     results += refresh_scraped(store, list(SOURCES), country, **kwargs)
 

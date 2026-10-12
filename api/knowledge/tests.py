@@ -616,6 +616,30 @@ def test_unchanged_chunks_keep_their_embeddings(voyage_key, settings, tmp_path):
 
 
 @pytest.mark.django_db
+def test_a_new_embedding_model_makes_every_corpus_due(voyage_key, curated_dir, settings, tmp_path):
+    from django.core.management import call_command
+
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    _ingest_scrape(root, "--only-due")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == 2
+
+    # No new feed and no edit to data/, but the stored vectors no longer match
+    # what queries are embedded with: the scheduled run re-embeds both corpora.
+    settings.EMBEDDING_MODEL = "voyage-law-2"
+    _ingest_scrape(root, "--only-due")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == 4
+    assert [r.embedding_model for r in _runs("ecfr")] == ["voyage-3", "voyage-law-2"]
+    assert [r.embedding_model for r in _runs("curated")] == ["voyage-3", "voyage-law-2"]
+
+    # Once that is done, it settles again.
+    _ingest_scrape(root, "--only-due")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == 4 and len(_runs("ecfr")) == 2
+
+
+@pytest.mark.django_db
 def test_failed_source_is_recorded_and_retried(voyage_key, tmp_path):
     from django.core.management.base import CommandError
 
@@ -794,9 +818,51 @@ def test_refresh_corpus_fails_loudly_but_keeps_what_it_can(
     # The bucket is not configured on this service: the scrape sources cannot
     # be read, but the curated corpus is still brought up to date.
     settings.R2_BUCKET = None
-    with pytest.raises(CommandError, match="scrape sources"):
+    with pytest.raises(CommandError, match="uscis, ecfr, federal-register"):
         call_command("refresh_corpus")
     assert KnowledgeChunk.objects.filter(corpus="curated").exists()
+    # Each source it could not look at has a failed run on record.
+    for corpus in ("uscis", "ecfr", "federal-register"):
+        (run,) = _runs(corpus)
+        assert run.status == "failed" and "R2_BUCKET" in run.error
+
+
+@pytest.mark.django_db
+def test_a_source_whose_feeds_cannot_be_listed_is_recorded_as_failed(
+        voyage_key, curated_dir, tmp_path, monkeypatch, capsys):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    from knowledge import feed_store
+
+    class _EcfrListingFails(feed_store.LocalFeeds):
+        def newest(self, source):
+            if source == "ecfr":
+                raise ConnectionError("R2 is unreachable")
+            return super().newest(source)
+
+    root = _feeds_root(tmp_path)
+    monkeypatch.setattr(
+        feed_store.R2Feeds, "from_settings",
+        classmethod(lambda cls, workdir: _EcfrListingFails(root)),
+    )
+    with pytest.raises(CommandError, match="ecfr"):
+        call_command("refresh_corpus")
+
+    (run,) = _runs("ecfr")
+    assert run.status == "failed" and "R2 is unreachable" in run.error
+    assert run.finished_at is not None
+    assert _runs("uscis")[-1].status == "succeeded"  # the others still went ahead
+
+    capsys.readouterr()
+    call_command("corpus_status")
+    (line,) = [ln for ln in capsys.readouterr().out.splitlines() if ln.startswith("us  ecfr")]
+    assert "latest attempt failed" in line and "R2 is unreachable" in line
+
+    # A dry run that hits the same error writes nothing down.
+    with pytest.raises(CommandError):
+        call_command("ingest_scrape", "--from-r2")
+    assert len(_runs("ecfr")) == 1
 
 
 class _StubS3:
