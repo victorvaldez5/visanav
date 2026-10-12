@@ -22,8 +22,9 @@ class KnowledgeChunk(models.Model):
     doc_id = models.CharField(max_length=255)
     country = models.CharField(max_length=8, db_index=True)
     # Which producer wrote the row: "curated" (data/ Markdown via `ingest`) or a
-    # scrape source such as "uscis" (via `ingest_scrape`). Each command replaces
-    # only its own corpus, so re-ingesting one never wipes the other.
+    # scrape source such as "uscis", "ecfr" or "federal-register" (via
+    # `ingest_scrape`, see knowledge.scrape_utils.SOURCES). Each corpus is
+    # replaced on its own, so re-ingesting one never wipes another.
     corpus = models.CharField(max_length=32, default="curated", db_index=True)
     text = models.TextField()
     embedding = VectorField(dimensions=settings.EMBEDDING_DIM)
@@ -31,6 +32,10 @@ class KnowledgeChunk(models.Model):
     # Frontmatter metadata (see data/scripts META_FIELDS / knowledge.schema.json).
     authority = models.CharField(max_length=255, blank=True, null=True)
     topic = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    # The kind of legal document a scraped chunk comes from (statute, regulation,
+    # agency-guidance, final-rule, proposed-rule, notice, presidential, form), so
+    # the model can weigh sources that disagree. Curated chunks leave it null.
+    instrument = models.CharField(max_length=32, blank=True, null=True, db_index=True)
     title = models.CharField(max_length=512, blank=True, null=True)
     lang = models.CharField(max_length=16, blank=True, null=True)
     source_url = models.URLField(max_length=1024, blank=True, null=True)

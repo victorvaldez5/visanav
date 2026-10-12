@@ -21,6 +21,20 @@ export default defineRailway(() => {
     deploy: { cronSchedule: "0 6 * * 1", restartPolicyType: "NEVER" },
     env: { AWS_ACCESS_KEY_ID: preserve(), AWS_ENDPOINT_URL: preserve(), AWS_REGION_NAME: preserve(), AWS_SECRET_ACCESS_KEY: preserve(), R2_BUCKET: preserve() },
   });
+  // One cron service per scrape source, all built from the same scraper image; the
+  // start command picks the spider (the image's default command crawls USCIS).
+  // Schedules are staggered after the USCIS crawl (Mondays 06:00 UTC, about 2 hours).
+  // Each new service needs the same R2 variables as visanav-scraper set on Railway.
+  const scraperSource = (name: string, spider: string, cronSchedule: string) =>
+    service(name, {
+      source: github("victorvaldez5/visanav", { checkSuites: false }),
+      build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "/scrapers/uscis_scraper/Dockerfile" },
+      replicas: { "us-east4-eqdc4a": 1 },
+      deploy: { startCommand: `scrapy crawl ${spider}`, cronSchedule, restartPolicyType: "NEVER" },
+      env: { AWS_ACCESS_KEY_ID: preserve(), AWS_ENDPOINT_URL: preserve(), AWS_REGION_NAME: preserve(), AWS_SECRET_ACCESS_KEY: preserve(), R2_BUCKET: preserve() },
+    });
+  const visanavScraperEcfr = scraperSource("visanav-scraper-ecfr", "ecfr", "0 9 * * 1");
+  const visanavScraperFederalRegister = scraperSource("visanav-scraper-federal-register", "federal-register", "30 9 * * 1");
   const visanav = service("visanav", {
     source: github("victorvaldez5/visanav", { checkSuites: true }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "./api/Dockerfile" },
@@ -33,6 +47,6 @@ export default defineRailway(() => {
   });
 
   return project("jubilant-success", {
-    resources: [visanavScraper, visanav],
+    resources: [visanavScraper, visanavScraperEcfr, visanavScraperFederalRegister, visanav],
   });
 });

@@ -6,7 +6,8 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-feeds := "scrapers/uscis_scraper/output/items/uscis"
+# The feeds root: one directory of JSONL feeds per scrape source.
+feeds := "scrapers/uscis_scraper/output/items"
 
 # List recipes
 default:
@@ -104,17 +105,24 @@ db-status: db
 ingest cc="us" *flags: db
     cd api && uv run python manage.py ingest {{cc}} {{ if flags == "--dry" { "" } else { "--upsert" } }}
 
-# Download the crawl's JSONL feeds from R2 (needs R2 read credentials in config/.env)
-corpus-pull:
-    cd scrapers/uscis_scraper && uv run python pull_feeds.py
+# Download the crawls' JSONL feeds from R2, every source or just those named (needs R2 read credentials in config/.env)
+corpus-pull *sources:
+    cd scrapers/uscis_scraper && uv run python pull_feeds.py {{sources}}
 
-# Embed + upsert the scraped USCIS corpus from the pulled feeds (dry run: add --dry)
-corpus-ingest *flags: db
-    cd api && uv run python manage.py ingest_scrape ../{{feeds}} {{ if flags == "--dry" { "" } else { "--upsert" } }}
+# Embed + upsert the scraped corpus from the pulled feeds: every source, or just those named (dry run: add --dry)
+corpus-ingest *args: db
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mode="--upsert"; sources=()
+    for arg in {{args}}; do
+        if [ "$arg" = "--dry" ]; then mode=""; else sources+=(--source "$arg"); fi
+    done
+    # (macOS bash 3.2 rejects an empty array under `set -u`, hence the guard.)
+    cd api && uv run python manage.py ingest_scrape ../{{feeds}} $mode ${sources[@]+"${sources[@]}"}
 
-# Run the USCIS crawl locally into scrapers/uscis_scraper/output/ (never touches R2)
-crawl:
-    cd scrapers/uscis_scraper && LOCAL_TEST=true uv run scrapy crawl uscis
+# Run one source's crawl locally into scrapers/uscis_scraper/output/ (never touches R2): uscis, ecfr or federal-register
+crawl source="uscis":
+    cd scrapers/uscis_scraper && LOCAL_TEST=true uv run scrapy crawl {{source}}
 
 # ── frontend ─────────────────────────────────────────────────────────────────
 

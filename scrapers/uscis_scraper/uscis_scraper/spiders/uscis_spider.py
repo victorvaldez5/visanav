@@ -1,7 +1,20 @@
+import re
+
 import scrapy
 
 from scrapy.loader import ItemLoader
-from ..items import UscisItem
+from ..items import ScrapedItem
+
+# Markup that differs on every fetch of an otherwise unchanged page: Drupal
+# stamps each embedded view with a random id, every Policy Manual chapter shows
+# the date the whole manual is current as of (uscis.gov), and every U.S. Code
+# page carries the date its text is current through (uscode.house.gov).
+_VOLATILE_MARKUP = re.compile(
+    r"js-view-dom-id-[0-9a-f]+"
+    r'|<span class="current-date__value">.*?</span>'
+    r'|<span class="lawsInEffect">.*?</span>',
+    re.S,
+)
 
 
 class UscisSpider(scrapy.Spider):
@@ -22,6 +35,14 @@ class UscisSpider(scrapy.Spider):
         # 'https://www.uscis.gov/tools',
         # add other entry points as needed
     ]
+
+    # A full crawl sees about 730 pages and 250 PDFs; far fewer means the site
+    # blocked us or its markup changed (see health.py).
+    min_items_seen = 500
+
+    def stable_content(self, content):
+        """What ContentHashPipeline hashes to decide whether a page changed."""
+        return _VOLATILE_MARKUP.sub("", content)
 
     def parse(self, response, **kwargs):
         # Route to different parsers by URL pattern
@@ -44,7 +65,7 @@ class UscisSpider(scrapy.Spider):
 
     def parse_forms_page(self, response, **kwargs):
         # Yield an item for the HTML page itself
-        loader = ItemLoader(item=UscisItem(), response=response)
+        loader = ItemLoader(item=ScrapedItem(), response=response)
         pdf_links = response.css("article.media a::attr(href)").getall()
         loader.add_value("url", response.url)
         loader.add_value("content_type", "text/html")
@@ -70,7 +91,7 @@ class UscisSpider(scrapy.Spider):
             )
 
     def parse_uscode_page(self, response, **kwargs):
-        loader = ItemLoader(item=UscisItem(), response=response)
+        loader = ItemLoader(item=ScrapedItem(), response=response)
         loader.add_value("url", response.url)
         loader.add_value("content_type", "text/html")
         loader.add_value("content", response.css("#docViewer").get())
@@ -94,7 +115,7 @@ class UscisSpider(scrapy.Spider):
         # Chapter bodies use the same #page-content container as form pages.
         # These are HTML-only; the per-volume "Download PDF" links are skipped
         # as redundant with the chapter HTML.
-        loader = ItemLoader(item=UscisItem(), response=response)
+        loader = ItemLoader(item=ScrapedItem(), response=response)
         loader.add_value("url", response.url)
         loader.add_value("content_type", "text/html")
         loader.add_value("content", response.css("#page-content").get())
@@ -103,7 +124,7 @@ class UscisSpider(scrapy.Spider):
         yield loader.load_item()
 
     def parse_pdf(self, response):
-        loader = ItemLoader(item=UscisItem(), response=response)
+        loader = ItemLoader(item=ScrapedItem(), response=response)
         loader.add_value("url", response.url)
         loader.add_value("content_type", "application/pdf")
         loader.add_value("file_urls", [response.url])

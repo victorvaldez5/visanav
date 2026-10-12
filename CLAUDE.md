@@ -10,7 +10,7 @@ independently-deployed services** plus a shared config file:
 
 - `api/` — Django REST Framework backend (chat, auth, public-resources directory). Deployed to **Railway**.
 - `frontend/` — Vue 3 + Vite SPA (chat UI). Deployed to **Cloudflare** (static `dist/` via Wrangler).
-- `scrapers/uscis_scraper/` — Scrapy spider that crawls USCIS → **Cloudflare R2**. Runs weekly as a Railway cron service.
+- `scrapers/uscis_scraper/` — Scrapy project with one spider per source (`uscis`, `ecfr`, `federal-register`) → **Cloudflare R2**. Each runs weekly as its own Railway cron service.
 - `data/` — community-curated, per-country immigration knowledge/resources (Markdown + YAML) plus the scripts that validate and ingest them into the vector store.
 - `i18n/`: shared internationalization assets: the canonical locale allowlist (`supported-locales.json`) and the translation glossary. See "Internationalization" below.
 - `config/.env` — the single env file read by **all** services (gitignored; see `config/.env.example`).
@@ -19,7 +19,7 @@ independently-deployed services** plus a shared config file:
 
 A root **`justfile`** wraps the everyday tasks (`just` lists them all): `just setup`,
 `just test`, `just lint`, `just migrate`, `just manage <cmd>`, `just db-status`,
-`just ingest us`, `just corpus-pull`, `just corpus-ingest`. Recipes run on the host
+`just ingest us`, `just corpus-pull`, `just corpus-ingest`, `just crawl <source>`. Recipes run on the host
 against the compose Postgres (`just db` starts only that). Prefer them over ad-hoc
 commands; they never load `config/.env` into the shell.
 
@@ -72,10 +72,11 @@ deliberately skip it, so run `npm run lint` yourself before shipping.
 
 ### Scraper (`scrapers/uscis_scraper/`)
 ```bash
-just crawl           # LOCAL_TEST=true crawl → scrapers/uscis_scraper/output/ (never R2)
+just crawl           # LOCAL_TEST=true USCIS crawl → scrapers/uscis_scraper/output/ (never R2)
+just crawl ecfr      # any spider by name: uscis (default), ecfr, federal-register
 just test-scraper    # scraper unit tests
 ```
-(`LOCAL_TEST=false` uploads to R2; only the weekly Railway cron service runs that way; `scrape.yml` is a manual fallback.)
+(`LOCAL_TEST=false` uploads to R2; only the weekly Railway cron services run that way; `scrape.yml` is a manual fallback.)
 
 ### Data corpus
 ```bash
@@ -86,13 +87,19 @@ uv run python data/scripts/ingest.py us  # preview the chunks (dry run only)
 # Authoritative ingestion (embed via Voyage + write to pgvector) lives in the API:
 just ingest us --dry     # DRY RUN: chunk + preview, no keys/DB
 just ingest us           # embed + upsert curated data/ (needs VOYAGE_API_KEY + DB)
-just corpus-pull         # fetch the crawl's JSONL feeds from R2 (needs R2 read creds)
-just corpus-ingest       # embed + upsert the scraped USCIS corpus from those feeds
+just corpus-pull         # fetch every source's JSONL feeds from R2 (needs R2 read creds)
+just corpus-ingest       # embed + upsert the scraped corpus, every source, from those feeds
+just corpus-ingest --dry # preview chunk counts per source (no keys, no writes)
+just corpus-ingest ecfr  # narrow pull or ingest to named sources
 just db-status           # chunk counts per country / corpus / topic
 ```
 Both ingest commands transactionally replace **only their own corpus** (the
-`KnowledgeChunk.corpus` column: `curated` vs `uscis`), so re-running one never wipes the
-other. Run them from a full checkout (local/CI), not the prod web image.
+`KnowledgeChunk.corpus` column: `curated`, or one per scrape source: `uscis`, `ecfr`,
+`federal-register`), so re-running one never wipes another. `ingest_scrape` takes the
+**feeds root** (one subdirectory per source) and handles every source in one run, each in
+its own transaction: a source with no feeds is skipped and keeps its rows, and a failing
+source makes the command exit non-zero without rolling back the others. Run them from a
+full checkout (local/CI), not the prod web image.
 
 ### Translations (i18n)
 ```bash
@@ -109,8 +116,10 @@ just compile-messages   # compile the .mo files Django loads (commit both)
   env vars — `prod.py` refuses to boot without them.
 - **Frontend → Cloudflare**: `npm run build` then `wrangler deploy` uploads `dist/` as a
   static-assets Worker (`frontend/wrangler.jsonc`, SPA fallback for Vue Router history mode).
-- **Scraper → Railway cron**: the `visanav-scraper` service (defined in `.railway/railway.ts`,
-  `production` stage of `scrapers/uscis_scraper/Dockerfile`, repo-root context) crawls weekly to R2.
+- **Scraper → Railway cron**: one cron service per spider (defined in `.railway/railway.ts`,
+  `production` stage of `scrapers/uscis_scraper/Dockerfile`, repo-root context) crawls weekly to R2:
+  `visanav-scraper` (USCIS, the image's default command), `visanav-scraper-ecfr` and
+  `visanav-scraper-federal-register` (same image, a `startCommand` per spider).
   `.github/workflows/scrape.yml` is a `workflow_dispatch`-only fallback.
 - **Railway config**: `.railway/railway.ts` (Infrastructure as Code) declares the API and scraper services,
   never Postgres. `railway config plan` previews and `railway config apply` applies; read the plan first.
@@ -185,20 +194,35 @@ its rows via the `corpus` column:
   chunks the body (~200 words), embeds via Voyage, and upserts rows scoped by **country** with the
   frontmatter as columns. `validate.py` gates format in CI (e.g. anything `source_type: official`
   must cite a domain declared in that country's `meta.yaml`).
-- **Raw scrape** (`scrapers/`): the `uscis` spider crawls USCIS forms, the INA, and the Policy
-  Manual, writing raw HTML/PDF/JSONL to R2 under `raw/`. It is **incremental** via a content-hash
-  manifest (`raw/manifest.json`): `ContentHashPipeline` drops unchanged pages before they hit the
-  storage sinks, and every crawl also writes a JSONL feed (`raw/items/uscis/<time>.jsonl`, url +
-  main-content HTML). Because feeds are deltas, `manage.py ingest_scrape` (`knowledge/scrape_utils.py`)
-  merges **all** of them oldest→newest, extracts the Policy Manual guidance, INA statute text and
-  form pages, and writes `corpus="uscis"` chunks. PDFs aren't ingested yet.
+- **Raw scrape** (`scrapers/`): one spider per source writes raw pages/PDF/JSONL to R2 under
+  `raw/`. `uscis` crawls USCIS forms, the INA, and the Policy Manual; `ecfr` splits GPO's eCFR
+  bulk XML (govinfo.gov, because ecfr.gov's robots.txt disallows its full-text API) into one item
+  per CFR section; `federal-register` pulls recent immigration documents from the Federal Register
+  API. Each is **incremental** via its own content-hash manifest (`raw/manifests/<spider>.json`;
+  USCIS falls back once to the old shared `raw/manifest.json`): `ContentHashPipeline` drops
+  unchanged pages before they hit the storage sinks, and every crawl also writes a JSONL feed
+  (`raw/items/<spider>/<time>.jsonl`: url + main content + optional `meta`). The hash is taken
+  over `spider.stable_content(content)` when a spider defines it (USCIS strips per-fetch markup
+  such as random Drupal view ids and "current as of" dates, without which every page looked
+  changed every week). A page is recorded in the manifest only once it has reached the feed, and
+  the manifest is saved only after the feed is stored, so a failed upload is re-emitted by the
+  next crawl instead of being lost. `ecfr` sees its whole
+  source every crawl, so after a clean crawl it also emits `removed` lines for sections that are
+  gone (`enumeration.py`). Because feeds are deltas, `manage.py ingest_scrape`
+  (`knowledge/scrape_utils.py`) merges **all** of a source's feeds oldest→newest (honouring
+  removals), runs that source's extractor from the `SOURCES` registry, and writes chunks with
+  `corpus=<spider name>`. Federal Register documents older than
+  `FEDERAL_REGISTER_RETENTION_DAYS` (default 730) are left out. PDFs aren't ingested yet.
+  Scraped chunks also carry `instrument` (statute, regulation, agency-guidance, final-rule,
+  proposed-rule, notice, presidential, form); `semantic_search` returns it with `authority`
+  so Javi can weigh sources that disagree.
 
 ### Django apps
 - `accounts` — custom `User` (AbstractUser, `AUTH_USER_MODEL = accounts.User`) + `Profile`; JWT auth (SimpleJWT: 10-min access, 7-day refresh), registration, email verification.
 - `conversation` — `Conversation` / `Message` / `Feedback` models, the `ConversationViewSet`, and the SSE `chat_stream`. Conversations are keyed publicly by **UUID, not integer id**, so anonymous chats can't be enumerated.
 - `locations` — `Country` / `Subdivision` / `Address` / `Language` reference data.
 - `network` — the public-resources directory: a flat `Organization` (contact details are inline Postgres `ArrayField`s — no contact/address/language side-tables — matching `data/schema/resource.schema.json`) plus a read-only `Representative` (individual attorneys / DOJ-accredited reps). Seeded via management commands (`load_resources <cc>`, `extract_ra_orgs`, `extract_probono`, `extract_ra_reps`), not migrations; the DOJ roster fixtures are (re)parsed from the source EOIR PDFs in `data/raw/` by `build_ra_fixtures` (`download_ra_rosters`, or `build_ra_fixtures --download`, refreshes those PDFs from justice.gov first).
-- `knowledge` — the pgvector RAG corpus: `KnowledgeChunk` (embedded chunks, per-country), `ingest_utils.py` (chunking), and the `ingest` management command.
+- `knowledge` — the pgvector RAG corpus: `KnowledgeChunk` (embedded chunks, per-country), `ingest_utils.py` (chunking), `scrape_utils.py` (the scrape-source registry and extractors), and the `ingest` / `ingest_scrape` management commands.
 - `core` — shared infra: `llm.py` (the agent), `embeddings.py` (Voyage), `pagination.py`, `utils.py`, `mail.py`.
 
 URL roots (`api_project/urls.py`): `api/` (conversation), `api/auth/`, `api/locations/`,
@@ -232,6 +256,13 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   and `python` silently loses every package. Build context is the repo root, so the root
   `.dockerignore` is the only one Docker reads (it keeps `.venv`, `node_modules`, `.claude/`
   and `config/.env` out of the context).
+- **`scrapy crawl` is overridden** (`COMMANDS_MODULE`, `uscis_scraper/commands/crawl.py`): after
+  the crawl it runs `health.crawl_problems` over the stats and exits non-zero when the crawl can't
+  be trusted (feed not stored, no or mostly failed requests, parse errors, fewer items than the
+  spider's `min_items_seen`, removals refused). Stock Scrapy exits 0 in all of those cases.
+- **Local crawls are throttled too**: `LOCAL_TEST` only changes where output goes. Robots.txt,
+  the 5-second delay and autothrottle apply in every mode, so `just crawl` (USCIS) takes about as
+  long as production; pass `-s DOWNLOAD_DELAY=1` to scrapy directly for a quick experiment.
 - **Scraper + R2**: `AWS_USE_SSL = True` is set deliberately — with the default, botocore's
   S3 region-redirector infinitely recurses against R2. Don't remove it.
 - **`pydantic-ai-slim`, not `pydantic-ai`**: only the `anthropic` + `openai` extras are installed

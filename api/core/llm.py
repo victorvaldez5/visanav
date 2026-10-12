@@ -98,6 +98,19 @@ INSTRUCTIONS = """
       the tool result's `note`.
     - Never invent a source, URL, or form number, and never cite a document
       semantic_search did not return.
+
+    Weighing sources (each match says who issued it in `authority` and what kind
+    of document it is in `instrument`):
+    - A statute or a regulation is binding law and outranks agency-guidance (such
+      as the USCIS Policy Manual) and form pages, which explain how the agency
+      applies it.
+    - A proposed-rule is NOT in effect: describe it only as a proposal. A
+      final-rule takes effect on the date in its title, which may still be ahead.
+    - A notice, final-rule or presidential document may be newer than the other
+      sources. Mention its publication date, and note that a dated document may
+      since have been extended, replaced or blocked.
+    - When sources disagree, say so plainly rather than choosing silently, and
+      suggest confirming with an accredited representative or attorney.
     - When referring the user to a specific organization or representative, use
       resource_lookup and share ONLY the names and contact details it returns.
       Never state an organization's name, phone number, address, email, or other
@@ -194,6 +207,12 @@ class SearchMatch(BaseModel):
     id: str
     score: Optional[float] = None
     topic: Optional[str] = None
+    # The issuing government body, and the kind of legal document (statute,
+    # regulation, agency-guidance, final-rule, proposed-rule, notice,
+    # presidential, form; null for curated summaries). See "Weighing sources"
+    # in INSTRUCTIONS.
+    authority: Optional[str] = None
+    instrument: Optional[str] = None
     title: Optional[str] = None
     source_url: Optional[str] = None
     # ISO date (YYYY-MM-DD) the source was last checked, shown next to the link.
@@ -275,8 +294,8 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
         .annotate(distance=CosineDistance("embedding", vector))
         .order_by("distance")[:top_k]
         .values(
-            "chunk_id", "topic", "title", "source_url", "last_verified",
-            "text", "distance",
+            "chunk_id", "topic", "authority", "instrument", "title", "source_url",
+            "last_verified", "text", "distance",
         )
     )
     matches = [
@@ -286,6 +305,8 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
             # distance; higher = more relevant.
             score=1.0 - row["distance"],
             topic=row["topic"],
+            authority=row["authority"],
+            instrument=row["instrument"],
             title=row["title"],
             source_url=row["source_url"],
             last_verified=(
