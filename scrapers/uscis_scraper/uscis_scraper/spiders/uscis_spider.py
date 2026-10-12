@@ -3,6 +3,7 @@ import re
 import scrapy
 
 from scrapy.loader import ItemLoader
+from ..enumeration import MissCountingMixin
 from ..items import ScrapedItem
 
 # Markup that differs on every fetch of an otherwise unchanged page: Drupal
@@ -17,7 +18,10 @@ _VOLATILE_MARKUP = re.compile(
 )
 
 
-class UscisSpider(scrapy.Spider):
+class UscisSpider(MissCountingMixin, scrapy.Spider):
+    # Pages are found by following links, so one that vanishes from the site is
+    # only removed once two healthy crawls in a row have not seen it
+    # (MissCountingMixin).
     name = "uscis"
     allowed_domains = ["uscis.gov", "uscode.house.gov"]
     start_urls = [

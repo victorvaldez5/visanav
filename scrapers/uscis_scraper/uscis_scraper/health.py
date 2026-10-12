@@ -23,16 +23,22 @@ def feed_was_stored(stats):
     )
 
 
-def crawl_problems(stats, spider=None):
-    """Return the reasons this crawl should count as failed (empty if healthy)."""
+def crawl_problems(stats, spider=None, finished=True):
+    """Return the reasons this crawl should count as failed (empty if healthy).
+
+    With ``finished=False`` the crawl is judged as it stands once every request
+    has been handled but before it closes, when how it finished and whether its
+    feed was stored are not yet known.
+    """
     problems = []
 
-    reason = stats.get("finish_reason")
-    if reason != "finished":
-        problems.append(f"the crawl ended as {reason!r}, not 'finished'")
+    if finished:
+        reason = stats.get("finish_reason")
+        if reason != "finished":
+            problems.append(f"the crawl ended as {reason!r}, not 'finished'")
 
-    if not feed_was_stored(stats):
-        problems.append("the feed could not be stored")
+        if not feed_was_stored(stats):
+            problems.append("the feed could not be stored")
 
     succeeded = _sum(stats, "downloader/response_status_count/2") + _sum(
         stats, "downloader/response_status_count/3"

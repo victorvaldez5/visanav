@@ -206,9 +206,12 @@ its rows via the `corpus` column:
   such as random Drupal view ids and "current as of" dates, without which every page looked
   changed every week). A page is recorded in the manifest only once it has reached the feed, and
   the manifest is saved only after the feed is stored, so a failed upload is re-emitted by the
-  next crawl instead of being lost. `ecfr` sees its whole
-  source every crawl, so after a clean crawl it also emits `removed` lines for sections that are
-  gone (`enumeration.py`). Because feeds are deltas, `manage.py ingest_scrape`
+  next crawl instead of being lost. Spiders also emit `removed`
+  lines for pages that are gone (`enumeration.py`): `ecfr` sees its whole source every crawl, so
+  anything missing after a clean crawl is removed at once; `uscis` follows links, so a page is
+  removed only after two healthy crawls in a row have not seen it (the per-URL miss count lives
+  in the manifest, whose entries are `{hash, missed}`; unhealthy crawls count nothing). Neither
+  removes more than a tenth of its known pages in one crawl. Because feeds are deltas, `manage.py ingest_scrape`
   (`knowledge/scrape_utils.py`) merges **all** of a source's feeds oldest→newest (honouring
   removals), runs that source's extractor from the `SOURCES` registry, and writes chunks with
   `corpus=<spider name>`. Federal Register documents older than
