@@ -14,7 +14,9 @@ an IngestRun.
   id is already stored keeps its vector. Only new or changed chunks are embedded,
   which is what makes it affordable to run this on a schedule.
 - One at a time: an advisory lock keeps a manual run and a scheduled run from
-  interleaving their deletes and inserts.
+  interleaving their deletes and inserts. The lock belongs to the database
+  connection, so it is checked again before every write: if the connection was
+  dropped meanwhile, the lock is taken again or the corpus is left alone.
 """
 from __future__ import annotations
 
@@ -37,6 +39,8 @@ CURATED = "curated"
 # Any constant will do; it only has to be the same for every ingestion run.
 _LOCK_ID = 7_141_592
 _RETRIES = 5
+# The backend (connection) that holds the ingestion lock for this process, if any.
+_lock_pid: int | None = None
 
 # Outcomes of refreshing one corpus. The first two mean the run should exit non-zero.
 FAILED, SKIPPED = IngestRun.FAILED, IngestRun.SKIPPED
@@ -53,19 +57,57 @@ class Result:
         return self.status in (FAILED, SKIPPED)
 
 
+class LockLost(RuntimeError):
+    """The ingestion lock went with a dropped connection and another run has it."""
+
+
+def _try_lock() -> int | None:
+    """Take the lock on the current connection; return its backend pid, or None
+    if another connection holds the lock."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_try_advisory_lock(%s), pg_backend_pid()", [_LOCK_ID])
+        acquired, pid = cursor.fetchone()
+    return pid if acquired else None
+
+
 @contextmanager
 def ingest_lock():
     """Yield True if this process now holds the ingestion lock, False if another
     run already does (the caller should then do nothing)."""
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT pg_try_advisory_lock(%s)", [_LOCK_ID])
-        acquired = cursor.fetchone()[0]
+    global _lock_pid
+    _lock_pid = _try_lock()
+    acquired = _lock_pid is not None
     try:
         yield acquired
     finally:
         if acquired:
+            _lock_pid = None
             with connection.cursor() as cursor:
                 cursor.execute("SELECT pg_advisory_unlock(%s)", [_LOCK_ID])
+
+
+def _keep_lock() -> None:
+    """Make sure the lock taken by `ingest_lock` is still held before writing.
+
+    An advisory lock lives and dies with its connection. A run spends minutes
+    waiting on Voyage, and if the idle connection is dropped in that time Django
+    quietly opens a new one that holds nothing. On a new connection the lock is
+    taken again; if another run got there first, this one must not write.
+    Does nothing outside `ingest_lock`.
+    """
+    global _lock_pid
+    if _lock_pid is None:
+        return
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_backend_pid()")
+        if cursor.fetchone()[0] == _lock_pid:
+            return
+    retaken = _try_lock()
+    if retaken is None:
+        raise LockLost(
+            "the database connection was dropped and another ingestion run now holds the lock"
+        )
+    _lock_pid = retaken
 
 
 def last_success(country: str, corpus: str) -> IngestRun | None:
@@ -146,6 +188,7 @@ def replace_corpus(
         previous_chunks=rows.count(), embedding_model=settings.EMBEDDING_MODEL,
     )
     try:
+        _keep_lock()
         records = build()
         # Nothing extracted means a broken crawl or extractor, not an empty source.
         if not records:
@@ -181,6 +224,8 @@ def replace_corpus(
         ]
 
         with transaction.atomic():
+            # Checked inside the transaction, which cannot outlive its connection.
+            _keep_lock()
             deleted, _ = rows.delete()
             KnowledgeChunk.objects.bulk_create(objs, batch_size=500)
 

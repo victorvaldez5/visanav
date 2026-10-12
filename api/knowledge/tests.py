@@ -707,6 +707,75 @@ def test_ingestion_does_nothing_while_another_run_holds_the_lock(voyage_key, tmp
     assert not KnowledgeChunk.objects.filter(chunk_id="old-ecfr").exists()
 
 
+class _VoyageThatDropsTheConnection:
+    """A Voyage client whose first call outlasts the database connection: the
+    backend holding the ingestion lock is killed while the call is in flight.
+    With `rival`, another run takes the lock before this one notices."""
+
+    def __init__(self, other, rival):
+        self.other, self.rival, self.calls = other, rival, 0
+        self.lock_was_free = []  # per later call: could someone else have taken the lock?
+
+    def embed(self, texts, model, input_type):
+        from django.db import connection
+
+        from knowledge.corpus import _LOCK_ID
+
+        self.calls += 1
+        with self.other.cursor() as cursor:
+            if self.calls == 1:
+                with connection.cursor() as mine:
+                    mine.execute("SELECT pg_backend_pid()")
+                    cursor.execute("SELECT pg_terminate_backend(%s)", mine.fetchone())
+                cursor.execute("SELECT pg_sleep(0.2)")  # let the backend go
+                if self.rival:
+                    cursor.execute("SELECT pg_advisory_lock(%s)", [_LOCK_ID])
+            elif not self.rival:
+                cursor.execute("SELECT pg_try_advisory_lock(%s)", [_LOCK_ID])
+                free = cursor.fetchone()[0]
+                self.lock_was_free.append(free)
+                if free:
+                    cursor.execute("SELECT pg_advisory_unlock(%s)", [_LOCK_ID])
+        return _FakeResp([[1.0] * 1024 for _ in texts])
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("rival", [False, True])
+def test_a_dropped_connection_does_not_let_two_runs_write(
+        rival, monkeypatch, settings, tmp_path):
+    from django.core.management.base import CommandError
+    from django.db import connection
+
+    settings.VOYAGE_API_KEY = "test"
+    for corpus in ("uscis", "ecfr", "federal-register"):
+        _seed(f"old-{corpus}", corpus)
+    other = connection.copy()
+    voyage = _VoyageThatDropsTheConnection(other, rival)
+    monkeypatch.setattr(embeddings, "get_voyage_client", lambda: voyage)
+    try:
+        # The source being embedded when the connection went fails either way.
+        with pytest.raises(CommandError, match="uscis"):
+            _ingest_scrape(_feeds_root(tmp_path), "--force")
+        connection.close()  # look at what was left behind on a fresh connection
+        assert _runs("uscis")[-1].status == "failed"
+        assert KnowledgeChunk.objects.filter(chunk_id="old-uscis").exists()
+
+        later = [_runs(c)[-1] for c in ("ecfr", "federal-register")]
+        if rival:
+            # Another run holds the lock now: nothing more is written or embedded.
+            assert [r.status for r in later] == ["failed", "failed"]
+            assert all("another ingestion run" in r.error for r in later)
+            assert KnowledgeChunk.objects.filter(chunk_id__startswith="old-").count() == 3
+            assert voyage.calls == 1
+        else:
+            # Nobody else wants it: the run takes the lock again on its new
+            # connection and finishes the other sources, still alone.
+            assert [r.status for r in later] == ["succeeded", "succeeded"]
+            assert voyage.lock_was_free == [False, False]
+    finally:
+        other.close()
+
+
 _CURATED_DOC = """---
 doc_id: us-green-card-renewal
 authority: USCIS
