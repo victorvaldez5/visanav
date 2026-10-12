@@ -47,6 +47,9 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10", "pytest-django>=4.9", "pytest-cov>=6.0", "pytest-asyncio>=0.24"]
+# Scheduled ingestion reads the scrapers' feeds from R2 (knowledge/feed_store.py).
+# Installed only in the ingest image (api/ingest.Dockerfile), never the web image.
+ingest = ["boto3>=1.43,<2"]
 
 [tool.uv]
 # A Django project run from this directory, not an installable package.

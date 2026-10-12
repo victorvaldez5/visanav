@@ -3,23 +3,23 @@
     python manage.py ingest us            # DRY RUN: chunk + preview, no keys/DB
     python manage.py ingest us --upsert   # embed (Voyage) + write KnowledgeChunk rows
 
---upsert transactionally replaces the country's curated chunks (delete + bulk insert),
-mirroring the old Pinecone per-namespace overwrite so re-ingesting reaps chunks
-whose content changed. Needs VOYAGE_API_KEY and a reachable database.
+--upsert transactionally replaces the country's curated chunks (delete + bulk
+insert), so re-ingesting reaps chunks whose content changed. Only new or changed
+chunks are embedded. Needs VOYAGE_API_KEY and a reachable database.
 
-Reads Markdown from settings.KNOWLEDGE_DATA_DIR (a full repo checkout), so run it
-locally or from CI — not inside the slim prod web image, which omits data/.
+--only-due does nothing when the chunks are the same as the last successful
+ingest. --force overrides the shrink guard (see knowledge/corpus.py).
+
+Reads Markdown from settings.KNOWLEDGE_DATA_DIR: a repo checkout, or /app/data
+in the API and ingest images. In production the scheduled `refresh_corpus`
+command runs this for you after each deploy.
 """
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 
-from knowledge.ingest_utils import records_for_country
-from knowledge.models import KnowledgeChunk
-
-_EMBED_BATCH = 128
+from knowledge.corpus import ingest_lock, refresh_curated
 
 
 class Command(BaseCommand):
@@ -32,44 +32,35 @@ class Command(BaseCommand):
             action="store_true",
             help="embed + write to the database (default: dry run)",
         )
+        parser.add_argument(
+            "--only-due", action="store_true",
+            help="do nothing if the chunks are unchanged since the last successful ingest",
+        )
+        parser.add_argument(
+            "--force", action="store_true",
+            help="replace the corpus even if the new one is much smaller",
+        )
 
     def handle(self, *args, **options):
         code = options["country"].lower()
         cdir = Path(settings.KNOWLEDGE_DATA_DIR) / code
         if not cdir.exists():
             raise CommandError(f"No such country under {settings.KNOWLEDGE_DATA_DIR}: {code}")
-
-        records = records_for_country(code)
-        self.stdout.write(f"{code.upper()}: {len(records)} chunk(s)")
-
-        if not options["upsert"]:
-            for r in records[:3]:
-                preview = r["text"][:100].replace("\n", " ")
-                self.stdout.write(f"  [{r.get('topic')}] {r['chunk_id']}: {preview}...")
-            if len(records) > 3:
-                self.stdout.write(
-                    f"  ... and {len(records) - 3} more (dry run; pass --upsert to write)"
-                )
+        upsert = options["upsert"]
+        if not upsert:
+            refresh_curated(code, upsert=False, only_due=options["only_due"], out=self.stdout.write)
+            self.stdout.write("(dry run; pass --upsert to embed + write)")
             return
-
         if not settings.VOYAGE_API_KEY:
             raise CommandError("--upsert requires VOYAGE_API_KEY")
-        if not records:
-            raise CommandError(f"No knowledge chunks found for {code}")
 
-        # Embed here (not in ingest_utils) so the dry run stays key/network-free.
-        from core.embeddings import embed_documents
-
-        vectors = embed_documents([r["text"] for r in records])
-        objs = [KnowledgeChunk(embedding=vec, **rec) for rec, vec in zip(records, vectors)]
-
-        with transaction.atomic():
-            deleted, _ = KnowledgeChunk.objects.filter(country=code, corpus="curated").delete()
-            KnowledgeChunk.objects.bulk_create(objs, batch_size=_EMBED_BATCH)
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"✓ upserted {len(objs)} chunk(s) for '{code}' "
-                f"(replaced {deleted} existing row(s)) using {settings.EMBEDDING_MODEL}"
+        with ingest_lock() as acquired:
+            if not acquired:
+                self.stdout.write("Another ingestion run is in progress; nothing done.")
+                return
+            result = refresh_curated(
+                code, upsert=True, only_due=options["only_due"], force=options["force"],
+                out=self.stdout.write,
             )
-        )
+        if result.bad:
+            raise CommandError(f"curated corpus for '{code}' was not replaced ({result.status})")

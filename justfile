@@ -97,9 +97,14 @@ validate-data *cc:
 
 # ── knowledge corpus ─────────────────────────────────────────────────────────
 
-# What's in the vector store and resource directory right now
+# What's in the vector store, how fresh each corpus is, and the resource directory size
 db-status: db
-    @cd api && uv run python manage.py shell -v 0 -c "from django.db.models import Count; from knowledge.models import KnowledgeChunk as K; from network.models import Organization as O; rows = K.objects.values('country', 'corpus', 'topic').annotate(n=Count('id')).order_by('country', 'corpus', 'topic'); [print(f\"{r['country']:3} {r['corpus']:8} {r['topic'] or '-':16} {r['n']:6}\") for r in rows]; print(f\"total chunks: {K.objects.count()}   organizations: {O.objects.count()}\")"
+    @cd api && uv run python manage.py corpus_status
+    @cd api && uv run python manage.py shell -v 0 -c "from network.models import Organization as O; print(f'organizations: {O.objects.count()}')"
+
+# Ingest everything that is due, as the scheduler does: curated data/ if it changed, and each scrape source's new feeds straight from R2
+corpus-refresh *args: db
+    cd api && uv run python manage.py refresh_corpus {{args}}
 
 # Embed + upsert the curated data/ corpus for a country (dry run: add --dry)
 ingest cc="us" *flags: db

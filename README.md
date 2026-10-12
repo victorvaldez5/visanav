@@ -234,6 +234,25 @@ doesn't migrate a second time on every cold start. If the variable is unset it
 is harmless (migrate is idempotent), just redundant. `api/entrypoint.sh` still
 runs `collectstatic` on every start, and still migrates on boot locally.
 
+### Scheduled ingestion (the knowledge base keeps itself current)
+
+A third kind of Railway service, `visanav-ingest`, runs `python manage.py refresh_corpus`
+every hour from its own image ([`api/ingest.Dockerfile`](api/ingest.Dockerfile): the API code
+plus an S3 client). Each run ingests only what is due:
+
+- a scrape source whose crawl has left a new feed in R2, and
+- the curated `data/` corpus, when a deploy changed it.
+
+With nothing due it exits in seconds. Only new or changed chunks are embedded, every run is
+recorded (`python manage.py corpus_status`), and a corpus that would shrink by more than 30%
+is not replaced without `--force`.
+
+Set these on the service (same values as the API service unless noted): `DJANGO_SETTINGS_MODULE`,
+`DJANGO_SECRET_KEY`, `ALLOWED_HOSTS`, `CONVERSATION_ENCRYPTION_KEYS`, the six `POSTGRES_*`
+variables, `VOYAGE_API_KEY`, and for the bucket the scrapers write to (read-only credentials are
+enough): `R2_BUCKET`, `AWS_ENDPOINT_URL` (the bare host, no bucket path), `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_REGION_NAME=auto`.
+
 Before a `develop` → `main` release, work through [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ---
