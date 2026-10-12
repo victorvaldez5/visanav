@@ -4,15 +4,15 @@
 //      the listed "locales").
 //   2. Each surface's declared locale list AND default match that allowlist: the
 //      Vue app's SUPPORTED_LOCALES + DEFAULT_LOCALE, Django's LANGUAGES +
-//      LANGUAGE_CODE, and (once it exists) the Astro i18n config.
-//   3. Per-locale JSON catalogs (frontend/src/locales, and marketing once it has
-//      them) share an identical key set with the default locale's catalog.
-//   4. Django gettext catalogs (api/locale/<locale>/LC_MESSAGES/*.po), once any
-//      exist, cover every non-default locale with no missing, fuzzy or obsolete
-//      entries (gettext's equivalent of missing/orphaned keys).
+//      LANGUAGE_CODE, and the marketing site's SUPPORTED_LOCALES + Astro i18n config.
+//   3. Per-locale JSON catalogs (frontend/src/locales, marketing/src/i18n) share
+//      an identical key set with the default locale's catalog.
+//   4. Django gettext catalogs (api/locale/<locale>/LC_MESSAGES/*.po) cover every
+//      non-default locale with no missing, fuzzy or obsolete entries (gettext's
+//      equivalent of missing/orphaned keys).
 //
-// A surface that has no catalogs yet (marketing, the API) is skipped, so the gate
-// grows stricter as each phase lands. Exits non-zero on any problem.
+// A surface whose files are absent is skipped rather than failed. Exits non-zero
+// on any problem.
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
@@ -119,6 +119,14 @@ if (existsSync(feI18n)) {
   if (def) assertDefault("frontend DEFAULT_LOCALE", def[1]);
 }
 
+const mkI18n = join(ROOT, "marketing", "src", "i18n", "index.ts");
+if (existsSync(mkI18n)) {
+  const list = extract(mkI18n, "SUPPORTED_LOCALES", /SUPPORTED_LOCALES\s*=\s*\[([^\]]*)\]/);
+  if (list) assertSameSet("marketing SUPPORTED_LOCALES", quoted(list[1]));
+  const def = extract(mkI18n, "DEFAULT_LOCALE", /DEFAULT_LOCALE\s*(?::\s*\w+\s*)?=\s*["'`]([^"'`]+)["'`]/);
+  if (def) assertDefault("marketing DEFAULT_LOCALE", def[1]);
+}
+
 const beSettings = join(ROOT, "api", "api_project", "base.py");
 if (existsSync(beSettings)) {
   const list = extract(beSettings, "LANGUAGES", /^LANGUAGES\s*=\s*\[([\s\S]*?)\]/m);
@@ -129,12 +137,11 @@ if (existsSync(beSettings)) {
 
 const astroConfig = join(ROOT, "marketing", "astro.config.mjs");
 if (existsSync(astroConfig)) {
-  // Astro i18n arrives in the marketing phase; only check it once configured.
   const block = readFileSync(astroConfig, "utf8").match(/i18n\s*:\s*\{[\s\S]*?locales\s*:\s*\[([^\]]*)\]/);
   if (block) assertSameSet("Astro i18n.locales", quoted(block[1]));
 }
 
-// ── 3. JSON catalog key parity (skipped until a surface has catalogs) ────────
+// ── 3. JSON catalog key parity ───────────────────────────────────────────────
 for (const root of [
   join(ROOT, "frontend", "src", "locales"),
   join(ROOT, "marketing", "src", "i18n"),
@@ -169,7 +176,7 @@ for (const root of [
   }
 }
 
-// ── 4. Django gettext catalogs (skipped until any exist) ─────────────────────
+// ── 4. Django gettext catalogs ───────────────────────────────────────────────
 const poRoot = join(ROOT, "api", "locale");
 const localeDirs = existsSync(poRoot)
   ? readdirSync(poRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)

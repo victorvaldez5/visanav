@@ -61,6 +61,7 @@ def assert_turnstile(token, request, field="turnstile_token"):
     A no-op when TURNSTILE_SECRET_KEY is unset (dev/CI/tests). Call from a
     serializer's validate(); imported here to keep the check identical across
     the intake form, registration, and login."""
+    from django.utils.translation import gettext as _
     from rest_framework import serializers as drf_serializers
 
     if not getattr(settings, "TURNSTILE_SECRET_KEY", ""):
@@ -68,5 +69,5 @@ def assert_turnstile(token, request, field="turnstile_token"):
     remoteip = client_ip(request) if request is not None else None
     if not verify_turnstile(token, remoteip):
         raise drf_serializers.ValidationError(
-            {field: "Bot verification failed. Please try again."}
+            {field: _("Bot verification failed. Please try again.")}
         )

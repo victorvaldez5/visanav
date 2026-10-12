@@ -2,6 +2,8 @@
 // Vite at build time; defaults target production so the site builds with no .env.
 // Override in marketing/.env for local dev (e.g. point at localhost:8000 / :3000).
 
+import type { Locale } from "./i18n";
+
 export const SITE_URL = "https://www.visanav.org";
 export const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "https://app.visanav.org";
 export const API_URL = import.meta.env.PUBLIC_API_URL ?? "https://api.visanav.org";
@@ -12,7 +14,18 @@ export const API_URL = import.meta.env.PUBLIC_API_URL ?? "https://api.visanav.or
 export const TURNSTILE_SITE_KEY =
   import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
 
-/** Deep-link into the chat app for a specific directory org (no account needed). */
-export const orgAppLink = (id: string) => `${APP_URL}/?org=${encodeURIComponent(id)}`;
+/** The query param the app reads on boot to adopt a locale (see frontend/src/i18n). */
+export const LANG_PARAM = "lang";
+
+/**
+ * A link into the chat app. Every outbound link carries `?lang=<locale>`: the
+ * origins differ, so localStorage can't cross, and this hands the language the
+ * visitor was reading over to the app (precedence there: ?lang > saved > browser).
+ * `params.q` prefills the chat composer with a question.
+ */
+export const appLink = (locale: Locale, params: Record<string, string> = {}) => {
+  const query = new URLSearchParams({ ...params, [LANG_PARAM]: locale });
+  return `${APP_URL}/?${query}`;
+};
 
 export const SUBMISSIONS_ENDPOINT = `${API_URL}/api/network/submissions/`;

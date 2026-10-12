@@ -4,7 +4,7 @@ import apiClient from "@/plugins/axios";
 import {authService} from "@/services/authService";
 import {useRouter} from "vue-router";
 import {toast} from "vue-sonner";
-import {currentLocale, hasSavedLocale} from "@/i18n";
+import {currentLocale, hasSavedLocale, i18n} from "@/i18n";
 import {syncLocaleOnLogin} from "@/services/profileLocale";
 
 interface JwtPayload {
@@ -36,15 +36,39 @@ export const useAuthStore = defineStore("auth", () => {
 
     // getters
     const isAuthenticated = computed(() => !!accessToken.value);
+    // What to call the signed-in user: their username, else their email.
+    const displayName = computed(() => username.value || userEmail.value || "");
 
     // helpers
     function setFromToken(token: string) {
         accessToken.value = token;
         apiClient.defaults.headers["Authorization"] = `Bearer ${token}`;
         const payload = decodeJwt(token);
+        const sameUser = userId.value !== null && userId.value === payload?.user_id;
         userId.value = payload?.user_id ?? null;
-        userEmail.value = payload?.email ?? null;
-        username.value = payload?.username ?? null;
+        // A token minted without the identity claims (older sessions) keeps what
+        // is already known about the same user, so a refresh doesn't blank the
+        // account menu; with nothing known yet, look the user up instead.
+        const hasClaims = !!(payload?.email || payload?.username);
+        if (hasClaims || !sameUser) {
+            userEmail.value = payload?.email ?? null;
+            username.value = payload?.username ?? null;
+        }
+        if (userId.value !== null && !userEmail.value && !username.value) {
+            void loadIdentity(userId.value);
+        }
+    }
+
+    // Best effort: a failed lookup just leaves the menu on its fallback label.
+    async function loadIdentity(id: number) {
+        try {
+            const user = await authService.getUser(id);
+            if (userId.value !== id) return; // signed out or switched meanwhile
+            // The users endpoint exposes the email but not the username.
+            userEmail.value = user?.email || null;
+        } catch (e) {
+            console.warn("Could not load the signed-in user's identity:", e);
+        }
     }
 
     // actions
@@ -79,7 +103,7 @@ export const useAuthStore = defineStore("auth", () => {
             await router.push({name: "Home"}); // remove if you prefer to navigate in the component
         } catch (e: any) {
             error.value =
-                e?.response?.data?.detail || "Invalid username or password.";
+                e?.response?.data?.detail || i18n.global.t("auth.invalidCredentials");
             throw e;
         } finally {
             loading.value = false;
@@ -94,13 +118,13 @@ export const useAuthStore = defineStore("auth", () => {
             // Registration creates an inactive account; the user must confirm
             // their email before they can sign in, so we don't log them in here.
             await authService.register(email, password, password2, turnstileToken);
-            toast("Account created", {
-                description: "Check your email to verify your account, then sign in.",
+            toast(i18n.global.t("auth.accountCreated"), {
+                description: i18n.global.t("auth.checkEmail"),
             });
             await router.push({name: "Login"});
         } catch (e: any) {
             error.value =
-                e?.response?.data?.detail || "Registration failed. Please try again.";
+                e?.response?.data?.detail || i18n.global.t("auth.registrationFailed");
             throw e;
         } finally {
             loading.value = false;
@@ -131,6 +155,7 @@ export const useAuthStore = defineStore("auth", () => {
 
         // getters
         isAuthenticated,
+        displayName,
 
         // actions
         init,

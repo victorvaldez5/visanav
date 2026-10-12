@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.utils.translation import gettext as _
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 from rest_framework.serializers import CharField, ModelSerializer
@@ -39,12 +40,12 @@ class RegisterSerializer(ModelSerializer):
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already exists.")
+            raise serializers.ValidationError(_("Email already exists."))
         return value
 
     def validate_password(self, value):
         if value != self.initial_data.get("password2"):
-            raise serializers.ValidationError("Passwords do not match.")
+            raise serializers.ValidationError(_("Passwords do not match."))
         validate_password(value)
         return value
 
@@ -73,7 +74,7 @@ class ProfileSerializer(ModelSerializer):
     # (settings.LANGUAGES), so a profile can only hold a language the app ships.
     preferred_language = serializers.SlugRelatedField(
         slug_field="code",
-        queryset=Language.objects.filter(code__in=[code for code, _ in settings.LANGUAGES]),
+        queryset=Language.objects.filter(code__in=[code for code, _name in settings.LANGUAGES]),
         allow_null=True,
         required=False,
     )

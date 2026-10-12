@@ -56,7 +56,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         class="data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 outline-none focus-visible:outline-none focus-visible:shadow-glow-focus disabled:pointer-events-none"
       >
         <X class="size-4" />
-        <span class="sr-only">Close</span>
+        <span class="sr-only">{{ $t("common.close") }}</span>
       </DialogClose>
     </DialogContent>
   </DialogPortal>

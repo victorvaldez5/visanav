@@ -11,21 +11,43 @@ import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import { SITE_URL } from "../config";
+import {
+  DEFAULT_LOCALE,
+  OG_LOCALE,
+  SUPPORTED_LOCALES,
+  type Locale,
+  localeFromPath,
+  localePath,
+  stripLocale,
+  useTranslations,
+} from "../i18n";
 
 interface Props {
   title: string;
   description: string;
-  /** Path only, e.g. "/directory". Defaults to the current page path. */
+  /** Locale-free path, e.g. "/directory". Defaults to the current page's. */
   canonicalPath?: string;
+  /**
+   * Whether this page exists in every locale. False for pages that are English
+   * only (terms, privacy): they get no hreflang alternates, and the language link
+   * leads to the other locale's home page instead of a missing twin.
+   */
+  translated?: boolean;
 }
 
-const { title, description, canonicalPath } = Astro.props;
-const canonical = new URL(canonicalPath ?? Astro.url.pathname, SITE_URL).href;
+const { title, description, canonicalPath, translated = true } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const t = useTranslations(locale);
+const path = stripLocale(canonicalPath ?? Astro.url.pathname);
+const url = (l: Locale) => new URL(localePath(l, path), SITE_URL).href;
+const canonical = url(locale);
 const ogImage = new URL("/og.png", SITE_URL).href;
+// Page in each locale, for <link rel="alternate" hreflang>. x-default is English.
+const alternates = translated ? SUPPORTED_LOCALES.map((l) => ({ hreflang: l, href: url(l) })) : [];
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -34,11 +56,15 @@ const ogImage = new URL("/og.png", SITE_URL).href;
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
+    {translated && <link rel="alternate" hreflang="x-default" href={url(DEFAULT_LOCALE)} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <!-- Open Graph / Twitter -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="VisaNav" />
+    <meta property="og:locale" content={OG_LOCALE[locale]} />
+    {translated && SUPPORTED_LOCALES.filter((l) => l !== locale).map((l) => <meta property="og:locale:alternate" content={OG_LOCALE[l]} />)}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -52,12 +78,12 @@ const ogImage = new URL("/og.png", SITE_URL).href;
     <a
       href="#main"
       class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
-      >Skip to content</a
+      >{t("layout.skipToContent")}</a
     >
-    <Header />
+    <Header locale={locale} path={path} translated={translated} />
     <main id="main" class="flex-1">
       <slot />
     </main>
-    <Footer />
+    <Footer locale={locale} />
   </body>
 </html>

@@ -1,36 +1,45 @@
 ---
-import Base from "../layouts/Base.astro";
-import Eyebrow from "../components/Eyebrow.astro";
-import { orgAppLink } from "../config";
-import orgs from "../data/organizations.json";
+import Base from "../../layouts/Base.astro";
+import Eyebrow from "../../components/Eyebrow.astro";
+import { appLink } from "../../config";
+import orgs from "../../data/organizations.json";
+import { localeFromParam, localePath, localeStaticPaths, useTranslations } from "../../i18n";
+
+// One file serves every locale: `/directory` and `/es/directory`.
+export const getStaticPaths = localeStaticPaths;
+const locale = localeFromParam(Astro.params.lang);
+const t = useTranslations(locale);
 
 const total = orgs.length;
 const proBono = orgs.filter((o) => o.proBono).length;
 const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sort();
 ---
 
-<Base
-  title="Find free immigration help near you — VisaNav directory"
-  description="Search a directory of nonprofit and pro-bono immigration organizations across the U.S., drawn from official DOJ/EOIR recognized-organization data. Free to browse, no account needed."
-  canonicalPath="/directory"
->
-  <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-    <Eyebrow items={["FREE TO BROWSE", "NO ACCOUNT NEEDED", "DOJ/EOIR DATA"]} />
+<Base title={t("directory.title")} description={t("directory.description")} canonicalPath="/directory">
+  <section
+    class="mx-auto max-w-6xl px-4 py-14 sm:px-6"
+    id="directory"
+    data-strings={JSON.stringify({
+      locale,
+      none: t("directory.none"),
+      showingOne: t("directory.range.one"),
+      showingOther: t("directory.range.other"),
+      pageOf: t("directory.pageOf"),
+    })}
+  >
+    <Eyebrow items={t.list("directory.eyebrow")} />
 
     <h1 class="mt-5 text-4xl font-bold text-foreground">
-      Find trustworthy immigration help
+      {t("directory.h1")}
     </h1>
     <p class="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
-      {total.toLocaleString()} nonprofit and pro-bono organizations — including{" "}
-      {proBono} pro-bono legal providers — from official DOJ/EOIR recognized-organization
-      data. Free to browse. Being listed here is not an endorsement; always
-      verify an organization before sharing personal details.
+      {t("directory.intro", { total: total.toLocaleString(locale), proBono })}
     </p>
 
     <!-- Filters -->
     <div class="mt-8 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
       <div>
-        <label for="q" class="block text-sm font-medium text-foreground">Search by name or city</label>
+        <label for="q" class="block text-sm font-medium text-foreground">{t("directory.searchLabel")}</label>
         <div class="vn-field mt-2 flex h-10 items-center px-3">
           <svg class="h-4 w-4 shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7"></circle>
@@ -40,26 +49,26 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
             id="q"
             type="search"
             autocomplete="off"
-            placeholder="e.g. Catholic Charities, Houston…"
+            placeholder={t("directory.searchPlaceholder")}
             class="ml-2 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-field-placeholder"
           />
         </div>
       </div>
       <div>
-        <label for="state" class="block text-sm font-medium text-foreground">State</label>
+        <label for="state" class="block text-sm font-medium text-foreground">{t("directory.state")}</label>
         <select id="state" class="vn-field mt-2 h-10 px-3 text-sm sm:w-44">
-          <option value="">All states</option>
+          <option value="">{t("directory.allStates")}</option>
           {states.map((s) => <option value={s}>{s}</option>)}
         </select>
       </div>
       <label class="flex items-center gap-2.5 pb-2 text-sm font-medium text-foreground">
         <input id="probono" type="checkbox" class="h-[18px] w-[18px] accent-vn-ocean-700" />
-        Pro-bono only
+        {t("directory.proBonoOnly")}
       </label>
     </div>
 
     <p id="count" class="mt-7 scroll-mt-24 text-sm text-muted-foreground" aria-live="polite">
-      Showing {total.toLocaleString()} organizations
+      {t.plural("directory.showing", total)}
     </p>
 
     <!-- Results -->
@@ -77,7 +86,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
               <h2 class="text-lg font-bold leading-tight text-foreground">{o.name}</h2>
               {o.proBono && (
                 <span class="vn-badge vn-badge-diamond h-[22px] shrink-0 px-4 text-xs">
-                  Pro bono
+                  {t("directory.proBono")}
                 </span>
               )}
             </div>
@@ -91,7 +100,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
             <dl class="mt-3 flex flex-col gap-1.5 text-sm text-muted-foreground">
               {o.phone && (
                 <div class="flex items-center gap-2">
-                  <dt class="sr-only">Phone</dt>
+                  <dt class="sr-only">{t("directory.phone")}</dt>
                   <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                     <rect x="6" y="2" width="12" height="20" rx="2" fill="var(--vn-ocean-700)" />
                     <rect x="10" y="18" width="4" height="1.5" rx="0.75" fill="var(--vn-sunflower-500)" />
@@ -101,7 +110,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
               )}
               {o.website && (
                 <div class="flex items-center gap-2">
-                  <dt class="sr-only">Website</dt>
+                  <dt class="sr-only">{t("directory.website")}</dt>
                   <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" fill="var(--vn-ocean-700)" />
                     <line x1="3" y1="12" x2="21" y2="12" stroke="var(--vn-sunflower-500)" stroke-width="1.5" />
@@ -109,7 +118,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
                   </svg>
                   <dd class="min-w-0 truncate">
                     <a href={o.website} target="_blank" rel="noopener noreferrer nofollow" class="vn-link">
-                      Visit website
+                      {t("directory.visitWebsite")}
                     </a>
                   </dd>
                 </div>
@@ -117,10 +126,10 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
             </dl>
 
             <a
-              href={orgAppLink(o.id)}
+              href={appLink(locale, { q: t("directory.askPrompt", { name: o.name }) })}
               class="vn-link mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold"
             >
-              Ask VisaNav about this org
+              {t("directory.askAbout")}
               <span aria-hidden="true">→</span>
             </a>
           </li>
@@ -129,7 +138,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
     </ul>
 
     <p id="empty" hidden class="mt-10 text-center text-muted-foreground">
-      No organizations match your search. Try a different state or clear the filters.
+      {t("directory.empty")}
     </p>
 
     <!-- Pagination. Hidden until the script activates it, so with JS disabled the
@@ -137,7 +146,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
     <nav
       id="pager"
       hidden
-      aria-label="Directory pages"
+      aria-label={t("directory.pagerLabel")}
       class="mt-8 flex items-center justify-center gap-3"
     >
       <button
@@ -145,15 +154,15 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
         type="button"
         class="vn-btn vn-btn-raised h-9 px-4 text-sm"
       >
-        <span aria-hidden="true">←</span> Prev
+        <span aria-hidden="true">←</span> {t("directory.prev")}
       </button>
-      <span id="pageinfo" class="min-w-32 text-center text-sm text-muted-foreground">Page 1 of 1</span>
+      <span id="pageinfo" class="min-w-32 text-center text-sm text-muted-foreground">{t("directory.pageOf", { page: 1, pages: 1 })}</span>
       <button
         id="next"
         type="button"
         class="vn-btn vn-btn-raised h-9 px-4 text-sm"
       >
-        Next <span aria-hidden="true">→</span>
+        {t("directory.next")} <span aria-hidden="true">→</span>
       </button>
     </nav>
   </section>
@@ -161,6 +170,11 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
 
 <script>
   const PAGE_SIZE = 24;
+
+  // Copy for the strings this script writes, rendered per locale at build time.
+  const strings = JSON.parse(document.getElementById("directory")!.dataset.strings ?? "{}");
+  const fill = (s: string, vars: Record<string, string>) =>
+    s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
 
   const q = document.getElementById("q") as HTMLInputElement;
   const state = document.getElementById("state") as HTMLSelectElement;
@@ -173,7 +187,8 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
   const nextBtn = document.getElementById("next") as HTMLButtonElement;
   const pageInfo = document.getElementById("pageinfo") as HTMLElement;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".org-card"));
-  const nf = new Intl.NumberFormat();
+  const nf = new Intl.NumberFormat(strings.locale);
+  const plural = new Intl.PluralRules(strings.locale);
 
   let matches: HTMLElement[] = cards; // cards passing the current filter
   let page = 1; // 1-based, within the filtered set
@@ -200,12 +215,15 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
     for (const card of cards) card.hidden = !onPage.has(card);
 
     if (total === 0) {
-      count.textContent = "No organizations found";
+      count.textContent = strings.none;
     } else {
       const to = Math.min(end, total);
-      count.textContent =
-        `Showing ${nf.format(start + 1)}–${nf.format(to)} of ` +
-        `${nf.format(total)} organization${total === 1 ? "" : "s"}`;
+      const template = plural.select(total) === "one" ? strings.showingOne : strings.showingOther;
+      count.textContent = fill(template, {
+        from: nf.format(start + 1),
+        to: nf.format(to),
+        count: nf.format(total),
+      });
     }
     empty.hidden = total !== 0;
 
@@ -214,7 +232,7 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
       pager.hidden = false;
       prevBtn.disabled = page <= 1;
       nextBtn.disabled = page >= totalPages;
-      pageInfo.textContent = `Page ${nf.format(page)} of ${nf.format(totalPages)}`;
+      pageInfo.textContent = fill(strings.pageOf, { page: nf.format(page), pages: nf.format(totalPages) });
     } else {
       pager.hidden = true;
     }

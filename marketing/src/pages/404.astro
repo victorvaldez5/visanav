@@ -1,19 +1,31 @@
 ---
 import Base from "../layouts/Base.astro";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, localePath, useTranslations } from "../i18n";
+
+// A static host serves one 404 for every missing path, whatever its prefix, so
+// this page can't know which language the visitor wanted: it shows every locale.
+const en = useTranslations(DEFAULT_LOCALE);
+const copies = SUPPORTED_LOCALES.map((lang) => ({ t: useTranslations(lang), lang }));
 ---
 
-<Base title="Page not found — VisaNav" description="The page you're looking for doesn't exist.">
+<Base title={en("notFound.title")} description={en("notFound.description")} translated={false}>
   <section class="mx-auto max-w-2xl px-4 py-24 text-center sm:px-6">
     <p class="font-serif text-6xl font-bold text-vn-ocean-700">404</p>
-    <h1 class="mt-2 text-3xl font-bold text-foreground">
-      We couldn't find that page
-    </h1>
-    <p class="mt-3 text-muted-foreground">
-      The page may have moved. Try the directory or start a free chat.
-    </p>
-    <div class="mt-8 flex flex-wrap justify-center gap-3">
-      <a href="/" class="vn-btn vn-btn-primary h-12 px-6 text-base">Go home</a>
-      <a href="/directory" class="vn-btn vn-btn-raised h-12 px-6 text-base">Find help</a>
-    </div>
+    {
+      copies.map(({ t, lang }, i) => (
+        <div lang={lang} class:list={[i > 0 && "mt-14 border-t border-border pt-10"]}>
+          <h1 class="mt-2 text-3xl font-bold text-foreground">{t("notFound.heading")}</h1>
+          <p class="mt-3 text-muted-foreground">{t("notFound.body")}</p>
+          <div class="mt-8 flex flex-wrap justify-center gap-3">
+            <a href={localePath(lang, "/")} class="vn-btn vn-btn-primary h-12 px-6 text-base">
+              {t("notFound.home")}
+            </a>
+            <a href={localePath(lang, "/directory")} class="vn-btn vn-btn-raised h-12 px-6 text-base">
+              {t("notFound.findHelp")}
+            </a>
+          </div>
+        </div>
+      ))
+    }
   </section>
 </Base>

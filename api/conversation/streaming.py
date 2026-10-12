@@ -15,6 +15,7 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
@@ -206,23 +207,21 @@ async def chat_stream(request):
         # CORS preflight; CorsMiddleware attaches the headers.
         return HttpResponse(status=204)
     if request.method != "POST":
-        return JsonResponse({"detail": "Method not allowed"}, status=405)
+        return JsonResponse({"detail": _("Method not allowed")}, status=405)
 
     try:
         body = json.loads(request.body.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"detail": "Invalid JSON body"}, status=400)
+        return JsonResponse({"detail": _("Invalid JSON body")}, status=400)
 
     user_message = (body.get("user_message") or "").strip()
     if not user_message:
-        return JsonResponse({"detail": "user_message is required"}, status=400)
+        return JsonResponse({"detail": _("user_message is required")}, status=400)
     if len(user_message) > settings.CHAT_MAX_MESSAGE_CHARS:
         return JsonResponse(
             {
-                "detail": (
-                    f"Message too long (max {settings.CHAT_MAX_MESSAGE_CHARS} "
-                    "characters)."
-                )
+                "detail": _("Message too long (max %(max)d characters).")
+                % {"max": settings.CHAT_MAX_MESSAGE_CHARS}
             },
             status=400,
         )
@@ -230,13 +229,13 @@ async def chat_stream(request):
         conversation_uuid = uuid.UUID(str(body.get("conversation") or ""))
     except ValueError:
         return JsonResponse(
-            {"detail": "conversation must be a conversation uuid"}, status=400
+            {"detail": _("conversation must be a conversation uuid")}, status=400
         )
 
     try:
         user = await _authenticate(request)
     except (InvalidToken, TokenError):
-        return JsonResponse({"detail": "Invalid or expired token"}, status=401)
+        return JsonResponse({"detail": _("Invalid or expired token")}, status=401)
 
     # A short, content-free id to correlate this turn across logs and with the
     # client (returned as X-Request-ID). It identifies nothing about the user.
@@ -252,22 +251,25 @@ async def chat_stream(request):
             _abuse_fingerprint(identity),
         )
         return JsonResponse(
-            {"detail": "Rate limit exceeded. Please wait a moment and try again."},
+            {"detail": _("Rate limit exceeded. Please wait a moment and try again.")},
             status=429,
         )
 
     conversation = await _get_conversation(conversation_uuid)
     if conversation is None:
-        return JsonResponse({"detail": "Conversation not found"}, status=404)
+        return JsonResponse({"detail": _("Conversation not found")}, status=404)
 
     # Authorization mirrors IsOwnerOrReadOnly: user-less conversations are
     # public; owned conversations require their owner.
     if conversation.user_id is not None:
         if user is None or conversation.user_id != user.id:
-            return JsonResponse({"detail": "Forbidden"}, status=403)
+            return JsonResponse({"detail": _("Forbidden")}, status=403)
 
     conversation_id = conversation.id
     history = await _load_history(conversation_id)
+    # Translated here, in the request's language: event_stream runs lazily, after
+    # this view has returned and the request's language is no longer guaranteed.
+    failed_message = _("The assistant failed to respond. Please try again.")
 
     async def event_stream():
         # Scope retrieval to a populated country corpus. Curated knowledge is
@@ -346,7 +348,7 @@ async def chat_stream(request):
             )
             yield _sse(
                 "error",
-                {"detail": "The assistant failed to respond. Please try again."},
+                {"detail": failed_message},
             )
 
     response = StreamingHttpResponse(

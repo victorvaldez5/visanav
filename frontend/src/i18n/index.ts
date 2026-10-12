@@ -3,8 +3,8 @@ import en from "@/locales/en.json";
 
 /**
  * App i18n. The initial locale is resolved once at boot (see `resolveLocale`),
- * persisted per-viewer in localStorage, and switchable from the sidebar's
- * LanguageSwitcher. `setLocale` is the single writer.
+ * persisted per-viewer in localStorage, and switchable from the language menu
+ * in the sidebar header. `setLocale` is the single writer.
  *
  * SUPPORTED_LOCALES and DEFAULT_LOCALE mirror /i18n/supported-locales.json, and
  * each locale's catalog lives in src/locales/<code>.json. CI
@@ -154,15 +154,22 @@ function applyLocale(locale: Locale) {
  * Resolve the initial locale and load its catalog. Awaited before mount so the
  * first paint is already in the right language. A failed catalog fetch leaves
  * the app in the default locale rather than blocking boot.
+ *
+ * Memoized: the router's first navigation starts before mount, so a guard that
+ * needs the resolved locale (the verify route) awaits this same promise.
  */
-export async function initLocale(): Promise<void> {
-  const locale = detectLocale();
-  try {
-    await loadLocaleMessages(locale);
-    applyLocale(locale);
-  } catch {
-    applyLocale(DEFAULT_LOCALE);
-  }
+let localeReady: Promise<void> | null = null;
+export function initLocale(): Promise<void> {
+  localeReady ??= (async () => {
+    const locale = detectLocale();
+    try {
+      await loadLocaleMessages(locale);
+      applyLocale(locale);
+    } catch {
+      applyLocale(DEFAULT_LOCALE);
+    }
+  })();
+  return localeReady;
 }
 
 /** Change the active locale and remember it for next time. */

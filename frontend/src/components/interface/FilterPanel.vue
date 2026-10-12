@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import {ref} from "vue";
+import {computed, ref} from "vue";
+import {useI18n} from "vue-i18n";
 import {breakpointsTailwind, useBreakpoints} from "@vueuse/core";
 import {Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {Button} from "@/components/ui/button";
@@ -10,10 +11,9 @@ import LineIcon from "@/components/interface/LineIcon.vue";
 // sticks to the top and the controls move into a bottom sheet opened by a
 // "Filters" button that shows how many filters are active — so results start
 // above the fold. Slots: #search (always visible) and default (the controls).
-withDefaults(defineProps<{activeCount?: number; title?: string}>(), {
-  activeCount: 0,
-  title: "Filters",
-});
+const props = defineProps<{activeCount?: number; title?: string}>();
+const {t} = useI18n();
+const sheetTitle = computed(() => props.title ?? t("common.filters"));
 
 const breakpoints = useBreakpoints(breakpointsTailwind);
 const isMobile = breakpoints.smaller("md");
@@ -51,7 +51,7 @@ const countBadge =
           name="filter"
           class="h-[15px] w-[15px]"
         />
-        Filters
+        {{ t("common.filters") }}
         <span
           v-if="activeCount"
           :class="countBadge"
@@ -66,7 +66,7 @@ const countBadge =
       >
         <SheetHeader class="px-0 pt-1">
           <SheetTitle class="font-serif text-lg">
-            {{ title }}
+            {{ sheetTitle }}
           </SheetTitle>
         </SheetHeader>
         <div
@@ -81,7 +81,7 @@ const countBadge =
             class="h-12 w-full"
             @click="open = false"
           >
-            Show results
+            {{ t("common.showResults") }}
           </Button>
         </SheetFooter>
       </SheetContent>

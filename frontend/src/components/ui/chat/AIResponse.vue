@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { marked } from "marked";
+import { renderMarkdown } from "@/lib/markdown";
 import {computed} from "vue";
 
 const props = defineProps({
@@ -28,11 +28,11 @@ const body = computed(() => {
   <div
     v-if="thinking !== ''"
     class="text-muted-foreground mb-6 prose dark:prose-invert max-w-none"
-    v-html="marked.parse(thinking)"
+    v-html="renderMarkdown(thinking)"
   />
   <div
     class="prose dark:prose-invert max-w-none text-foreground"
-    v-html="marked.parse(body)"
+    v-html="renderMarkdown(body)"
   />
 </template>
 

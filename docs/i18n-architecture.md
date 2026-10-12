@@ -1,8 +1,8 @@
 # Internationalization (i18n) architecture
 
-Status: Phases 1 and 2 implemented; Phase 3 in progress (3a done); Phases 4 to 6 planned.
+Status: Phases 1 to 6 implemented (Phase 3 done through 3c).
 Owner: VisaNav
-Last updated: 2026-09-23
+Last updated: 2026-10-09
 
 This document is the source of truth for how VisaNav supports multiple languages
 across its three deployed surfaces (the Vue app, the Astro marketing site, and the
@@ -132,8 +132,9 @@ at generation time.
 - **Store and service strings** (Pinia toasts, error fallbacks) are routed through
   the exported global `i18n.global.t`, since they live outside component setup.
 - **Extraction** proceeds feature by feature, not big-bang.
-- **Switcher:** `LanguageSwitcher.vue` in the sidebar footer (moved out of
-  `BetaBanner.vue`), visible to anonymous and authenticated users, each option
+- **Switcher:** `LanguageMenu.vue` (an icon button opening `LanguageMenuItems.vue`) in
+  the sidebar header (previously a footer toggle, `LanguageSwitcher.vue`, moved out of
+  `BetaBanner.vue`; the theme toggle now lives in the account / Register-Login menus), visible to anonymous and authenticated users, each option
   labelled in its own language. On change: `setLocale()` (load catalog + set +
   persist localStorage + sync `<html lang>`), and if authenticated, write through
   to `Profile.preferred_language` (`useLocaleSync`).
@@ -150,25 +151,60 @@ at generation time.
 - **Astro i18n routing with `prefixDefaultLocale: false`:** English keeps today's
   bare URLs (no redirects, existing backlinks and sitemap stay valid), Spanish
   lives under `/es/`, later `/zh-Hans/`.
-- **SEO:** extend `marketing/src/layouts/Base.astro` to emit `hreflang` alternates
-  (`en` / `es` / `x-default`) and a per-locale canonical, turn on sitemap locale
-  alternates, and add the `robots.txt` that is currently missing.
+- **SEO:** `marketing/src/layouts/Base.astro` emits `hreflang` alternates
+  (`en` / `es` / `x-default`) and a per-locale canonical, the sitemap carries locale
+  alternates, and there is a `robots.txt`. URLs always end in a slash
+  (`trailingSlash: "always"`), so the canonical, the alternates and the sitemap agree.
 - **URL is authoritative:** no `Accept-Language` auto-redirect on bare visits (it
   hurts SEO and surprises users). The switcher in `Header.astro` navigates between
   localized paths.
-- **Copy** is extracted from the 4 inline `.astro` templates into catalogs.
+- **Copy** lives in `marketing/src/i18n/<code>.json` (parity-checked like the app's),
+  read through `useTranslations(locale)` in `src/i18n/index.ts`. Each page is one
+  `src/pages/[...lang]/<page>.astro` that serves `/` and `/es/` from the same file, so
+  there is no second copy of a page to drift. Strings that client scripts write
+  (directory counts and pager, the partner form's errors) are rendered per locale at
+  build time into a `data-strings` attribute the script reads.
+- **Implemented:** `hreflang` alternates plus `x-default` and a per-locale canonical in
+  `Base.astro`, `og:locale`, sitemap alternates (`@astrojs/sitemap` `i18n`), a
+  `robots.txt`, a language link in the header (to the same page in the other locale), and
+  `?lang=<locale>` on every outbound app link (every locale, so the app opens in the
+  language the visitor was just reading). The partner form sends `Accept-Language`, so
+  the API's validation errors come back in the page's language.
+- **Terms and Privacy stay English only**, at `/terms` and `/privacy` with no `/es/`
+  twins, no `hreflang` alternates, and an "English only" note on their footer links in
+  other locales. A machine translation of legal text without legal review would be
+  worse than none; add real translations here only after review.
+- **404** is one bilingual page: a static host serves a single `404.html` for every
+  missing path, so it cannot know the visitor's language.
 
 ## Backend (`api.visanav.org`, Django) with gettext
 
-- Turn on Django's gettext machinery: add `LocaleMiddleware`, `LOCALE_PATHS`, and
-  the `LANGUAGES` allowlist. User-facing API strings get wrapped in `gettext` (`_()`)
-  incrementally.
+- Django's gettext machinery is on: `LocaleMiddleware`, `LOCALE_PATHS` and the
+  `LANGUAGES` allowlist. Every user-facing API string (auth and account errors, the
+  chat endpoint's errors, the Turnstile failure, the verification email) is wrapped
+  in `gettext as _`. Admin-only text and the tool results handed to the model are
+  deliberately not translated. Strings Django, DRF and SimpleJWT raise themselves
+  (e.g. password validators) come from their own catalogs.
 - We chose server-side gettext (over returning locale-neutral error codes the
   frontend maps) because the API is intended to be openly consumable, so it should
   return already-localized strings negotiated via `Accept-Language`.
+- **Catalogs:** `api/locale/<code>/LC_MESSAGES/django.po` is the source and `django.mo`
+  the compiled form Django loads. Both are committed, because the API image has no
+  gettext toolchain and a missing `.mo` silently falls back to English.
+  `just messages` extracts (`--no-location --no-wrap`, to keep diffs small),
+  `just compile-messages` compiles, `scripts/check_i18n_parity.mjs` rejects missing,
+  fuzzy or obsolete entries in CI, and `core/test_catalogs.py` fails if a `.mo` is
+  missing or out of date.
+- **Async views:** the chat view translates its messages up front, in the request's
+  language, because the SSE generator runs after the view has returned.
 - **Email:** the verification email
-  ([`api/core/mail.py`](../api/core/mail.py)) is rendered per the recipient's
-  profile locale (fallback `en`).
+  ([`api/core/mail.py`](../api/core/mail.py)) is written in the language the
+  registering browser sent (`request.LANGUAGE_CODE`), else the profile's preferred
+  language, else `en`, under an explicit `translation.override` so it never depends
+  on the ambient language. The link carries `?lang=<code>` (the app's handoff
+  param), so it opens in that language on any device, and it works once. Delivery
+  is Mailtrap's sending API from `DEFAULT_FROM_EMAIL`; setting
+  `MAILTRAP_SANDBOX_INBOX_ID` (dev's default) captures mail in a sandbox inbox instead.
 
 ## Resource directory (language matching)
 
@@ -178,9 +214,19 @@ are org-authored). Instead we surface the already-modeled `Organization.language
 
 - Wire it into the agent's `resource_lookup` tool so Javi prefers orgs that serve
   the user's language.
-- Surface it in the directory filter/UI.
+- Surface it in the directory UI (card text now; a filter once the data supports it).
 
-The data and a REST filter already exist; they are just unused by the agent today.
+The data and a REST filter already exist.
+
+Done: `resource_lookup` ranks orgs known to serve the user's language first. The
+language is the interface locale (`Deps.locale`, script stripped: `zh-Hans` is `zh`)
+unless the model passes `language`. It is a **soft preference**, never a filter,
+because the directory records languages for almost no one (3 of 994 active orgs when
+this shipped; the DOJ rosters carry no language data). Each match returns `languages`,
+and the result `note` tells Javi to say that language support is unknown rather than
+claim it. Cards in the directory show an org's languages when it has any. A language
+filter chip in the UI is deliberately not built until the data is there, since today it
+would return almost nothing; filling that data is the real follow-up.
 
 ## Translation workflow and cross-catalog consistency
 
@@ -194,10 +240,10 @@ Django `.po`), on three deploys, sharing no code. We keep them consistent with:
 - **CI parity checks** ([`scripts/check_i18n_parity.mjs`](../scripts/check_i18n_parity.mjs),
   run by the `i18n` job in `ci.yml`; run it locally with `node scripts/check_i18n_parity.mjs`):
   - every surface's declared locale list and default match the canonical file;
-  - every JSON catalog (the frontend now, marketing once it has one) has exactly
-    the keys of the default-locale catalog, so no key is missing or orphaned;
-  - every Django `.po` catalog, once the API has any, covers each non-default
-    locale with no missing, fuzzy, or obsolete entries.
+  - every JSON catalog (the frontend's and marketing's) has exactly the keys of
+    the default-locale catalog, so no key is missing or orphaned;
+  - every Django `.po` catalog covers each non-default locale with no missing,
+    fuzzy, or obsolete entries.
 
 **Production flow:** machine-first (Claude generates the first pass), then
 contributor (open-source community refines via PR editing each surface's native
@@ -210,14 +256,17 @@ contributor volume justifies it, not a launch dependency.
 1. In [`i18n/supported-locales.json`](../i18n/supported-locales.json), move the
    locale from `planned` to `locales`, and add its column to
    [`i18n/GLOSSARY.md`](../i18n/GLOSSARY.md).
-2. Add it to Django `LANGUAGES` in `api/api_project/base.py` and to
-   `SUPPORTED_LOCALES` in `frontend/src/i18n/index.ts` (and to Astro
-   `i18n.locales` once marketing has i18n).
+2. Add it to Django `LANGUAGES` in `api/api_project/base.py`, to
+   `SUPPORTED_LOCALES` in `frontend/src/i18n/index.ts`, and on the marketing site to
+   `SUPPORTED_LOCALES`, `LOCALE_NAMES` and `OG_LOCALE` in `marketing/src/i18n/index.ts`
+   plus the `i18n.locales` and sitemap `i18n` entries in `marketing/astro.config.mjs`.
 3. Add a data migration that creates its `locations.Language` row. The populate
    migration does not run again on existing databases.
 4. Add its catalogs: `frontend/src/locales/<code>.json` (picked up and
-   lazy-loaded automatically), plus
-   `api/locale/<code>/LC_MESSAGES/django.po` once the API has translated strings.
+   lazy-loaded automatically), `marketing/src/i18n/<code>.json` (imported in
+   `marketing/src/i18n/index.ts`), plus
+   `api/locale/<code>/LC_MESSAGES/django.po` (then `just messages`, translate, and
+   `just compile-messages`; commit the `.mo` too).
 5. Reveal it in a surface's switcher only after that surface is fully translated
    and reviewed (the launch gate below).
 
@@ -229,7 +278,9 @@ The three surfaces are different origins, so `localStorage` does not cross betwe
 them. When someone browsing `www.visanav.org/es/` clicks through to the app:
 
 - Marketing appends `?lang=<locale>` to every outbound `APP_URL` link
-  (`orgAppLink`, "Start a free chat").
+  (`appLink`: "Start a free chat", the home teaser, the directory's "ask about this
+  org"). A `?q=` on the same link prefills the chat composer; it is never sent
+  automatically.
 - The app validates `?lang` against the allowlist on boot, writes it to
   localStorage, then strips the param.
 
@@ -250,10 +301,14 @@ Build order front-loads the shared foundations so nothing is built twice.
 2. **Chat locale** (done): thread `request.LANGUAGE_CODE` into `Deps` and the
    agent, plus the softened mirror-rule override.
 3. **App UI extraction** + promote the switcher (3a done: lazy catalogs, `?lang=`
-   handoff, switcher, profile write-through, `Language` prune).
-4. **Resource-directory language matching.**
-5. **Marketing i18n + SEO.**
-6. **Emails.**
+   handoff, switcher, profile write-through, `Language` prune; 3b done: sidebar nav,
+   login/register, error pages, auth/profile store messages; 3c done: resources,
+   representatives, forms and account pages, the shared filter/pagination/sheet
+   primitives; still English by design: US state names and the `forms.json`
+   titles, summaries and categories, which are content, not UI chrome).
+4. **Resource-directory language matching** (done; see above).
+5. **Marketing i18n + SEO** (done; see above).
+6. **Emails** (done: translated per recipient; real delivery is separate).
 
 **First release = Phase 1 + Phase 2** (foundations plus Javi reliably answering in
 the chosen language): the biggest user win for the least code, and it validates the
@@ -263,4 +318,5 @@ whole locale pipeline end to end.
 but a locale is only revealed in a given surface's switcher once that surface is
 fully translated and reviewed. This avoids shipping a half-Spanish page to a user
 who cannot read the English gaps, while still allowing incremental deploys behind
-the gate.
+the gate. Spanish cleared the gate on 2026-10-09 (app and marketing switchers
+tested by the maintainer).

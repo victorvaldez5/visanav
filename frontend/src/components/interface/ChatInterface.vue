@@ -45,6 +45,21 @@ function scrubNoticeFor(content: string): string {
   return summary ? describeScrub(summary, locale.value as "en" | "es") : "";
 }
 
+// The marketing site hands a question over as `?q=` (the home teaser, and "ask
+// about this org" in the directory). It only prefills the composer: a link must
+// never send a message on someone's behalf. The param is then dropped so a
+// reload or a shared URL doesn't bring the text back.
+const MAX_HANDOFF_PROMPT = 500;
+const handoffPrompt =
+  !conversationUuid.value && typeof route.query.q === "string"
+    ? route.query.q.trim().slice(0, MAX_HANDOFF_PROMPT)
+    : "";
+if ("q" in route.query) {
+  const query = {...route.query};
+  delete query.q;
+  void router.replace({...route, query});
+}
+
 async function onSubmit(prompt: string) {
   try {
     if (!conversationUuid.value) {
@@ -57,8 +72,8 @@ async function onSubmit(prompt: string) {
     }
   } catch (e) {
     console.error(e);
-    toast("Oops, an error occurred", {
-      description: "Please try again later",
+    toast(t("common.genericError"), {
+      description: t("errors.tryAgain"),
     });
   }
 }
@@ -136,6 +151,7 @@ async function onSubmit(prompt: string) {
     </h3>
     <UserPromptInput
       :streaming="isStreaming"
+      :initial="handoffPrompt"
       @submit-prompt="onSubmit($event)"
       @stop="stopStreaming"
     />

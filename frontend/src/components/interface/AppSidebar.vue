@@ -14,60 +14,67 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ConversationsSidebarGroup from "@/components/interface/ConversationsSidebarGroup.vue";
 import { useAuthStore } from "@/stores/useAuthStore.ts";
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import Icon from "@/components/ui/Icon.vue";
-import ThemeToggle from "@/components/interface/ThemeToggle.vue";
-import LanguageSwitcher from "@/components/interface/LanguageSwitcher.vue";
+import ThemeMenuItem from "@/components/interface/ThemeMenuItem.vue";
+import LanguageMenu from "@/components/interface/LanguageMenu.vue";
 import { useTheme } from "@/composables/useTheme";
 import logoLight from "@/assets/VisaNav-Horizontal-Main.svg";
 import logoDark from "@/assets/VisaNav-Horizontal-OnDark.svg";
 
+const { t } = useI18n();
 const { isDark } = useTheme();
 
 const authStore = useAuthStore();
-const { isAuthenticated, username, userId,  userEmail} = storeToRefs(authStore);
+const { isAuthenticated, displayName, userId, userEmail } = storeToRefs(authStore);
 const { logout } = authStore;
+// Initial for the avatar. No remote image: it would send every signed-in user's
+// IP to a third-party host, which a privacy-first app shouldn't do.
+const initial = computed(() => displayName.value.charAt(0).toUpperCase() || "?");
 const route = useRoute();
 
-const menuItems = [
+const menuItems = computed(() => [
     {
-        title: "New Chat",
+        title: t("nav.newChat"),
         icon: "icon-edit",
         href: "/",
     },
     {
-        title: "Public Resources",
+        title: t("nav.resources"),
         icon: "icon-scale",
         href: "/resources",
     },
     {
-        title: "Representatives",
+        title: t("nav.representatives"),
         icon: "icon-user-check",
         href: "/representatives",
     },
     {
-      title: "Forms",
+      title: t("nav.forms"),
       icon: "icon-folder",
       href: "/forms",
     },
-];
+]);
 </script>
 
 <template>
   <Sidebar>
     <SidebarHeader class="flex flex-row items-center justify-between py-6 px-4">
       <img
-        alt="Visanav logo"
+        :alt="t('nav.logoAlt')"
         class="h-7 w-fit"
         :src="isDark ? logoDark : logoLight"
       >
-      <ThemeToggle />
+      <LanguageMenu />
     </SidebarHeader>
     <SidebarContent class="py-2">
       <SidebarGroup>
@@ -102,31 +109,22 @@ const menuItems = [
           <DropdownMenu v-if="isAuthenticated">
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton class="py-7 px-2 bg-background items-center gap-3">
-                <div
-                  v-if="isAuthenticated"
-                  class="flex items-center"
-                >
+                <div class="flex items-center">
                   <Avatar>
-                    <AvatarImage
-                      src="https://github.com/unovue.png"
-                      alt="@unovue"
-                    />
-                    <AvatarFallback>CN</AvatarFallback>
+                    <AvatarFallback>{{ initial }}</AvatarFallback>
                   </Avatar>
-                  <div class="flex flex-col px-2">
-                    <div class="text-lg font-medium">
-                      {{ username }}
+                  <div class="flex min-w-0 flex-col px-2">
+                    <div class="truncate">
+                      {{ displayName || t("nav.account") }}
                     </div>
-                    <div class="text-xs  font-normal">
+                    <div
+                      v-if="userEmail && userEmail !== displayName"
+                      class="truncate text-xs font-normal"
+                    >
                       {{ userEmail }}
                     </div>
                   </div>
                 </div>
-                <template v-else>
-                  <RouterLink to="Login">
-                    Sign In
-                  </RouterLink>
-                </template>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -138,37 +136,53 @@ const menuItems = [
                 class="text-base"
               >
                 <RouterLink :to="`/profile/${userId}`">
-                  Account
+                  {{ t("nav.account") }}
                 </RouterLink>
               </DropdownMenuItem>
               <DropdownMenuItem
                 class="text-base"
                 @click="logout()"
               >
-                <span>Sign out</span>
+                <span>{{ t("nav.signOut") }}</span>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <ThemeMenuItem />
             </DropdownMenuContent>
           </DropdownMenu>
-          <template v-else>
-            <SidebarMenuButton as-child>
-              <RouterLink to="register">
-                Register
-              </RouterLink>
-            </SidebarMenuButton>
-            <SidebarMenuButton as-child>
-              <RouterLink
-                to="login"
-                class="sidebar-accent-foreground"
+          <DropdownMenu v-else>
+            <DropdownMenuTrigger as-child>
+              <SidebarMenuButton class="py-7 px-2 bg-background items-center justify-center text-base font-medium">
+                {{ t("nav.registerLogin") }}
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              class="w-3xs"
+            >
+              <DropdownMenuItem
+                as-child
+                class="text-base"
               >
-                Login
-              </RouterLink>
-            </SidebarMenuButton>
-          </template>
+                <RouterLink to="/register">
+                  {{ t("nav.register") }}
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                as-child
+                class="text-base"
+              >
+                <RouterLink to="/login">
+                  {{ t("nav.login") }}
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <ThemeMenuItem />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-      <LanguageSwitcher class="mt-2" />
       <nav
-        aria-label="Legal"
+        :aria-label="t('nav.legal')"
         class="mt-1 flex items-center justify-center gap-2 px-2 text-xs text-muted-foreground"
       >
         <a
@@ -176,14 +190,14 @@ const menuItems = [
           target="_blank"
           rel="noopener"
           class="hover:underline"
-        >Terms</a>
+        >{{ t("nav.terms") }}</a>
         <span aria-hidden="true">·</span>
         <a
           href="https://www.visanav.org/privacy"
           target="_blank"
           rel="noopener"
           class="hover:underline"
-        >Privacy</a>
+        >{{ t("nav.privacy") }}</a>
       </nav>
     </SidebarFooter>
   </Sidebar>
