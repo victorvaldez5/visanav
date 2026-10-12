@@ -479,6 +479,30 @@ def test_ingest_scrape_removed_section_leaves_the_corpus(voyage_key, tmp_path):
 
 
 @pytest.mark.django_db
+def test_ingest_scrape_page_removed_from_uscis_leaves_the_corpus(voyage_key, tmp_path):
+    form, chapter = "https://www.uscis.gov/i-485", (
+        "https://www.uscis.gov/policy-manual/volume-12-part-l-chapter-3"
+    )
+    root = _feeds_root(tmp_path, sources=())
+    _write_lines(root / "uscis" / _FEED, [
+        _page(form, _FORM_HTML.format(body=_BODY)),
+        _page(chapter, _PM_HTML.format(body=_BODY)),
+    ])
+    # USCIS withdrew the chapter; after it stayed away the crawl said so.
+    _write_lines(root / "uscis" / _LATER_FEED, [{"url": chapter, "files": [], "removed": True}])
+    _ingest_scrape(root)
+    assert set(KnowledgeChunk.objects.filter(corpus="uscis")
+               .values_list("source_url", flat=True)) == {form}
+
+    # If the chapter is published again, a later crawl emits it as a new page.
+    _write_lines(root / "uscis" / "2026-10-05T00-00-00+00-00.jsonl",
+                 [_page(chapter, _PM_HTML.format(body=_BODY))])
+    _ingest_scrape(root)
+    assert set(KnowledgeChunk.objects.filter(corpus="uscis")
+               .values_list("source_url", flat=True)) == {form, chapter}
+
+
+@pytest.mark.django_db
 def test_ingest_scrape_federal_register_ages_out_and_labels_rules(voyage_key, settings, tmp_path):
     settings.FEDERAL_REGISTER_RETENTION_DAYS = 365
     old_url = _FR_URL.replace("2026-19000", "2025-00001")

@@ -156,6 +156,14 @@ class ContentHashPipeline:
     disappeared). A tombstone item (``removed``) passes through to the feed and
     drops its URL from the manifest.
 
+    Each entry also carries ``missed``: how many healthy crawls in a row did not
+    see the page, for spiders that only remove a page once it has stayed away
+    (enumeration.MissCountingMixin). The pipeline tells such a spider what it
+    saw (``seen_urls``) and the counts so far (``manifest_misses``); the spider
+    answers with ``missed_counts`` if the crawl was healthy enough to count, and
+    otherwise the stored counts are kept. A manifest written before this (a
+    plain ``{url: hash}`` map) still loads, with every count at zero.
+
     USCIS predates per-source manifests: until its namespaced manifest exists it
     is read from the original shared key, then written namespaced from then on.
     """
@@ -193,19 +201,23 @@ class ContentHashPipeline:
         self.bucket = bucket
         self.s3_client = s3_client
         self.source = LEGACY_SOURCE
-        self.manifest = {}
+        self.spider = None
+        self.manifest = {}  # url -> content hash
+        self.misses = {}  # url -> consecutive healthy crawls that did not see it
         self.stats = None
-        self._dirty = False
+        self._stored = None  # the records as last read from or written to storage
         self._save_after_feed = False
 
     def open_spider(self, spider):
         self.source = _source(spider)
-        self.manifest = self._load_manifest()
+        self.spider = spider
+        self._load_manifest()
         if spider is not None:
             spider.manifest_urls = frozenset(self.manifest)
+            spider.manifest_misses = dict(self.misses)
 
     def close_spider(self, spider):
-        if not self._save_after_feed and self._dirty:
+        if not self._save_after_feed:
             self._save_manifest()
 
     def feed_exporter_closed(self):
@@ -215,7 +227,7 @@ class ContentHashPipeline:
                 "the next crawl will emit this crawl's pages again",
                 self.source,
             )
-        elif self._dirty:
+        else:
             self._save_manifest()
 
     def process_item(self, item, spider):
@@ -223,11 +235,16 @@ class ContentHashPipeline:
         if item.get("removed") or item.get("content_type") not in _PAGE_EXTENSIONS:
             return item
 
+        url = item.get("url")
+        # Seen, whether or not it turns out to have changed.
+        seen = getattr(spider, "seen_urls", None)
+        if seen is not None:
+            seen.add(url)
+
         content = item.get("content", "")
         stable = getattr(spider, "stable_content", None)
         if callable(stable):
             content = stable(content)
-        url = item.get("url")
         digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
         if url and self.manifest.get(url) == digest:
             raise DropItem(f"unchanged: {url}")
@@ -239,11 +256,10 @@ class ContentHashPipeline:
         """The item passed every pipeline and was handed to the feed: record it."""
         url = item.get("url")
         if item.get("removed"):
-            if self.manifest.pop(url, None) is not None:
-                self._dirty = True
+            self.manifest.pop(url, None)
+            self.misses.pop(url, None)
         elif item.get("content_hash"):
             self.manifest[url] = item["content_hash"]
-            self._dirty = True
 
     # -- manifest persistence -------------------------------------------------
 
@@ -269,20 +285,43 @@ class ContentHashPipeline:
             return None
 
     def _load_manifest(self):
-        """Return the stored manifest, or an empty dict on the first run
-        (everything is then treated as new for this run)."""
-        manifest = self._read(self._local_path, f"raw/{self._relative}")
-        if manifest is None and self.source == LEGACY_SOURCE:
-            manifest = self._read(
+        """Read the stored manifest into ``manifest`` and ``misses``; both stay
+        empty on the first run (everything is then treated as new)."""
+        stored = self._read(self._local_path, f"raw/{self._relative}")
+        self._stored = stored
+        if stored is None and self.source == LEGACY_SOURCE:
+            stored = self._read(
                 os.path.join(self.local_dir, self.LEGACY_MANIFEST_NAME),
                 self.LEGACY_MANIFEST_KEY,
             )
-            # Write it back namespaced even if this crawl changes nothing.
-            self._dirty = manifest is not None
-        return manifest or {}
+            # self._stored stays None, so it is written back namespaced even if
+            # this crawl changes nothing.
+        self.manifest, self.misses = {}, {}
+        for url, entry in (stored or {}).items():
+            # Before miss counts, an entry was just the hash.
+            if isinstance(entry, dict):
+                self.manifest[url] = entry.get("hash")
+                self.misses[url] = entry.get("missed", 0)
+            else:
+                self.manifest[url] = entry
+
+    def _records(self):
+        # A spider that counts misses reports this crawl's counts (seen pages
+        # are simply absent, so they reset to zero); None means the crawl was
+        # not fit to count, and the stored counts stand.
+        counts = getattr(self.spider, "missed_counts", None)
+        if counts is None:
+            counts = self.misses
+        return {
+            url: {"hash": digest, "missed": counts.get(url, 0)}
+            for url, digest in self.manifest.items()
+        }
 
     def _save_manifest(self):
-        payload = json.dumps(self.manifest, sort_keys=True).encode("utf-8")
+        records = self._records()
+        if records == self._stored or (not records and self._stored is None):
+            return
+        payload = json.dumps(records, sort_keys=True).encode("utf-8")
         if self.local_test:
             os.makedirs(os.path.dirname(self._local_path), exist_ok=True)
             with open(self._local_path, "wb") as f:
@@ -294,6 +333,7 @@ class ContentHashPipeline:
                 Body=payload,
                 ContentType="application/json",
             )
+        self._stored = records
 
 
 class NamedFilesPipeline(FilesPipeline):

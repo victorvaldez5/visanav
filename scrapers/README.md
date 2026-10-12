@@ -170,13 +170,20 @@ Optional pieces of the contract:
   documents never change can skip the request entirely (see
   `federal_register_spider.py`).
 - **Removals**: crawls are incremental, so a feed normally only adds or updates
-  pages. If your spider sees its *whole* source on every crawl, mix in
+  pages, and a page the source deletes would stay in the knowledge base. Pick
+  the mixin in `enumeration.py` that fits how your spider finds pages. A
+  **link-following** spider mixes in `MissCountingMixin` (as `uscis` does) and
+  needs nothing else: a page is removed once two healthy crawls in a row have
+  not seen it, and a crawl that fails its health check counts nothing. Set a
+  realistic `min_items_seen` so a blocked crawl is recognised as unhealthy.
+  If your spider sees its *whole* source on every crawl, mix in
   `CompleteEnumerationMixin` (`enumeration.py`), call `self.mark_seen(url)` for
   every item and pass `errback=self.mark_failed` on every request. After a
   clean crawl it emits a `removed` line for each URL that has disappeared, and
-  ingestion drops it. If more than a tenth of the known pages are missing it
-  assumes the source is broken, removes nothing and fails the crawl. Do not use it for a link-following crawl, where a missed
-  link would look like a deleted page.
+  ingestion drops it. Do not use this one for a link-following crawl, where a
+  missed link would look like a deleted page. Either way, if more than a tenth
+  of the known pages would be removed at once the spider assumes the source is
+  broken, removes nothing and fails the crawl.
 
 One thing is still USCIS-specific and may need generalizing for a new source:
 the PDF filename heuristics in `NamedFilesPipeline.file_path()`

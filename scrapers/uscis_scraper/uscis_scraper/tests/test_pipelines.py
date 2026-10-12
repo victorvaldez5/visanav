@@ -327,7 +327,7 @@ def test_content_hash_reads_legacy_uscis_manifest_once(tmp_path):
         run.process_item(dict(item), _spider("uscis"))
     run.close_spider(_spider("uscis"))
     namespaced = tmp_path / "manifests" / "uscis.json"
-    assert json.loads(namespaced.read_text()) == {"https://x/a": digest}
+    assert json.loads(namespaced.read_text()) == {"https://x/a": {"hash": digest, "missed": 0}}
 
     # From then on the namespaced manifest is the one that counts.
     (tmp_path / "manifest.json").write_text("{}")
@@ -388,7 +388,8 @@ def test_r2_keys_are_namespaced_per_source_with_uscis_fallback(tmp_path):
     uscis.open_spider(_spider("uscis"))
     assert uscis.manifest == {"https://x/a": digest}
     uscis.close_spider(_spider("uscis"))
-    assert json.loads(s3.objects["raw/manifests/uscis.json"]) == {"https://x/a": digest}
+    moved = {"https://x/a": {"hash": digest, "missed": 0}}
+    assert json.loads(s3.objects["raw/manifests/uscis.json"]) == moved
 
     # Another source starts empty and writes only its own manifest and pages.
     ecfr = ContentHashPipeline(str(tmp_path), local_test=False, bucket="b", s3_client=s3)
@@ -399,7 +400,7 @@ def test_r2_keys_are_namespaced_per_source_with_uscis_fallback(tmp_path):
     _through(ecfr, item, _spider("ecfr"))
     ecfr.close_spider(_spider("ecfr"))
     assert "raw/manifests/ecfr.json" in s3.objects
-    assert json.loads(s3.objects["raw/manifests/uscis.json"]) == {"https://x/a": digest}
+    assert json.loads(s3.objects["raw/manifests/uscis.json"]) == moved
 
     pages = HTMLPagesPipeline(str(tmp_path), local_test=False, bucket="b", s3_client=s3)
     pages.process_item(item, _spider("ecfr"))
@@ -516,3 +517,117 @@ def test_content_hash_ignores_markup_the_spider_calls_volatile(tmp_path):
         {"url": "https://x/a", "content_type": "text/html", "content": amended}, spider
     )
     assert out["content"] == amended
+
+
+# -- pages that vanish from a link-following crawl (miss counting) ----------------
+
+_SITE = [f"https://www.uscis.gov/page-{n}" for n in range(30)]
+_GONE = _SITE[0]
+
+
+def _uscis_crawl(tmp_path, urls, blocked=False):
+    """One crawl of the given pages by the USCIS spider, through the hash
+    pipeline, as far as the manifest it leaves behind.
+
+    Returns the URLs it emitted removals for.
+    """
+    from ..spiders.uscis_spider import UscisSpider
+
+    spider = UscisSpider()
+    spider.min_items_seen = 20
+    spider.crawler = DummyCrawler({})
+    pipeline = _content_hash_pipeline(tmp_path)
+    pipeline.open_spider(spider)
+
+    stats = spider.crawler.stats.values
+    for url in urls:
+        item = {"url": url, "content_type": "text/html", "content": "<p>same every week</p>"}
+        try:
+            _through(pipeline, item, spider)
+            stats["item_scraped_count"] = stats.get("item_scraped_count", 0) + 1
+        except DropItem:
+            stats["item_dropped_count"] = stats.get("item_dropped_count", 0) + 1
+    if blocked:
+        stats["downloader/response_status_count/403"] = 100
+    stats["downloader/response_status_count/200"] = len(urls)
+
+    # What the spider does when it goes idle, then what the pipelines do with it.
+    removals = spider.removed_items()
+    for tombstone in removals:
+        _through(pipeline, tombstone, spider)
+    pipeline.close_spider(spider)
+    return [item["url"] for item in removals]
+
+
+def _manifest(tmp_path):
+    return json.loads((tmp_path / "manifests" / "uscis.json").read_text())
+
+
+def test_page_missing_from_one_crawl_is_kept(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == []
+
+    manifest = _manifest(tmp_path)
+    assert manifest[_GONE]["missed"] == 1
+    assert all(manifest[url]["missed"] == 0 for url in _SITE[1:])
+
+
+def test_page_missing_from_two_crawls_in_a_row_is_removed(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == [_GONE]
+
+    # It is forgotten, so if the site brings it back it is emitted as new.
+    assert _GONE not in _manifest(tmp_path)
+    assert _uscis_crawl(tmp_path, _SITE) == []
+    assert _manifest(tmp_path)[_GONE]["missed"] == 0
+
+
+def test_page_that_comes_back_starts_over(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])  # missed once
+    _uscis_crawl(tmp_path, _SITE)  # back again
+    assert _manifest(tmp_path)[_GONE]["missed"] == 0
+
+    # One more absence is a first miss again, not the second.
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == []
+    assert _manifest(tmp_path)[_GONE]["missed"] == 1
+
+
+def test_unhealthy_crawl_counts_no_misses(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])  # missed once, fairly
+
+    # The site blocks most requests: half the pages look missing, and the page
+    # already missed once looks missing a second time. None of that counts.
+    assert _uscis_crawl(tmp_path, _SITE[15:], blocked=True) == []
+    manifest = _manifest(tmp_path)
+    assert manifest[_GONE]["missed"] == 1
+    assert all(manifest[url]["missed"] == 0 for url in _SITE[1:])
+
+
+def test_too_many_missing_pages_are_not_removed(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[5:])  # five pages missed once: plausible so far
+
+    # Still missing: removing five of thirty at once is past the cap, which is
+    # what a redesign that hides the links would look like. Nothing is removed
+    # and the counts stay put, so the crawl after a fix decides.
+    assert _uscis_crawl(tmp_path, _SITE[5:]) == []
+    manifest = _manifest(tmp_path)
+    assert all(manifest[url]["missed"] == 1 for url in _SITE[:5])
+
+
+def test_manifest_from_before_miss_counts_still_loads(tmp_path):
+    digest = hashlib.sha256(b"<p>same every week</p>").hexdigest()
+    (tmp_path / "manifests").mkdir()
+    (tmp_path / "manifests" / "uscis.json").write_text(
+        json.dumps({url: digest for url in _SITE})
+    )
+
+    # Nothing is re-emitted (every page is recognised as unchanged), and the
+    # page that is absent starts counting from zero.
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == []
+    manifest = _manifest(tmp_path)
+    assert manifest[_GONE] == {"hash": digest, "missed": 1}
+    assert manifest[_SITE[1]] == {"hash": digest, "missed": 0}
