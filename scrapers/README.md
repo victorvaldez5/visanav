@@ -65,7 +65,8 @@ takes about two hours). While developing a spider, shorten that from
 `LOCAL_TEST` defaults to `true`, so a local crawl writes to `./output/`
 (`items/<spider>/`, `manifests/<spider>.json`, raw pages and PDFs) and needs
 **no cloud credentials**. Only the scheduled Railway cron services (one per
-spider, `.railway/railway.ts`) run with `LOCAL_TEST=false` and upload to R2.
+spider, `.railway/railway.ts`) and the manual `scrape` GitHub workflow run with
+`LOCAL_TEST=false` and upload to R2.
 Settings are read from the shared `config/.env` (see `config/.env.example`).
 
 ## 2. Initialize a new spider

@@ -76,7 +76,7 @@ just crawl           # LOCAL_TEST=true USCIS crawl → scrapers/uscis_scraper/ou
 just crawl ecfr      # any spider by name: uscis (default), ecfr, federal-register
 just test-scraper    # scraper unit tests
 ```
-(`LOCAL_TEST=false` uploads to R2; only the weekly Railway cron services run that way; `scrape.yml` is a manual fallback.)
+(`LOCAL_TEST=false` uploads to R2; the weekly Railway cron services run that way, and so does `scrape.yml`, the manual fallback.)
 
 ### Data corpus
 ```bash
@@ -233,9 +233,10 @@ its rows via the `corpus` column:
   lines for pages that are gone (`enumeration.py`): `ecfr` sees its whole source every crawl, so
   anything missing after a clean crawl is removed at once; `uscis` follows links, so a page is
   removed only after two healthy crawls in a row have not seen it (the per-URL miss count lives
-  in the manifest, whose entries are `{hash, missed}`; an unhealthy crawl counts no misses, but a page it does see starts over at zero). Neither
-  removes more than a tenth of its known pages in one crawl: it removes nothing and fails, on
-  every crawl, until one is run with `-a allow_large_removal=1`. Because feeds are deltas, `manage.py ingest_scrape`
+  in the manifest, whose entries are `{hash, missed}`; an unhealthy crawl counts no misses, but
+  a page it does see starts over at zero). Neither removes more than a tenth of its known pages
+  in one crawl: it removes nothing and fails, on every crawl, until one is run with
+  `-a allow_large_removal=1`. Because feeds are deltas, `manage.py ingest_scrape`
   (`knowledge/scrape_utils.py`) merges **all** of a source's feeds oldest→newest (honouring
   removals), runs that source's extractor from the `SOURCES` registry, and writes chunks with
   `corpus=<spider name>`. Federal Register documents older than
@@ -288,8 +289,10 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   and `config/.env` out of the context).
 - **`scrapy crawl` is overridden** (`COMMANDS_MODULE`, `uscis_scraper/commands/crawl.py`): after
   the crawl it runs `health.crawl_problems` over the stats and exits non-zero when the crawl can't
-  be trusted (feed not stored, no or mostly failed requests, parse errors, fewer items than the
-  spider's `min_items_seen`, removals refused). Stock Scrapy exits 0 in all of those cases.
+  be trusted (it ended as anything but `finished`, feed not stored, no or mostly failed requests,
+  parse errors, fewer items than the spider's `min_items_seen`, any failed request on a spider
+  that sees its whole source such as `ecfr`, removals refused). Stock Scrapy exits 0 in all of
+  those cases.
 - **Local crawls are throttled too**: `LOCAL_TEST` only changes where output goes. Robots.txt,
   the 5-second delay and autothrottle apply in every mode, so `just crawl` (USCIS) takes about as
   long as production; pass `-s DOWNLOAD_DELAY=1` to scrapy directly for a quick experiment.

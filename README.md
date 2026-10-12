@@ -120,8 +120,10 @@ One Scrapy project holds a spider per source:
   lets re-runs skip pages whose content is unchanged, so only changed documents are
   re-written and forwarded downstream. A page is only recorded once its feed is
   safely stored, and a crawl that cannot be trusted (blocked, feed not stored, far
-  fewer pages than usual) exits non-zero so its Railway run shows as failed. The `ecfr` spider also reports sections that
-  have been removed, so repealed rules leave the knowledge base on the next ingest.
+  fewer pages than usual) exits non-zero so its Railway run shows as failed. Crawls
+  also report pages that are gone from the source, so they leave the knowledge base
+  on the next ingest: `ecfr` reports a repealed section at once, and `uscis` reports
+  a page once two healthy crawls in a row have not seen it.
 - **Scheduling**: one **Railway cron service** per spider runs weekly on Mondays,
   writing to R2: `visanav-scraper` (USCIS, 06:00 UTC), `visanav-scraper-ecfr` (09:00)
   and `visanav-scraper-federal-register` (09:30). The two newer ones use the same
