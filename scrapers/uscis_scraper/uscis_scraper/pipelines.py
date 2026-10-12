@@ -27,6 +27,14 @@ def _source(spider):
     return getattr(spider, "name", None) or LEGACY_SOURCE
 
 
+def _mark_seen(spider, url):
+    """Tell a spider that tracks removals (enumeration.py) that this crawl
+    fetched the page, whatever becomes of the item afterwards."""
+    seen = getattr(spider, "seen_urls", None)
+    if seen is not None:
+        seen.add(url)
+
+
 def _build_s3_client(settings):
     """Create a botocore S3 client pointed at the configured S3-compatible
     endpoint (Cloudflare R2).
@@ -55,6 +63,9 @@ class CleanValidatePipeline:
             return item
 
         if not item.get("content"):
+            # The page was fetched, so it is still at the source: nothing we
+            # could extract is no reason to count it as missing and remove it.
+            _mark_seen(spider, item.get("url"))
             raise DropItem("No page content found")
 
         return item
@@ -239,9 +250,7 @@ class ContentHashPipeline:
 
         url = item.get("url")
         # Seen, whether or not it turns out to have changed.
-        seen = getattr(spider, "seen_urls", None)
-        if seen is not None:
-            seen.add(url)
+        _mark_seen(spider, url)
 
         content = item.get("content", "")
         stable = getattr(spider, "stable_content", None)

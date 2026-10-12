@@ -7,7 +7,12 @@ import pytest
 from scrapy import Request
 from scrapy.exceptions import NotConfigured, DropItem
 from scrapy.utils.test import get_crawler
-from ..pipelines import HTMLPagesPipeline, NamedFilesPipeline, ContentHashPipeline
+from ..pipelines import (
+    CleanValidatePipeline,
+    ContentHashPipeline,
+    HTMLPagesPipeline,
+    NamedFilesPipeline,
+)
 
 
 class DummySignals:
@@ -525,11 +530,12 @@ _SITE = [f"https://www.uscis.gov/page-{n}" for n in range(30)]
 _GONE = _SITE[0]
 
 
-def _uscis_crawl(tmp_path, urls, blocked=False, **spider_args):
+def _uscis_crawl(tmp_path, urls, blocked=False, empty=(), **spider_args):
     """One crawl of the given pages by the USCIS spider, through the hash
     pipeline, as far as the manifest it leaves behind.
 
-    Returns the URLs it emitted removals for.
+    Returns the URLs it emitted removals for. Pages in `empty` are fetched
+    but yield no content (the markup changed, or the page is a bare shell).
     """
     from ..spiders.uscis_spider import UscisSpider
 
@@ -541,9 +547,10 @@ def _uscis_crawl(tmp_path, urls, blocked=False, **spider_args):
 
     stats = spider.crawler.stats.values
     for url in urls:
-        item = {"url": url, "content_type": "text/html", "content": "<p>same every week</p>"}
+        content = "" if url in empty else "<p>same every week</p>"
+        item = {"url": url, "content_type": "text/html", "content": content}
         try:
-            _through(pipeline, item, spider)
+            _through(pipeline, CleanValidatePipeline().process_item(item, spider), spider)
             stats["item_scraped_count"] = stats.get("item_scraped_count", 0) + 1
         except DropItem:
             stats["item_dropped_count"] = stats.get("item_dropped_count", 0) + 1
@@ -604,6 +611,17 @@ def test_unhealthy_crawl_counts_no_misses(tmp_path):
     manifest = _manifest(tmp_path)
     assert manifest[_GONE]["missed"] == 1
     assert all(manifest[url]["missed"] == 0 for url in _SITE[1:])
+
+
+def test_page_fetched_without_content_is_not_a_miss(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+
+    # The page is still on the site, but for two crawls nothing can be
+    # extracted from it. It was fetched, so it is not gone: it keeps its place
+    # in the manifest (and its last good content stays in the corpus).
+    for _ in range(2):
+        assert _uscis_crawl(tmp_path, _SITE, empty={_GONE}) == []
+    assert _manifest(tmp_path)[_GONE]["missed"] == 0
 
 
 def test_page_seen_by_an_unhealthy_crawl_starts_over(tmp_path):
