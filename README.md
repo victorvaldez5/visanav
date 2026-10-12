@@ -120,8 +120,10 @@ One Scrapy project holds a spider per source:
   lets re-runs skip pages whose content is unchanged, so only changed documents are
   re-written and forwarded downstream. A page is only recorded once its feed is
   safely stored, and a crawl that cannot be trusted (blocked, feed not stored, far
-  fewer pages than usual) exits non-zero so its Railway run shows as failed. The `ecfr` spider also reports sections that
-  have been removed, so repealed rules leave the knowledge base on the next ingest.
+  fewer pages than usual) exits non-zero so its Railway run shows as failed. Crawls
+  also report pages that are gone from the source, so they leave the knowledge base
+  on the next ingest: `ecfr` reports a repealed section at once, and `uscis` reports
+  a page once two healthy crawls in a row have not seen it.
 - **Scheduling**: one **Railway cron service** per spider runs weekly on Mondays,
   writing to R2: `visanav-scraper` (USCIS, 06:00 UTC), `visanav-scraper-ecfr` (09:00)
   and `visanav-scraper-federal-register` (09:30). The two newer ones use the same
@@ -233,6 +235,25 @@ serving. Set `SKIP_MIGRATE_ON_START=1` on the API service so the container
 doesn't migrate a second time on every cold start. If the variable is unset it
 is harmless (migrate is idempotent), just redundant. `api/entrypoint.sh` still
 runs `collectstatic` on every start, and still migrates on boot locally.
+
+### Scheduled ingestion (the knowledge base keeps itself current)
+
+A third kind of Railway service, `visanav-ingest`, runs `python manage.py refresh_corpus`
+every hour from its own image ([`api/ingest.Dockerfile`](api/ingest.Dockerfile): the API code
+plus an S3 client). Each run ingests only what is due:
+
+- a scrape source whose crawl has left a new feed in R2, and
+- the curated `data/` corpus, when a deploy changed it.
+
+With nothing due it exits in seconds. Only new or changed chunks are embedded, every run is
+recorded (`python manage.py corpus_status`), and a corpus that would shrink by more than 30%
+is not replaced without `--force`.
+
+Set these on the service (same values as the API service unless noted): `DJANGO_SETTINGS_MODULE`,
+`DJANGO_SECRET_KEY`, `ALLOWED_HOSTS`, `CONVERSATION_ENCRYPTION_KEYS`, the six `POSTGRES_*`
+variables, `VOYAGE_API_KEY`, and for the bucket the scrapers write to (read-only credentials are
+enough): `R2_BUCKET`, `AWS_ENDPOINT_URL` (the bare host, no bucket path), `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_REGION_NAME=auto`.
 
 Before a `develop` → `main` release, work through [`docs/RELEASING.md`](docs/RELEASING.md).
 

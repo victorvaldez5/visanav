@@ -88,6 +88,25 @@ class InstructionsHardeningTests(SimpleTestCase):
         self.assertIn("not even to justify a refusal", text)
 
 
+class InstructionsSourceWeighingTests(SimpleTestCase):
+    """How Javi is told to rank the kinds of document semantic_search returns."""
+
+    def _section(self, heading):
+        start = llm.INSTRUCTIONS.index(heading)
+        end = llm.INSTRUCTIONS.find("\n\n", start)
+        return " ".join(llm.INSTRUCTIONS[start:end].split())
+
+    def test_final_rules_are_ranked_with_binding_law(self):
+        ranking = self._section("Weighing sources").split(" - ")[1]
+        self.assertIn("outrank", ranking)
+        for instrument in ("statute", "regulation", "final-rule"):
+            self.assertIn(instrument, ranking)
+
+    def test_referral_rule_stays_with_the_sourcing_rules(self):
+        self.assertIn("resource_lookup", self._section("Citations & sourcing"))
+        self.assertNotIn("resource_lookup", self._section("Weighing sources"))
+
+
 class TurnUsageLimitTests(SimpleTestCase):
     """Every agent run is bounded so one turn can't spend unbounded LLM budget."""
 

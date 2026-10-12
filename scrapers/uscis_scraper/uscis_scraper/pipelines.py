@@ -27,6 +27,14 @@ def _source(spider):
     return getattr(spider, "name", None) or LEGACY_SOURCE
 
 
+def _mark_seen(spider, url):
+    """Tell a spider that tracks removals (enumeration.py) that this crawl
+    fetched the page, whatever becomes of the item afterwards."""
+    seen = getattr(spider, "seen_urls", None)
+    if seen is not None:
+        seen.add(url)
+
+
 def _build_s3_client(settings):
     """Create a botocore S3 client pointed at the configured S3-compatible
     endpoint (Cloudflare R2).
@@ -55,6 +63,9 @@ class CleanValidatePipeline:
             return item
 
         if not item.get("content"):
+            # The page was fetched, so it is still at the source: nothing we
+            # could extract is no reason to count it as missing and remove it.
+            _mark_seen(spider, item.get("url"))
             raise DropItem("No page content found")
 
         return item
@@ -160,8 +171,10 @@ class ContentHashPipeline:
     see the page, for spiders that only remove a page once it has stayed away
     (enumeration.MissCountingMixin). The pipeline tells such a spider what it
     saw (``seen_urls``) and the counts so far (``manifest_misses``); the spider
-    answers with ``missed_counts`` if the crawl was healthy enough to count, and
-    otherwise the stored counts are kept. A manifest written before this (a
+    answers with ``missed_counts`` if the crawl was healthy enough to count.
+    Otherwise the stored counts are kept, except that a page this crawl did see
+    goes back to zero: an unhealthy crawl proves nothing about the pages it
+    missed, but a page it saw is there. A manifest written before this (a
     plain ``{url: hash}`` map) still loads, with every count at zero.
 
     USCIS predates per-source manifests: until its namespaced manifest exists it
@@ -237,9 +250,7 @@ class ContentHashPipeline:
 
         url = item.get("url")
         # Seen, whether or not it turns out to have changed.
-        seen = getattr(spider, "seen_urls", None)
-        if seen is not None:
-            seen.add(url)
+        _mark_seen(spider, url)
 
         content = item.get("content", "")
         stable = getattr(spider, "stable_content", None)
@@ -308,10 +319,12 @@ class ContentHashPipeline:
     def _records(self):
         # A spider that counts misses reports this crawl's counts (seen pages
         # are simply absent, so they reset to zero); None means the crawl was
-        # not fit to count, and the stored counts stand.
+        # not fit to count. The stored counts then stand, but a page this
+        # crawl saw has still come back, so its count starts over.
         counts = getattr(self.spider, "missed_counts", None)
         if counts is None:
-            counts = self.misses
+            seen = getattr(self.spider, "seen_urls", ())
+            counts = {url: n for url, n in self.misses.items() if url not in seen}
         return {
             url: {"hash": digest, "missed": counts.get(url, 0)}
             for url, digest in self.manifest.items()

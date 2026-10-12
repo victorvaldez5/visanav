@@ -66,6 +66,9 @@ def crawl_problems(stats, spider=None, finished=True):
     if getattr(spider, "crawl_failed", False):
         problems.append("a request failed, so removed pages were not worked out")
     if getattr(spider, "removals_refused", False):
-        problems.append("too many known pages were missing, so none were removed")
+        problems.append(
+            "too many known pages were missing, so none were removed "
+            "(if they are really gone: -a allow_large_removal=1)"
+        )
 
     return problems

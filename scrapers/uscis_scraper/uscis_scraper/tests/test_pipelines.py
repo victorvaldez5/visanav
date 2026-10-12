@@ -7,7 +7,12 @@ import pytest
 from scrapy import Request
 from scrapy.exceptions import NotConfigured, DropItem
 from scrapy.utils.test import get_crawler
-from ..pipelines import HTMLPagesPipeline, NamedFilesPipeline, ContentHashPipeline
+from ..pipelines import (
+    CleanValidatePipeline,
+    ContentHashPipeline,
+    HTMLPagesPipeline,
+    NamedFilesPipeline,
+)
 
 
 class DummySignals:
@@ -525,15 +530,17 @@ _SITE = [f"https://www.uscis.gov/page-{n}" for n in range(30)]
 _GONE = _SITE[0]
 
 
-def _uscis_crawl(tmp_path, urls, blocked=False):
+def _uscis_crawl(tmp_path, urls, blocked=False, empty=(), lose_removals=False, **spider_args):
     """One crawl of the given pages by the USCIS spider, through the hash
     pipeline, as far as the manifest it leaves behind.
 
-    Returns the URLs it emitted removals for.
+    Returns the URLs it emitted removals for. Pages in `empty` are fetched
+    but yield no content (the markup changed, or the page is a bare shell).
+    With `lose_removals` the removals are worked out but never reach the feed.
     """
     from ..spiders.uscis_spider import UscisSpider
 
-    spider = UscisSpider()
+    spider = UscisSpider(**spider_args)
     spider.min_items_seen = 20
     spider.crawler = DummyCrawler({})
     pipeline = _content_hash_pipeline(tmp_path)
@@ -541,9 +548,10 @@ def _uscis_crawl(tmp_path, urls, blocked=False):
 
     stats = spider.crawler.stats.values
     for url in urls:
-        item = {"url": url, "content_type": "text/html", "content": "<p>same every week</p>"}
+        content = "" if url in empty else "<p>same every week</p>"
+        item = {"url": url, "content_type": "text/html", "content": content}
         try:
-            _through(pipeline, item, spider)
+            _through(pipeline, CleanValidatePipeline().process_item(item, spider), spider)
             stats["item_scraped_count"] = stats.get("item_scraped_count", 0) + 1
         except DropItem:
             stats["item_dropped_count"] = stats.get("item_dropped_count", 0) + 1
@@ -554,7 +562,8 @@ def _uscis_crawl(tmp_path, urls, blocked=False):
     # What the spider does when it goes idle, then what the pipelines do with it.
     removals = spider.removed_items()
     for tombstone in removals:
-        _through(pipeline, tombstone, spider)
+        if not lose_removals:
+            _through(pipeline, tombstone, spider)
     pipeline.close_spider(spider)
     return [item["url"] for item in removals]
 
@@ -583,6 +592,18 @@ def test_page_missing_from_two_crawls_in_a_row_is_removed(tmp_path):
     assert _manifest(tmp_path)[_GONE]["missed"] == 0
 
 
+def test_removal_that_never_reached_the_feed_is_emitted_again(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])
+    assert _uscis_crawl(tmp_path, _SITE[1:], lose_removals=True) == [_GONE]
+
+    # Ingest never heard about it, so the page is not forgotten and the very
+    # next crawl says so again, without counting from zero.
+    assert _GONE in _manifest(tmp_path)
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == [_GONE]
+    assert _GONE not in _manifest(tmp_path)
+
+
 def test_page_that_comes_back_starts_over(tmp_path):
     _uscis_crawl(tmp_path, _SITE)
     _uscis_crawl(tmp_path, _SITE[1:])  # missed once
@@ -606,6 +627,33 @@ def test_unhealthy_crawl_counts_no_misses(tmp_path):
     assert all(manifest[url]["missed"] == 0 for url in _SITE[1:])
 
 
+def test_page_fetched_without_content_is_not_a_miss(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+
+    # The page is still on the site, but for two crawls nothing can be
+    # extracted from it. It was fetched, so it is not gone: it keeps its place
+    # in the manifest (and its last good content stays in the corpus).
+    for _ in range(2):
+        assert _uscis_crawl(tmp_path, _SITE, empty={_GONE}) == []
+    assert _manifest(tmp_path)[_GONE]["missed"] == 0
+
+
+def test_page_seen_by_an_unhealthy_crawl_starts_over(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])  # missed once, fairly
+
+    # The site blocks most requests, but the missing page is among the few that
+    # got through: it is back, whatever else this crawl cannot tell us. The
+    # pages the blocked crawl did not reach are not counted as missed.
+    assert _uscis_crawl(tmp_path, _SITE[:15], blocked=True) == []
+    manifest = _manifest(tmp_path)
+    assert all(manifest[url]["missed"] == 0 for url in _SITE)
+
+    # So its next absence is a first miss again, not the second.
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == []
+    assert _manifest(tmp_path)[_GONE]["missed"] == 1
+
+
 def test_too_many_missing_pages_are_not_removed(tmp_path):
     _uscis_crawl(tmp_path, _SITE)
     _uscis_crawl(tmp_path, _SITE[5:])  # five pages missed once: plausible so far
@@ -616,6 +664,13 @@ def test_too_many_missing_pages_are_not_removed(tmp_path):
     assert _uscis_crawl(tmp_path, _SITE[5:]) == []
     manifest = _manifest(tmp_path)
     assert all(manifest[url]["missed"] == 1 for url in _SITE[:5])
+
+    # Every later crawl refuses in the same way, until someone who checked that
+    # the pages are gone lets one crawl through. A crawl after that is clean.
+    assert _uscis_crawl(tmp_path, _SITE[5:]) == []
+    assert _uscis_crawl(tmp_path, _SITE[5:], allow_large_removal="1") == _SITE[:5]
+    assert set(_manifest(tmp_path)) == set(_SITE[5:])
+    assert _uscis_crawl(tmp_path, _SITE[5:]) == []
 
 
 def test_manifest_from_before_miss_counts_still_loads(tmp_path):

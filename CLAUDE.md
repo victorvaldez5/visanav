@@ -19,7 +19,7 @@ independently-deployed services** plus a shared config file:
 
 A root **`justfile`** wraps the everyday tasks (`just` lists them all): `just setup`,
 `just test`, `just lint`, `just migrate`, `just manage <cmd>`, `just db-status`,
-`just ingest us`, `just corpus-pull`, `just corpus-ingest`, `just crawl <source>`. Recipes run on the host
+`just ingest us`, `just corpus-pull`, `just corpus-ingest`, `just corpus-refresh`, `just crawl <source>`. Recipes run on the host
 against the compose Postgres (`just db` starts only that). Prefer them over ad-hoc
 commands; they never load `config/.env` into the shell.
 
@@ -76,7 +76,7 @@ just crawl           # LOCAL_TEST=true USCIS crawl → scrapers/uscis_scraper/ou
 just crawl ecfr      # any spider by name: uscis (default), ecfr, federal-register
 just test-scraper    # scraper unit tests
 ```
-(`LOCAL_TEST=false` uploads to R2; only the weekly Railway cron services run that way; `scrape.yml` is a manual fallback.)
+(`LOCAL_TEST=false` uploads to R2; the weekly Railway cron services run that way, and so does `scrape.yml`, the manual fallback.)
 
 ### Data corpus
 ```bash
@@ -91,15 +91,35 @@ just corpus-pull         # fetch every source's JSONL feeds from R2 (needs R2 re
 just corpus-ingest       # embed + upsert the scraped corpus, every source, from those feeds
 just corpus-ingest --dry # preview chunk counts per source (no keys, no writes)
 just corpus-ingest ecfr  # narrow pull or ingest to named sources
-just db-status           # chunk counts per country / corpus / topic
+just corpus-ingest ecfr --force  # other flags pass through to the command (also: just ingest us --force)
+just corpus-refresh      # what production's scheduler runs: ingest whatever is due, feeds read from R2
+just db-status           # chunk counts per country / corpus / topic + each corpus's last ingestion
 ```
 Both ingest commands transactionally replace **only their own corpus** (the
 `KnowledgeChunk.corpus` column: `curated`, or one per scrape source: `uscis`, `ecfr`,
 `federal-register`), so re-running one never wipes another. `ingest_scrape` takes the
 **feeds root** (one subdirectory per source) and handles every source in one run, each in
 its own transaction: a source with no feeds is skipped and keeps its rows, and a failing
-source makes the command exit non-zero without rolling back the others. Run them from a
-full checkout (local/CI), not the prod web image.
+source makes the command exit non-zero without rolling back the others.
+
+All of them go through `knowledge/corpus.py`, which makes ingestion safe to schedule:
+every `--upsert` attempt is recorded as an `IngestRun`; a chunk whose id is already
+stored keeps its embedding, so only new or changed chunks are sent to Voyage (a
+changed `EMBEDDING_MODEL` re-embeds everything); a corpus is never replaced by nothing,
+nor by one under `INGEST_MIN_KEEP_RATIO` (0.7) of its current size without `--force`;
+and a Postgres advisory lock keeps two runs from overlapping. `--only-due` skips a
+corpus whose marker (newest feed name, or a fingerprint of the curated chunks) matches
+its last successful run, unless `EMBEDDING_MODEL` changed since that run. An attempt
+that fails before a corpus is read (the feeds cannot be listed, R2 is not configured)
+is recorded as a failed `IngestRun` too.
+
+**Production ingests itself.** The hourly `visanav-ingest` Railway cron service runs
+`manage.py refresh_corpus`: curated `data/` when a deploy changed it, and each scrape
+source once its crawl has left a new feed in R2 (`ingest_scrape --from-r2`, feeds read
+by `knowledge/feed_store.py`). It needs boto3, which only `api/ingest.Dockerfile`
+installs (the `ingest` dependency group); the web image stays without it. A change to
+extraction or chunking does **not** re-ingest scraped sources by itself (their feeds are
+unchanged): run `ingest_scrape --from-r2 --upsert` after such a deploy.
 
 ### Translations (i18n)
 ```bash
@@ -121,6 +141,9 @@ just compile-messages   # compile the .mo files Django loads (commit both)
   `visanav-scraper` (USCIS, the image's default command), `visanav-scraper-ecfr` and
   `visanav-scraper-federal-register` (same image, a `startCommand` per spider).
   `.github/workflows/scrape.yml` is a `workflow_dispatch`-only fallback.
+- **Ingestion → Railway cron**: the `visanav-ingest` service (`api/ingest.Dockerfile`, repo-root
+  context) runs `manage.py refresh_corpus` hourly. It needs the API's Django and Postgres
+  variables, `VOYAGE_API_KEY`, and read-only credentials for the production R2 bucket.
 - **Railway config**: `.railway/railway.ts` (Infrastructure as Code) declares the API and scraper services,
   never Postgres. `railway config plan` previews and `railway config apply` applies; read the plan first.
   **Do not add a root `railway.json`/`railway.toml`**: Railway deprecated Config as Code (stops working
@@ -210,8 +233,10 @@ its rows via the `corpus` column:
   lines for pages that are gone (`enumeration.py`): `ecfr` sees its whole source every crawl, so
   anything missing after a clean crawl is removed at once; `uscis` follows links, so a page is
   removed only after two healthy crawls in a row have not seen it (the per-URL miss count lives
-  in the manifest, whose entries are `{hash, missed}`; unhealthy crawls count nothing). Neither
-  removes more than a tenth of its known pages in one crawl. Because feeds are deltas, `manage.py ingest_scrape`
+  in the manifest, whose entries are `{hash, missed}`; an unhealthy crawl counts no misses, but
+  a page it does see starts over at zero). Neither removes more than a tenth of its known pages
+  in one crawl: it removes nothing and fails, on every crawl, until one is run with
+  `-a allow_large_removal=1`. Because feeds are deltas, `manage.py ingest_scrape`
   (`knowledge/scrape_utils.py`) merges **all** of a source's feeds oldest→newest (honouring
   removals), runs that source's extractor from the `SOURCES` registry, and writes chunks with
   `corpus=<spider name>`. Federal Register documents older than
@@ -225,7 +250,7 @@ its rows via the `corpus` column:
 - `conversation` — `Conversation` / `Message` / `Feedback` models, the `ConversationViewSet`, and the SSE `chat_stream`. Conversations are keyed publicly by **UUID, not integer id**, so anonymous chats can't be enumerated.
 - `locations` — `Country` / `Subdivision` / `Address` / `Language` reference data.
 - `network` — the public-resources directory: a flat `Organization` (contact details are inline Postgres `ArrayField`s — no contact/address/language side-tables — matching `data/schema/resource.schema.json`) plus a read-only `Representative` (individual attorneys / DOJ-accredited reps). Seeded via management commands (`load_resources <cc>`, `extract_ra_orgs`, `extract_probono`, `extract_ra_reps`), not migrations; the DOJ roster fixtures are (re)parsed from the source EOIR PDFs in `data/raw/` by `build_ra_fixtures` (`download_ra_rosters`, or `build_ra_fixtures --download`, refreshes those PDFs from justice.gov first).
-- `knowledge` — the pgvector RAG corpus: `KnowledgeChunk` (embedded chunks, per-country), `ingest_utils.py` (chunking), `scrape_utils.py` (the scrape-source registry and extractors), and the `ingest` / `ingest_scrape` management commands.
+- `knowledge` — the pgvector RAG corpus: `KnowledgeChunk` (embedded chunks, per-country), `IngestRun` (the record of every ingestion), `ingest_utils.py` (chunking), `scrape_utils.py` (the scrape-source registry and extractors), `corpus.py` (replace a corpus safely: due check, shrink guard, embedding reuse, lock), `feed_store.py` (feeds from disk or R2), and the `ingest` / `ingest_scrape` / `refresh_corpus` / `corpus_status` management commands.
 - `core` — shared infra: `llm.py` (the agent), `embeddings.py` (Voyage), `pagination.py`, `utils.py`, `mail.py`.
 
 URL roots (`api_project/urls.py`): `api/` (conversation), `api/auth/`, `api/locations/`,
@@ -254,6 +279,9 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   terms are in `i18n/GLOSSARY.md`.
 
 ## Gotchas
+- **Local R2 is the dev bucket**: `config/.env` points at `visanav dev`; Railway uses
+  `visanav prod`. `just corpus-pull` / `corpus-refresh` on your machine say nothing about
+  production's feeds or freshness.
 - **Docker images install into `/opt/venv`** (on `PATH`), outside `/app`, so the dev bind mount
   can't shadow it. Never start container commands via `bash -lc`: a login shell resets `PATH`
   and `python` silently loses every package. Build context is the repo root, so the root
@@ -261,8 +289,10 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   and `config/.env` out of the context).
 - **`scrapy crawl` is overridden** (`COMMANDS_MODULE`, `uscis_scraper/commands/crawl.py`): after
   the crawl it runs `health.crawl_problems` over the stats and exits non-zero when the crawl can't
-  be trusted (feed not stored, no or mostly failed requests, parse errors, fewer items than the
-  spider's `min_items_seen`, removals refused). Stock Scrapy exits 0 in all of those cases.
+  be trusted (it ended as anything but `finished`, feed not stored, no or mostly failed requests,
+  parse errors, fewer items than the spider's `min_items_seen`, any failed request on a spider
+  that sees its whole source such as `ecfr`, removals refused). Stock Scrapy exits 0 in all of
+  those cases.
 - **Local crawls are throttled too**: `LOCAL_TEST` only changes where output goes. Robots.txt,
   the 5-second delay and autothrottle apply in every mode, so `just crawl` (USCIS) takes about as
   long as production; pass `-s DOWNLOAD_DELAY=1` to scrapy directly for a quick experiment.

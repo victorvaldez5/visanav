@@ -65,7 +65,8 @@ takes about two hours). While developing a spider, shorten that from
 `LOCAL_TEST` defaults to `true`, so a local crawl writes to `./output/`
 (`items/<spider>/`, `manifests/<spider>.json`, raw pages and PDFs) and needs
 **no cloud credentials**. Only the scheduled Railway cron services (one per
-spider, `.railway/railway.ts`) run with `LOCAL_TEST=false` and upload to R2.
+spider, `.railway/railway.ts`) and the manual `scrape` GitHub workflow run with
+`LOCAL_TEST=false` and upload to R2.
 Settings are read from the shared `config/.env` (see `config/.env.example`).
 
 ## 2. Initialize a new spider
@@ -174,7 +175,8 @@ Optional pieces of the contract:
   the mixin in `enumeration.py` that fits how your spider finds pages. A
   **link-following** spider mixes in `MissCountingMixin` (as `uscis` does) and
   needs nothing else: a page is removed once two healthy crawls in a row have
-  not seen it, and a crawl that fails its health check counts nothing. Set a
+  not seen it, and a crawl that fails its health check counts no misses (a page it does
+  see still starts over at zero). Set a
   realistic `min_items_seen` so a blocked crawl is recognised as unhealthy.
   If your spider sees its *whole* source on every crawl, mix in
   `CompleteEnumerationMixin` (`enumeration.py`), call `self.mark_seen(url)` for
@@ -183,7 +185,11 @@ Optional pieces of the contract:
   ingestion drops it. Do not use this one for a link-following crawl, where a
   missed link would look like a deleted page. Either way, if more than a tenth
   of the known pages would be removed at once the spider assumes the source is
-  broken, removes nothing and fails the crawl.
+  broken, removes nothing and fails the crawl. Every later crawl then fails the
+  same way. If the pages are really gone, run one crawl of that source with
+  `-a allow_large_removal=1` (for example
+  `scrapy crawl ecfr -a allow_large_removal=1`, or the `allow_large_removal`
+  input of the manual `scrape` workflow).
 
 One thing is still USCIS-specific and may need generalizing for a new source:
 the PDF filename heuristics in `NamedFilesPipeline.file_path()`

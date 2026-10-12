@@ -97,25 +97,41 @@ validate-data *cc:
 
 # ── knowledge corpus ─────────────────────────────────────────────────────────
 
-# What's in the vector store and resource directory right now
+# What's in the vector store, how fresh each corpus is, and the resource directory size
 db-status: db
-    @cd api && uv run python manage.py shell -v 0 -c "from django.db.models import Count; from knowledge.models import KnowledgeChunk as K; from network.models import Organization as O; rows = K.objects.values('country', 'corpus', 'topic').annotate(n=Count('id')).order_by('country', 'corpus', 'topic'); [print(f\"{r['country']:3} {r['corpus']:8} {r['topic'] or '-':16} {r['n']:6}\") for r in rows]; print(f\"total chunks: {K.objects.count()}   organizations: {O.objects.count()}\")"
+    @cd api && uv run python manage.py corpus_status
+    @cd api && uv run python manage.py shell -v 0 -c "from network.models import Organization as O; print(f'organizations: {O.objects.count()}')"
 
-# Embed + upsert the curated data/ corpus for a country (dry run: add --dry)
+# Ingest everything that is due, as the scheduler does: curated data/ if it changed, and each scrape source's new feeds straight from R2
+corpus-refresh *args: db
+    cd api && uv run python manage.py refresh_corpus {{args}}
+
+# Embed + upsert the curated data/ corpus for a country (dry run: add --dry; other flags, such as --force, pass through)
 ingest cc="us" *flags: db
-    cd api && uv run python manage.py ingest {{cc}} {{ if flags == "--dry" { "" } else { "--upsert" } }}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mode="--upsert"; flags=()
+    for arg in {{flags}}; do
+        if [ "$arg" = "--dry" ]; then mode=""; else flags+=("$arg"); fi
+    done
+    # (macOS bash 3.2 rejects an empty array under `set -u`, hence the guard.)
+    cd api && uv run python manage.py ingest {{cc}} $mode ${flags[@]+"${flags[@]}"}
 
 # Download the crawls' JSONL feeds from R2, every source or just those named (needs R2 read credentials in config/.env)
 corpus-pull *sources:
     cd scrapers/uscis_scraper && uv run python pull_feeds.py {{sources}}
 
-# Embed + upsert the scraped corpus from the pulled feeds: every source, or just those named (dry run: add --dry)
+# Embed + upsert the scraped corpus from the pulled feeds: every source, or just those named (dry run: add --dry; other flags, such as --force, pass through)
 corpus-ingest *args: db
     #!/usr/bin/env bash
     set -euo pipefail
     mode="--upsert"; sources=()
     for arg in {{args}}; do
-        if [ "$arg" = "--dry" ]; then mode=""; else sources+=(--source "$arg"); fi
+        case "$arg" in
+            --dry) mode="" ;;
+            --*) sources+=("$arg") ;;
+            *) sources+=(--source "$arg") ;;
+        esac
     done
     # (macOS bash 3.2 rejects an empty array under `set -u`, hence the guard.)
     cd api && uv run python manage.py ingest_scrape ../{{feeds}} $mode ${sources[@]+"${sources[@]}"}

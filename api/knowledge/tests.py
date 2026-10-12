@@ -544,3 +544,516 @@ def test_scrape_ecfr_authority_follows_the_chapter():
     assert state["authority"] == "Department of State"
     assert labor["authority"] == "Department of Labor"
     assert eoir["doc_id"] == "ecfr/8-cfr-1003.1"
+
+
+# -- scheduled ingestion: due detection, the record, guards (knowledge/corpus.py) --
+
+
+def _runs(corpus, **filters):
+    from knowledge.models import IngestRun
+
+    return list(IngestRun.objects.filter(corpus=corpus, **filters).order_by("started_at"))
+
+
+def _embedded(fake):
+    """How many texts have been sent to Voyage so far."""
+    return sum(len(call["texts"]) for call in fake.calls)
+
+
+@pytest.mark.django_db
+def test_only_due_ingests_a_source_once_per_new_feed(voyage_key, tmp_path):
+    root = _feeds_root(tmp_path)
+    _ingest_scrape(root, "--only-due")
+
+    (run,) = _runs("ecfr")
+    assert (run.status, run.marker, run.chunks, run.embedded) == ("succeeded", _FEED, 1, 1)
+    assert run.previous_chunks == 0 and run.finished_at is not None
+    assert all(len(_runs(c)) == 1 for c in ("uscis", "federal-register"))
+
+    # The next scheduled run finds no new feed: nothing is embedded or rewritten.
+    spent = _embedded(voyage_key)
+    stamps = dict(KnowledgeChunk.objects.values_list("chunk_id", "updated_at"))
+    _ingest_scrape(root, "--only-due")
+    assert _embedded(voyage_key) == spent
+    assert dict(KnowledgeChunk.objects.values_list("chunk_id", "updated_at")) == stamps
+    assert len(_runs("ecfr")) == 1
+
+    # One source's crawl finishes and leaves a newer feed: only that source runs.
+    other_url = "https://www.ecfr.gov/current/title-8/section-274a.13"
+    _write_lines(root / "ecfr" / _LATER_FEED, [
+        _page(other_url, _CFR_XML.format(body=_BODY),
+              {**_CFR_META, "citation": "8 CFR 274a.13", "heading": "Application."},
+              "application/xml"),
+    ])
+    _ingest_scrape(root, "--only-due")
+    assert [r.marker for r in _runs("ecfr")] == [_FEED, _LATER_FEED]
+    assert len(_runs("uscis")) == 1 and len(_runs("federal-register")) == 1
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() == 2
+
+
+@pytest.mark.django_db
+def test_unchanged_chunks_keep_their_embeddings(voyage_key, settings, tmp_path):
+    other_url = "https://www.ecfr.gov/current/title-8/section-274a.13"
+    other_meta = {**_CFR_META, "citation": "8 CFR 274a.13", "heading": "Application."}
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    _ingest_scrape(root)
+    assert _embedded(voyage_key) == 1
+
+    # A later crawl adds one section. The section already stored is not sent to
+    # Voyage again, but its row is still rewritten with the new crawl's date.
+    _write_lines(root / "ecfr" / _LATER_FEED,
+                 [_page(other_url, _CFR_XML.format(body=_BODY), other_meta, "application/xml")])
+    _ingest_scrape(root)
+    assert _embedded(voyage_key) == 2
+    assert _runs("ecfr")[-1].embedded == 1 and _runs("ecfr")[-1].chunks == 2
+    assert set(KnowledgeChunk.objects.filter(corpus="ecfr")
+               .values_list("last_verified", flat=True)) == {date(2026, 9, 28)}
+
+    # A different embedding model makes every stored vector unusable.
+    settings.EMBEDDING_MODEL = "voyage-law-2"
+    _ingest_scrape(root)
+    assert _embedded(voyage_key) == 4
+
+
+@pytest.mark.django_db
+def test_a_new_embedding_model_makes_every_corpus_due(voyage_key, curated_dir, settings, tmp_path):
+    from django.core.management import call_command
+
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    _ingest_scrape(root, "--only-due")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == 2
+
+    # No new feed and no edit to data/, but the stored vectors no longer match
+    # what queries are embedded with: the scheduled run re-embeds both corpora.
+    settings.EMBEDDING_MODEL = "voyage-law-2"
+    _ingest_scrape(root, "--only-due")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == 4
+    assert [r.embedding_model for r in _runs("ecfr")] == ["voyage-3", "voyage-law-2"]
+    assert [r.embedding_model for r in _runs("curated")] == ["voyage-3", "voyage-law-2"]
+
+    # Once that is done, it settles again.
+    _ingest_scrape(root, "--only-due")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == 4 and len(_runs("ecfr")) == 2
+
+
+@pytest.mark.django_db
+def test_failed_source_is_recorded_and_retried(voyage_key, tmp_path):
+    from django.core.management.base import CommandError
+
+    root = _feeds_root(tmp_path)
+    _ingest_scrape(root, "--only-due")
+    (root / "ecfr" / _LATER_FEED).write_text("{not json\n", encoding="utf-8")
+
+    for _ in range(2):  # it stays due, so every scheduled run fails loudly
+        with pytest.raises(CommandError, match="ecfr"):
+            _ingest_scrape(root, "--only-due")
+    statuses = [r.status for r in _runs("ecfr")]
+    assert statuses == ["succeeded", "failed", "failed"]
+    assert "JSONDecodeError" in _runs("ecfr")[-1].error
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() == 1  # the good rows stand
+
+    # Once the feed is fixed the next run picks it up without anyone forcing it.
+    (root / "ecfr" / _LATER_FEED).write_text("", encoding="utf-8")
+    _ingest_scrape(root, "--only-due")
+    assert _runs("ecfr")[-1].status == "succeeded"
+
+
+@pytest.mark.django_db
+def test_shrink_guard_refuses_a_much_smaller_corpus(voyage_key, tmp_path):
+    from django.core.management.base import CommandError
+
+    for n in range(10):
+        _seed(f"old-ecfr-{n}", "ecfr")
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+
+    # One chunk would replace ten: that is a broken crawl, not ten repeals.
+    with pytest.raises(CommandError, match="ecfr"):
+        _ingest_scrape(root)
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() == 10
+    (run,) = _runs("ecfr")
+    assert (run.status, run.chunks, run.previous_chunks) == ("skipped", 1, 10)
+    assert "--force" in run.error
+    assert _embedded(voyage_key) == 0  # refused before spending anything
+
+    # Unless a person says the shrink is real.
+    _ingest_scrape(root, "--force")
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() == 1
+    assert _runs("ecfr")[-1].status == "succeeded"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("ratio, replaced", [(0.5, True), (0.51, False)])
+def test_shrink_guard_allows_a_corpus_exactly_at_the_floor(
+        ratio, replaced, voyage_key, settings, tmp_path):
+    from django.core.management.base import CommandError
+
+    # One chunk would replace two: exactly half. At a floor of a half that is
+    # allowed; only a corpus below the floor is held back.
+    settings.INGEST_MIN_KEEP_RATIO = ratio
+    for n in range(2):
+        _seed(f"old-ecfr-{n}", "ecfr")
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+
+    if replaced:
+        _ingest_scrape(root)
+    else:
+        with pytest.raises(CommandError, match="ecfr"):
+            _ingest_scrape(root)
+    assert _runs("ecfr")[-1].status == ("succeeded" if replaced else "skipped")
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() == (1 if replaced else 2)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_ingestion_does_nothing_while_another_run_holds_the_lock(voyage_key, tmp_path, capsys):
+    from django.db import connection
+
+    from knowledge.corpus import _LOCK_ID
+
+    _seed("old-ecfr", "ecfr")
+    other = connection.copy()  # another process, as far as Postgres can tell
+    try:
+        with other.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_lock(%s)", [_LOCK_ID])
+        _ingest_scrape(_feeds_root(tmp_path))  # exits cleanly: no error raised
+        assert "Another ingestion run is in progress" in capsys.readouterr().out
+        assert list(KnowledgeChunk.objects.values_list("chunk_id", flat=True)) == ["old-ecfr"]
+        assert _runs("ecfr") == []
+    finally:
+        other.close()
+
+    # With the other run finished, it goes ahead.
+    _ingest_scrape(_feeds_root(tmp_path))
+    assert not KnowledgeChunk.objects.filter(chunk_id="old-ecfr").exists()
+
+
+class _VoyageThatDropsTheConnection:
+    """A Voyage client whose first call outlasts the database connection: the
+    backend holding the ingestion lock is killed while the call is in flight.
+    With `rival`, another run takes the lock before this one notices."""
+
+    def __init__(self, other, rival):
+        self.other, self.rival, self.calls = other, rival, 0
+        self.lock_was_free = []  # per later call: could someone else have taken the lock?
+
+    def embed(self, texts, model, input_type):
+        from django.db import connection
+
+        from knowledge.corpus import _LOCK_ID
+
+        self.calls += 1
+        with self.other.cursor() as cursor:
+            if self.calls == 1:
+                with connection.cursor() as mine:
+                    mine.execute("SELECT pg_backend_pid()")
+                    cursor.execute("SELECT pg_terminate_backend(%s)", mine.fetchone())
+                cursor.execute("SELECT pg_sleep(0.2)")  # let the backend go
+                if self.rival:
+                    cursor.execute("SELECT pg_advisory_lock(%s)", [_LOCK_ID])
+            elif not self.rival:
+                cursor.execute("SELECT pg_try_advisory_lock(%s)", [_LOCK_ID])
+                free = cursor.fetchone()[0]
+                self.lock_was_free.append(free)
+                if free:
+                    cursor.execute("SELECT pg_advisory_unlock(%s)", [_LOCK_ID])
+        return _FakeResp([[1.0] * 1024 for _ in texts])
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("rival", [False, True])
+def test_a_dropped_connection_does_not_let_two_runs_write(
+        rival, monkeypatch, settings, tmp_path):
+    from django.core.management.base import CommandError
+    from django.db import connection
+
+    settings.VOYAGE_API_KEY = "test"
+    for corpus in ("uscis", "ecfr", "federal-register"):
+        _seed(f"old-{corpus}", corpus)
+    other = connection.copy()
+    voyage = _VoyageThatDropsTheConnection(other, rival)
+    monkeypatch.setattr(embeddings, "get_voyage_client", lambda: voyage)
+    try:
+        # The source being embedded when the connection went fails either way.
+        with pytest.raises(CommandError, match="uscis"):
+            _ingest_scrape(_feeds_root(tmp_path), "--force")
+        connection.close()  # look at what was left behind on a fresh connection
+        assert _runs("uscis")[-1].status == "failed"
+        assert KnowledgeChunk.objects.filter(chunk_id="old-uscis").exists()
+
+        later = [_runs(c)[-1] for c in ("ecfr", "federal-register")]
+        if rival:
+            # Another run holds the lock now: nothing more is written or embedded.
+            assert [r.status for r in later] == ["failed", "failed"]
+            assert all("another ingestion run" in r.error for r in later)
+            assert KnowledgeChunk.objects.filter(chunk_id__startswith="old-").count() == 3
+            assert voyage.calls == 1
+        else:
+            # Nobody else wants it: the run takes the lock again on its new
+            # connection and finishes the other sources, still alone.
+            assert [r.status for r in later] == ["succeeded", "succeeded"]
+            assert voyage.lock_was_free == [False, False]
+    finally:
+        other.close()
+
+
+_CURATED_DOC = """---
+doc_id: us-green-card-renewal
+authority: USCIS
+topic: green-card
+title: Renewing a green card
+lang: en
+source_url: https://www.uscis.gov/i-90
+source_type: official
+last_verified: 2026-09-01
+---
+{body}
+"""
+
+
+@pytest.fixture
+def curated_dir(tmp_path, settings):
+    """A data/countries tree with one curated document for `us`."""
+    doc = tmp_path / "countries" / "us" / "knowledge" / "green-card.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text(_CURATED_DOC.format(body="A permanent resident files Form I-90 to renew."))
+    settings.KNOWLEDGE_DATA_DIR = str(tmp_path / "countries")
+    return doc
+
+
+@pytest.mark.django_db
+def test_curated_ingest_runs_only_when_the_data_changed(voyage_key, curated_dir):
+    from django.core.management import call_command
+
+    _seed("old-ecfr", "ecfr")
+    call_command("ingest", "us", "--upsert", "--only-due")
+    row = KnowledgeChunk.objects.get(corpus="curated")
+    assert row.title == "Renewing a green card" and row.last_verified == date(2026, 9, 1)
+    (run,) = _runs("curated")
+    assert (run.status, run.chunks) == ("succeeded", 1)
+    assert KnowledgeChunk.objects.filter(chunk_id="old-ecfr").exists()  # other corpora untouched
+
+    # Nothing in data/ changed (every scheduled run between deploys).
+    spent = _embedded(voyage_key)
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert _embedded(voyage_key) == spent and len(_runs("curated")) == 1
+
+    # A deploy ships an edit to the document.
+    curated_dir.write_text(_CURATED_DOC.format(body="File Form I-90 online or by mail to renew."))
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert "online or by mail" in KnowledgeChunk.objects.get(corpus="curated").text
+    assert len(_runs("curated")) == 2
+
+    # A metadata-only edit (the source was re-checked) is a change too, and
+    # costs no embedding.
+    spent = _embedded(voyage_key)
+    curated_dir.write_text(
+        curated_dir.read_text().replace("last_verified: 2026-09-01", "last_verified: 2026-10-01")
+    )
+    call_command("ingest", "us", "--upsert", "--only-due")
+    assert KnowledgeChunk.objects.get(corpus="curated").last_verified == date(2026, 10, 1)
+    assert _embedded(voyage_key) == spent
+
+
+@pytest.fixture
+def r2_is(monkeypatch):
+    """Make the R2 feed store read a local feeds root instead of the bucket."""
+    from knowledge import feed_store
+
+    def use(root):
+        monkeypatch.setattr(
+            feed_store.R2Feeds, "from_settings",
+            classmethod(lambda cls, workdir: feed_store.LocalFeeds(root)),
+        )
+
+    return use
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_reads_feeds_from_r2_when_asked(voyage_key, r2_is, tmp_path):
+    from django.core.management import call_command
+
+    root = _feeds_root(tmp_path, sources=("uscis", "ecfr"))
+    r2_is(root)
+    call_command("ingest_scrape", "--from-r2", "--only-due", "--upsert")
+    assert set(KnowledgeChunk.objects.values_list("corpus", flat=True)) == {"uscis", "ecfr"}
+    assert [r.marker for r in _runs("ecfr")] == [_FEED]
+
+    # Narrowed to one source and not --only-due: that source is ingested again
+    # although its feed is not new (how an extractor change is rolled out).
+    call_command("ingest_scrape", "--from-r2", "--source", "ecfr", "--upsert")
+    assert len(_runs("ecfr")) == 2 and len(_runs("uscis")) == 1
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_wants_a_feeds_root_or_r2_not_both(voyage_key, tmp_path):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    with pytest.raises(CommandError, match="feeds root directory or --from-r2"):
+        call_command("ingest_scrape", "--upsert")
+    with pytest.raises(CommandError, match="feeds root directory or --from-r2"):
+        call_command("ingest_scrape", str(root), "--from-r2", "--upsert")
+    assert not KnowledgeChunk.objects.exists() and _runs("ecfr") == []
+
+
+@pytest.mark.django_db
+def test_refresh_corpus_brings_everything_up_to_date_then_idles(
+        voyage_key, curated_dir, r2_is, tmp_path, capsys):
+    from django.core.management import call_command
+
+    root = _feeds_root(tmp_path, sources=("uscis", "ecfr"))  # no Federal Register crawl yet
+    r2_is(root)
+    call_command("refresh_corpus")
+
+    assert set(KnowledgeChunk.objects.values_list("corpus", flat=True)) == {
+        "curated", "uscis", "ecfr"
+    }
+    assert "summary: curated=succeeded, uscis=succeeded, ecfr=succeeded, " \
+           "federal-register=no-feeds" in capsys.readouterr().out
+
+    # An hour later nothing is new: no embeddings, no writes, a clean exit.
+    spent = _embedded(voyage_key)
+    call_command("refresh_corpus")
+    assert _embedded(voyage_key) == spent
+    assert "summary: curated=not-due, uscis=not-due, ecfr=not-due, " \
+           "federal-register=no-feeds" in capsys.readouterr().out
+
+    # Then the Federal Register crawl finishes.
+    _write_lines(root / "federal-register" / _FEED,
+                 [_page(_FR_URL, _FR_HTML.format(body=_BODY), _fr_meta(days_ago=10))])
+    call_command("refresh_corpus")
+    assert KnowledgeChunk.objects.filter(corpus="federal-register").exists()
+    assert len(_runs("uscis")) == 1 and len(_runs("curated")) == 1
+
+
+@pytest.mark.django_db
+def test_refresh_corpus_fails_loudly_but_keeps_what_it_can(
+        voyage_key, curated_dir, tmp_path, settings):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    # The bucket is not configured on this service: the scrape sources cannot
+    # be read, but the curated corpus is still brought up to date.
+    settings.R2_BUCKET = None
+    with pytest.raises(CommandError, match="uscis, ecfr, federal-register"):
+        call_command("refresh_corpus")
+    assert KnowledgeChunk.objects.filter(corpus="curated").exists()
+    # Each source it could not look at has a failed run on record.
+    for corpus in ("uscis", "ecfr", "federal-register"):
+        (run,) = _runs(corpus)
+        assert run.status == "failed" and "R2_BUCKET" in run.error
+
+
+@pytest.mark.django_db
+def test_a_source_whose_feeds_cannot_be_listed_is_recorded_as_failed(
+        voyage_key, curated_dir, tmp_path, monkeypatch, capsys):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    from knowledge import feed_store
+
+    class _EcfrListingFails(feed_store.LocalFeeds):
+        def newest(self, source):
+            if source == "ecfr":
+                raise ConnectionError("R2 is unreachable")
+            return super().newest(source)
+
+    root = _feeds_root(tmp_path)
+    monkeypatch.setattr(
+        feed_store.R2Feeds, "from_settings",
+        classmethod(lambda cls, workdir: _EcfrListingFails(root)),
+    )
+    with pytest.raises(CommandError, match="ecfr"):
+        call_command("refresh_corpus")
+
+    (run,) = _runs("ecfr")
+    assert run.status == "failed" and "R2 is unreachable" in run.error
+    assert run.finished_at is not None
+    assert _runs("uscis")[-1].status == "succeeded"  # the others still went ahead
+
+    capsys.readouterr()
+    call_command("corpus_status")
+    (line,) = [ln for ln in capsys.readouterr().out.splitlines() if ln.startswith("us  ecfr")]
+    assert "latest attempt failed" in line and "R2 is unreachable" in line
+
+    # A dry run that hits the same error writes nothing down.
+    with pytest.raises(CommandError):
+        call_command("ingest_scrape", "--from-r2")
+    assert len(_runs("ecfr")) == 1
+
+
+class _StubS3:
+    """The two S3 calls R2Feeds makes, over a dict of {key: bytes}."""
+
+    def __init__(self, objects):
+        self.objects = objects
+        self.listed = []
+
+    def get_paginator(self, operation):
+        assert operation == "list_objects_v2"
+        stub = self
+
+        class _Paginator:
+            def paginate(self, Bucket, Prefix):
+                stub.listed.append(Prefix)
+                keys = sorted(k for k in stub.objects if k.startswith(Prefix))
+                # two pages, to prove pagination is followed
+                yield {"Contents": [{"Key": k, "Size": len(stub.objects[k])} for k in keys[:1]]}
+                yield {"Contents": [{"Key": k, "Size": len(stub.objects[k])} for k in keys[1:]]}
+
+        return _Paginator()
+
+    def download_file(self, bucket, key, filename):
+        with open(filename, "wb") as f:
+            f.write(self.objects[key])
+
+
+def test_r2_feed_store_lists_and_downloads_one_source(tmp_path):
+    from knowledge.feed_store import R2Feeds
+
+    s3 = _StubS3({
+        "raw/items/ecfr/2026-09-21T00-00-00+00-00.jsonl": b"old\n",
+        "raw/items/ecfr/2026-09-28T00-00-00+00-00.jsonl": b"new\n",
+        "raw/items/ecfr/notes.txt": b"not a feed",
+        "raw/items/ecfr-archive/2026-12-01T00-00-00+00-00.jsonl": b"another source",
+        "raw/items/uscis/2026-10-05T00-00-00+00-00.jsonl": b"uscis\n",
+    })
+    store = R2Feeds("bucket", s3, tmp_path)
+
+    assert store.newest("ecfr") == "2026-09-28T00-00-00+00-00.jsonl"
+    assert store.newest("federal-register") is None
+    assert s3.listed == ["raw/items/ecfr/", "raw/items/federal-register/"]
+
+    paths = store.fetch("ecfr")
+    # Oldest first, in the per-source layout, and nothing from other prefixes.
+    assert [p.relative_to(tmp_path).as_posix() for p in paths] == [
+        "ecfr/2026-09-21T00-00-00+00-00.jsonl", "ecfr/2026-09-28T00-00-00+00-00.jsonl",
+    ]
+    assert paths[-1].read_bytes() == b"new\n"
+    assert not (tmp_path / "uscis").exists()
+
+
+@pytest.mark.django_db
+def test_corpus_status_shows_how_fresh_each_corpus_is(voyage_key, tmp_path, capsys):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    _seed("unrecorded", "curated")  # ingested before runs were recorded
+    root = _feeds_root(tmp_path, sources=("uscis", "ecfr"))
+    _ingest_scrape(root)
+    (root / "ecfr" / _LATER_FEED).write_text("{not json\n", encoding="utf-8")
+    with pytest.raises(CommandError):
+        _ingest_scrape(root, "--source", "ecfr")
+    capsys.readouterr()
+
+    call_command("corpus_status")
+    out = capsys.readouterr().out
+    assert "total chunks: 3" in out
+    status = {line.split()[1]: line for line in out.split("last ingestion per corpus:")[1].splitlines() if line}
+    assert "never ingested on record" in status["curated"]
+    assert f"1 chunk(s) (1 embedded), marker {_FEED}" in status["uscis"]
+    assert "latest attempt" not in status["uscis"]
+    assert f"marker {_FEED}" in status["ecfr"] and "latest attempt failed" in status["ecfr"]

@@ -61,3 +61,44 @@ class KnowledgeChunk(models.Model):
 
     def __str__(self):
         return f"{self.chunk_id} ({self.country})"
+
+
+class IngestRun(models.Model):
+    """One attempt to replace one corpus (curated, or a scrape source) for a country.
+
+    The record of what is in the vector store and how fresh it is: scheduled
+    ingestion reads the latest successful run to decide whether a corpus is due
+    (its ``marker`` no longer matches what is on offer), and `corpus_status`
+    shows it. Written by every --upsert run, manual or scheduled.
+    """
+
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    # The new corpus was much smaller than the current one, so it was not
+    # written (see settings.INGEST_MIN_KEEP_RATIO). Needs a human: --force.
+    SKIPPED = "skipped"
+    STATUSES = [(SUCCEEDED, "Succeeded"), (FAILED, "Failed"), (SKIPPED, "Skipped by shrink guard")]
+
+    country = models.CharField(max_length=8)
+    corpus = models.CharField(max_length=32)
+    # What was ingested: the newest feed's file name for a scrape source, a
+    # fingerprint of the chunks for the curated corpus.
+    marker = models.CharField(max_length=255)
+    status = models.CharField(max_length=16, choices=STATUSES)
+    # Rows written, how many of them needed a new embedding (the rest reused
+    # the vector of an unchanged chunk), and rows the corpus held beforehand.
+    chunks = models.PositiveIntegerField(blank=True, null=True)
+    embedded = models.PositiveIntegerField(blank=True, null=True)
+    previous_chunks = models.PositiveIntegerField(blank=True, null=True)
+    # Vectors are only reused while the model that produced them is unchanged.
+    embedding_model = models.CharField(max_length=64, blank=True)
+    error = models.TextField(blank=True)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["country", "corpus", "-started_at"])]
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.corpus}/{self.country} {self.status} ({self.marker})"

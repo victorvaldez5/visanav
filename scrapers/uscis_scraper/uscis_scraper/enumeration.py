@@ -13,7 +13,9 @@ it from the merged snapshot. Two ways of telling, for two kinds of spider:
 
 Both refuse to act on a crawl that cannot be trusted, and both refuse to remove
 an implausibly large share of what they know in one crawl, so an outage, a block
-or a half-published file at the source can never wipe a corpus.
+or a half-published file at the source can never wipe a corpus. A refusal
+repeats on every later crawl, since nothing was removed; when the removal is
+real, a person lets one crawl through with ``-a allow_large_removal=1``.
 """
 from scrapy import Request, signals
 from scrapy.exceptions import DontCloseSpider
@@ -28,11 +30,14 @@ class _RemovalsMixin:
     # A source loses a page now and then, not a tenth of itself in one crawl.
     # Past this share of the manifest the source is assumed to be broken (a
     # well-formed but incomplete file, a redesign that hides the links) and
-    # nothing is removed.
+    # nothing is removed, unless this crawl was started with
+    # `-a allow_large_removal=1` by someone who checked that the pages are gone.
     max_removal_fraction = 0.1
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, allow_large_removal=False, **kwargs):
         super().__init__(*args, **kwargs)
+        # Spider arguments arrive from the command line as strings.
+        self.allow_large_removal = str(allow_large_removal).lower() in ("1", "true", "yes")
         self.seen_urls = set()
         self.removals_refused = False
         self._removals_emitted = False
@@ -46,18 +51,30 @@ class _RemovalsMixin:
     def removed_items(self):
         raise NotImplementedError
 
+    def _crawl_problems(self):
+        """Why this crawl cannot say what has gone (empty if it can): the health
+        check as it stands at idle, before the crawl closes."""
+        return crawl_problems(self.crawler.stats.get_stats(), self, finished=False)
+
     def _tombstones(self, gone):
         """Tombstones for ``gone``, or none at all if that is too many to believe."""
         # ContentHashPipeline publishes the manifest's URLs when the spider opens.
         known = getattr(self, "manifest_urls", frozenset())
         if len(gone) > self.max_removal_fraction * len(known):
-            self.removals_refused = True
-            self.logger.error(
-                "%d of %d known pages are missing, more than a crawl may remove; "
-                "assuming the source is incomplete and removing nothing",
+            if not self.allow_large_removal:
+                self.removals_refused = True
+                self.logger.error(
+                    "%d of %d known pages are missing, more than a crawl may remove; "
+                    "assuming the source is incomplete and removing nothing. If they "
+                    "are really gone, run one crawl with -a allow_large_removal=1",
+                    len(gone), len(known),
+                )
+                return None
+            self.logger.warning(
+                "%d of %d known pages are missing, more than a crawl may normally "
+                "remove; removing them because allow_large_removal is set",
                 len(gone), len(known),
             )
-            return None
         return [ScrapedItem(url=url, removed=True) for url in sorted(gone)]
 
     def emit_removals_when_idle(self):
@@ -92,6 +109,10 @@ class CompleteEnumerationMixin(_RemovalsMixin):
 
     The spider calls ``mark_seen(url)`` for every item it yields (changed or
     not) and uses ``mark_failed`` as the errback of every request.
+
+    Only a healthy crawl removes anything. A failed request, an error while
+    parsing or far fewer pages than usual all leave pages unseen that are still
+    at the source, so such a crawl emits no tombstones.
     """
 
     complete_enumeration = True
@@ -109,7 +130,13 @@ class CompleteEnumerationMixin(_RemovalsMixin):
 
     def removed_items(self):
         """Tombstones for manifest URLs this crawl did not see (none if unclean)."""
-        if self.crawl_failed or not self.seen_urls:
+        if not self.seen_urls:
+            return []
+        problems = self._crawl_problems()
+        if problems:
+            self.logger.warning(
+                "emitting no removals, the crawl is not healthy: %s", "; ".join(problems)
+            )
             return []
         known = getattr(self, "manifest_urls", frozenset())
         return self._tombstones(known - self.seen_urls) or []
@@ -125,9 +152,9 @@ class MissCountingMixin(_RemovalsMixin):
     pipeline as ``missed_counts`` and are saved with the manifest.
 
     Only a healthy crawl counts. If the crawl fails its health check (requests
-    failing, parse errors, far fewer pages than usual) no count moves and
+    failing, parse errors, far fewer pages than usual) no count rises and
     nothing is removed, so a block or an outage never starts pages toward
-    removal.
+    removal. A page such a crawl did see still has its count reset.
     """
 
     # Consecutive healthy crawls a page must be absent from before it is
@@ -136,11 +163,12 @@ class MissCountingMixin(_RemovalsMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set only by a healthy crawl; None tells the pipeline to keep its counts.
+        # Set only by a healthy crawl; None tells the pipeline to keep its
+        # counts (but for the pages this crawl saw, which start over).
         self.missed_counts = None
 
     def removed_items(self):
-        problems = crawl_problems(self.crawler.stats.get_stats(), self, finished=False)
+        problems = self._crawl_problems()
         if problems:
             self.logger.warning(
                 "not counting missing pages, the crawl is not healthy: %s", "; ".join(problems)
@@ -154,5 +182,8 @@ class MissCountingMixin(_RemovalsMixin):
         tombstones = self._tombstones(gone)
         if tombstones is None:
             return []  # refused: leave every count where it was
-        self.missed_counts = {url: n for url, n in counts.items() if url not in gone}
+        # The pages being removed keep their count: the pipeline forgets a page
+        # only once its tombstone has reached the feed, so one that got lost on
+        # the way is still over the threshold and is emitted again next crawl.
+        self.missed_counts = counts
         return tombstones

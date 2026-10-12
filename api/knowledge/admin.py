@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import KnowledgeChunk
+from .models import IngestRun, KnowledgeChunk
 
 
 @admin.register(KnowledgeChunk)
@@ -11,3 +11,10 @@ class KnowledgeChunkAdmin(admin.ModelAdmin):
     # The embedding is a 1024-float vector — never useful to render/edit by hand.
     exclude = ("embedding",)
     readonly_fields = ("updated_at",)
+
+
+@admin.register(IngestRun)
+class IngestRunAdmin(admin.ModelAdmin):
+    list_display = ("started_at", "corpus", "country", "status", "chunks", "embedded", "marker")
+    list_filter = ("corpus", "status", "country")
+    readonly_fields = [f.name for f in IngestRun._meta.fields]

@@ -35,6 +35,18 @@ export default defineRailway(() => {
     });
   const visanavScraperEcfr = scraperSource("visanav-scraper-ecfr", "ecfr", "0 9 * * 1");
   const visanavScraperFederalRegister = scraperSource("visanav-scraper-federal-register", "federal-register", "30 9 * * 1");
+  // Scheduled ingestion: every hour, `manage.py refresh_corpus` ingests whatever is due
+  // (a scrape source whose crawl left a new feed in R2, or curated data/ changed by a
+  // deploy) and exits in seconds when nothing is. It runs the API code against the same
+  // database, so it needs the API's Django and Postgres variables, VOYAGE_API_KEY, and
+  // read-only credentials for the bucket the scrapers write to.
+  const visanavIngest = service("visanav-ingest", {
+    source: github("victorvaldez5/visanav", { checkSuites: false }),
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "/api/ingest.Dockerfile" },
+    replicas: { "ams": 1 },
+    deploy: { cronSchedule: "15 * * * *", restartPolicyType: "NEVER" },
+    env: { ALLOWED_HOSTS: preserve(), AWS_ACCESS_KEY_ID: preserve(), AWS_ENDPOINT_URL: preserve(), AWS_REGION_NAME: preserve(), AWS_SECRET_ACCESS_KEY: preserve(), CONVERSATION_ENCRYPTION_KEYS: preserve(), DJANGO_SECRET_KEY: preserve(), DJANGO_SETTINGS_MODULE: preserve(), POSTGRES_DB: preserve(), POSTGRES_HOST: preserve(), POSTGRES_PASSWORD: preserve(), POSTGRES_PORT: preserve(), POSTGRES_SSLMODE: preserve(), POSTGRES_USER: preserve(), R2_BUCKET: preserve(), VOYAGE_API_KEY: preserve() },
+  });
   const visanav = service("visanav", {
     source: github("victorvaldez5/visanav", { checkSuites: true }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "./api/Dockerfile" },
@@ -47,6 +59,6 @@ export default defineRailway(() => {
   });
 
   return project("jubilant-success", {
-    resources: [visanavScraper, visanavScraperEcfr, visanavScraperFederalRegister, visanav],
+    resources: [visanavScraper, visanavScraperEcfr, visanavScraperFederalRegister, visanavIngest, visanav],
   });
 });
