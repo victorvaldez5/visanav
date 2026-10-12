@@ -233,7 +233,7 @@ its rows via the `corpus` column:
   lines for pages that are gone (`enumeration.py`): `ecfr` sees its whole source every crawl, so
   anything missing after a clean crawl is removed at once; `uscis` follows links, so a page is
   removed only after two healthy crawls in a row have not seen it (the per-URL miss count lives
-  in the manifest, whose entries are `{hash, missed}`; unhealthy crawls count nothing). Neither
+  in the manifest, whose entries are `{hash, missed}`; an unhealthy crawl counts no misses, but a page it does see starts over at zero). Neither
   removes more than a tenth of its known pages in one crawl: it removes nothing and fails, on
   every crawl, until one is run with `-a allow_large_removal=1`. Because feeds are deltas, `manage.py ingest_scrape`
   (`knowledge/scrape_utils.py`) merges **all** of a source's feeds oldest→newest (honouring

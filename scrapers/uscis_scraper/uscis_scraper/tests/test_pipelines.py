@@ -606,6 +606,22 @@ def test_unhealthy_crawl_counts_no_misses(tmp_path):
     assert all(manifest[url]["missed"] == 0 for url in _SITE[1:])
 
 
+def test_page_seen_by_an_unhealthy_crawl_starts_over(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])  # missed once, fairly
+
+    # The site blocks most requests, but the missing page is among the few that
+    # got through: it is back, whatever else this crawl cannot tell us. The
+    # pages the blocked crawl did not reach are not counted as missed.
+    assert _uscis_crawl(tmp_path, _SITE[:15], blocked=True) == []
+    manifest = _manifest(tmp_path)
+    assert all(manifest[url]["missed"] == 0 for url in _SITE)
+
+    # So its next absence is a first miss again, not the second.
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == []
+    assert _manifest(tmp_path)[_GONE]["missed"] == 1
+
+
 def test_too_many_missing_pages_are_not_removed(tmp_path):
     _uscis_crawl(tmp_path, _SITE)
     _uscis_crawl(tmp_path, _SITE[5:])  # five pages missed once: plausible so far

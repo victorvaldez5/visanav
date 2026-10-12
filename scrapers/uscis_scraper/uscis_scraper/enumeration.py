@@ -152,9 +152,9 @@ class MissCountingMixin(_RemovalsMixin):
     pipeline as ``missed_counts`` and are saved with the manifest.
 
     Only a healthy crawl counts. If the crawl fails its health check (requests
-    failing, parse errors, far fewer pages than usual) no count moves and
+    failing, parse errors, far fewer pages than usual) no count rises and
     nothing is removed, so a block or an outage never starts pages toward
-    removal.
+    removal. A page such a crawl did see still has its count reset.
     """
 
     # Consecutive healthy crawls a page must be absent from before it is
@@ -163,7 +163,8 @@ class MissCountingMixin(_RemovalsMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set only by a healthy crawl; None tells the pipeline to keep its counts.
+        # Set only by a healthy crawl; None tells the pipeline to keep its
+        # counts (but for the pages this crawl saw, which start over).
         self.missed_counts = None
 
     def removed_items(self):

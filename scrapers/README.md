@@ -174,7 +174,8 @@ Optional pieces of the contract:
   the mixin in `enumeration.py` that fits how your spider finds pages. A
   **link-following** spider mixes in `MissCountingMixin` (as `uscis` does) and
   needs nothing else: a page is removed once two healthy crawls in a row have
-  not seen it, and a crawl that fails its health check counts nothing. Set a
+  not seen it, and a crawl that fails its health check counts no misses (a page it does
+  see still starts over at zero). Set a
   realistic `min_items_seen` so a blocked crawl is recognised as unhealthy.
   If your spider sees its *whole* source on every crawl, mix in
   `CompleteEnumerationMixin` (`enumeration.py`), call `self.mark_seen(url)` for
