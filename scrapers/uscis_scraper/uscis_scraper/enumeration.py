@@ -46,6 +46,11 @@ class _RemovalsMixin:
     def removed_items(self):
         raise NotImplementedError
 
+    def _crawl_problems(self):
+        """Why this crawl cannot say what has gone (empty if it can): the health
+        check as it stands at idle, before the crawl closes."""
+        return crawl_problems(self.crawler.stats.get_stats(), self, finished=False)
+
     def _tombstones(self, gone):
         """Tombstones for ``gone``, or none at all if that is too many to believe."""
         # ContentHashPipeline publishes the manifest's URLs when the spider opens.
@@ -92,6 +97,10 @@ class CompleteEnumerationMixin(_RemovalsMixin):
 
     The spider calls ``mark_seen(url)`` for every item it yields (changed or
     not) and uses ``mark_failed`` as the errback of every request.
+
+    Only a healthy crawl removes anything. A failed request, an error while
+    parsing or far fewer pages than usual all leave pages unseen that are still
+    at the source, so such a crawl emits no tombstones.
     """
 
     complete_enumeration = True
@@ -109,7 +118,13 @@ class CompleteEnumerationMixin(_RemovalsMixin):
 
     def removed_items(self):
         """Tombstones for manifest URLs this crawl did not see (none if unclean)."""
-        if self.crawl_failed or not self.seen_urls:
+        if not self.seen_urls:
+            return []
+        problems = self._crawl_problems()
+        if problems:
+            self.logger.warning(
+                "emitting no removals, the crawl is not healthy: %s", "; ".join(problems)
+            )
             return []
         known = getattr(self, "manifest_urls", frozenset())
         return self._tombstones(known - self.seen_urls) or []
@@ -140,7 +155,7 @@ class MissCountingMixin(_RemovalsMixin):
         self.missed_counts = None
 
     def removed_items(self):
-        problems = crawl_problems(self.crawler.stats.get_stats(), self, finished=False)
+        problems = self._crawl_problems()
         if problems:
             self.logger.warning(
                 "not counting missing pages, the crawl is not healthy: %s", "; ".join(problems)

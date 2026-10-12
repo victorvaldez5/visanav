@@ -28,9 +28,40 @@ _TITLE_22 = """<?xml version="1.0" encoding="UTF-8" ?>
 </DIV3></DIV1></ECFRBRWS></BODY></TEXT></DLPSTEXTCLASS>"""
 
 
+class _Engine:
+    def __init__(self):
+        self.requests = []
+
+    def crawl(self, request):
+        self.requests.append(request)
+
+
+class _Stats:
+    def __init__(self, values):
+        self.values = values
+
+    def get_stats(self):
+        return self.values
+
+
+class _Crawler:
+    """A crawl that went well: every request answered, the usual number of sections."""
+
+    def __init__(self):
+        self.engine = _Engine()
+        self.stats = _Stats(
+            {
+                "downloader/response_status_count/200": len(EcfrSpider.COVERAGE),
+                "item_scraped_count": EcfrSpider.min_items_seen,
+            }
+        )
+
+
 @pytest.fixture
 def spider():
-    return EcfrSpider()
+    spider = EcfrSpider()
+    spider.crawler = _Crawler()
+    return spider
 
 
 def _title_response(title, body):
@@ -107,6 +138,24 @@ def test_unclean_crawl_reports_no_removals(spider):
     assert spider.removed_items() == []
 
 
+def test_crawl_that_failed_while_parsing_reports_no_removals(spider):
+    # A title downloaded but raised partway through parsing: the sections after
+    # the error were never seen, and must not be reported as removed.
+    _remember(spider, "https://www.ecfr.gov/current/title-22/section-41.99")
+    list(spider.parse_title(_title_response(22, _TITLE_22), title=22))
+    spider.crawler.stats.values["spider_exceptions/ValueError"] = 1
+
+    assert spider.removed_items() == []
+
+
+def test_crawl_that_saw_too_few_sections_reports_no_removals(spider):
+    _remember(spider, "https://www.ecfr.gov/current/title-22/section-41.99")
+    list(spider.parse_title(_title_response(22, _TITLE_22), title=22))
+    spider.crawler.stats.values["item_scraped_count"] = EcfrSpider.min_items_seen - 1
+
+    assert spider.removed_items() == []
+
+
 def test_implausibly_many_missing_sections_are_not_removed(spider):
     # The file parsed cleanly but lists one section where the manifest knows
     # twenty: far likelier a half-published file than nineteen repeals.
@@ -120,21 +169,7 @@ def test_implausibly_many_missing_sections_are_not_removed(spider):
     assert spider.removals_refused  # and the crawl is reported as failed (health.py)
 
 
-class _Engine:
-    def __init__(self):
-        self.requests = []
-
-    def crawl(self, request):
-        self.requests.append(request)
-
-
-class _Crawler:
-    def __init__(self):
-        self.engine = _Engine()
-
-
 def test_idle_spider_routes_removals_into_the_feed_once(spider):
-    spider.crawler = _Crawler()
     _remember(spider, "https://www.ecfr.gov/current/title-22/section-41.99")
     list(spider.parse_title(_title_response(22, _TITLE_22), title=22))
 
