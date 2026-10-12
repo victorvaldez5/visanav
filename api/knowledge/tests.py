@@ -684,6 +684,28 @@ def test_shrink_guard_refuses_a_much_smaller_corpus(voyage_key, tmp_path):
     assert _runs("ecfr")[-1].status == "succeeded"
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("ratio, replaced", [(0.5, True), (0.51, False)])
+def test_shrink_guard_allows_a_corpus_exactly_at_the_floor(
+        ratio, replaced, voyage_key, settings, tmp_path):
+    from django.core.management.base import CommandError
+
+    # One chunk would replace two: exactly half. At a floor of a half that is
+    # allowed; only a corpus below the floor is held back.
+    settings.INGEST_MIN_KEEP_RATIO = ratio
+    for n in range(2):
+        _seed(f"old-ecfr-{n}", "ecfr")
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+
+    if replaced:
+        _ingest_scrape(root)
+    else:
+        with pytest.raises(CommandError, match="ecfr"):
+            _ingest_scrape(root)
+    assert _runs("ecfr")[-1].status == ("succeeded" if replaced else "skipped")
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() == (1 if replaced else 2)
+
+
 @pytest.mark.django_db(transaction=True)
 def test_ingestion_does_nothing_while_another_run_holds_the_lock(voyage_key, tmp_path, capsys):
     from django.db import connection
@@ -846,6 +868,35 @@ def r2_is(monkeypatch):
         )
 
     return use
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_reads_feeds_from_r2_when_asked(voyage_key, r2_is, tmp_path):
+    from django.core.management import call_command
+
+    root = _feeds_root(tmp_path, sources=("uscis", "ecfr"))
+    r2_is(root)
+    call_command("ingest_scrape", "--from-r2", "--only-due", "--upsert")
+    assert set(KnowledgeChunk.objects.values_list("corpus", flat=True)) == {"uscis", "ecfr"}
+    assert [r.marker for r in _runs("ecfr")] == [_FEED]
+
+    # Narrowed to one source and not --only-due: that source is ingested again
+    # although its feed is not new (how an extractor change is rolled out).
+    call_command("ingest_scrape", "--from-r2", "--source", "ecfr", "--upsert")
+    assert len(_runs("ecfr")) == 2 and len(_runs("uscis")) == 1
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_wants_a_feeds_root_or_r2_not_both(voyage_key, tmp_path):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    with pytest.raises(CommandError, match="feeds root directory or --from-r2"):
+        call_command("ingest_scrape", "--upsert")
+    with pytest.raises(CommandError, match="feeds root directory or --from-r2"):
+        call_command("ingest_scrape", str(root), "--from-r2", "--upsert")
+    assert not KnowledgeChunk.objects.exists() and _runs("ecfr") == []
 
 
 @pytest.mark.django_db
