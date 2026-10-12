@@ -182,5 +182,8 @@ class MissCountingMixin(_RemovalsMixin):
         tombstones = self._tombstones(gone)
         if tombstones is None:
             return []  # refused: leave every count where it was
-        self.missed_counts = {url: n for url, n in counts.items() if url not in gone}
+        # The pages being removed keep their count: the pipeline forgets a page
+        # only once its tombstone has reached the feed, so one that got lost on
+        # the way is still over the threshold and is emitted again next crawl.
+        self.missed_counts = counts
         return tombstones

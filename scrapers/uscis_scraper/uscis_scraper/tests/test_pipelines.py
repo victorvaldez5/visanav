@@ -530,12 +530,13 @@ _SITE = [f"https://www.uscis.gov/page-{n}" for n in range(30)]
 _GONE = _SITE[0]
 
 
-def _uscis_crawl(tmp_path, urls, blocked=False, empty=(), **spider_args):
+def _uscis_crawl(tmp_path, urls, blocked=False, empty=(), lose_removals=False, **spider_args):
     """One crawl of the given pages by the USCIS spider, through the hash
     pipeline, as far as the manifest it leaves behind.
 
     Returns the URLs it emitted removals for. Pages in `empty` are fetched
     but yield no content (the markup changed, or the page is a bare shell).
+    With `lose_removals` the removals are worked out but never reach the feed.
     """
     from ..spiders.uscis_spider import UscisSpider
 
@@ -561,7 +562,8 @@ def _uscis_crawl(tmp_path, urls, blocked=False, empty=(), **spider_args):
     # What the spider does when it goes idle, then what the pipelines do with it.
     removals = spider.removed_items()
     for tombstone in removals:
-        _through(pipeline, tombstone, spider)
+        if not lose_removals:
+            _through(pipeline, tombstone, spider)
     pipeline.close_spider(spider)
     return [item["url"] for item in removals]
 
@@ -588,6 +590,18 @@ def test_page_missing_from_two_crawls_in_a_row_is_removed(tmp_path):
     assert _GONE not in _manifest(tmp_path)
     assert _uscis_crawl(tmp_path, _SITE) == []
     assert _manifest(tmp_path)[_GONE]["missed"] == 0
+
+
+def test_removal_that_never_reached_the_feed_is_emitted_again(tmp_path):
+    _uscis_crawl(tmp_path, _SITE)
+    _uscis_crawl(tmp_path, _SITE[1:])
+    assert _uscis_crawl(tmp_path, _SITE[1:], lose_removals=True) == [_GONE]
+
+    # Ingest never heard about it, so the page is not forgotten and the very
+    # next crawl says so again, without counting from zero.
+    assert _GONE in _manifest(tmp_path)
+    assert _uscis_crawl(tmp_path, _SITE[1:]) == [_GONE]
+    assert _GONE not in _manifest(tmp_path)
 
 
 def test_page_that_comes_back_starts_over(tmp_path):
