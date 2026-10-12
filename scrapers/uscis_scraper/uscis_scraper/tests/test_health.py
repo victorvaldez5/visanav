@@ -71,5 +71,6 @@ def test_removal_tracking_failures_are_problems():
         "a request failed, so removed pages were not worked out"
     ]
     assert crawl_problems(_HEALTHY, refused) == [
-        "too many known pages were missing, so none were removed"
+        "too many known pages were missing, so none were removed "
+        "(if they are really gone: -a allow_large_removal=1)"
     ]

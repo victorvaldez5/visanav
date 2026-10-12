@@ -169,6 +169,20 @@ def test_implausibly_many_missing_sections_are_not_removed(spider):
     assert spider.removals_refused  # and the crawl is reported as failed (health.py)
 
 
+def test_large_removal_goes_through_when_a_person_allows_it():
+    # The same crawl, started with `-a allow_large_removal=1` (a string, as the
+    # command line passes it) after someone checked the sections are repealed.
+    spider = EcfrSpider(allow_large_removal="1")
+    spider.crawler = _Crawler()
+    kept = "https://www.ecfr.gov/current/title-22/section-41.0"
+    gone = {f"https://www.ecfr.gov/current/title-22/section-41.{n}" for n in range(100, 119)}
+    spider.manifest_urls = frozenset({kept} | gone)
+    list(spider.parse_title(_title_response(22, _TITLE_22), title=22))
+
+    assert {item["url"] for item in spider.removed_items()} == gone
+    assert not spider.removals_refused  # so the crawl is not reported as failed
+
+
 def test_idle_spider_routes_removals_into_the_feed_once(spider):
     _remember(spider, "https://www.ecfr.gov/current/title-22/section-41.99")
     list(spider.parse_title(_title_response(22, _TITLE_22), title=22))

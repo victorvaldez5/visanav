@@ -183,7 +183,11 @@ Optional pieces of the contract:
   ingestion drops it. Do not use this one for a link-following crawl, where a
   missed link would look like a deleted page. Either way, if more than a tenth
   of the known pages would be removed at once the spider assumes the source is
-  broken, removes nothing and fails the crawl.
+  broken, removes nothing and fails the crawl. Every later crawl then fails the
+  same way. If the pages are really gone, run one crawl of that source with
+  `-a allow_large_removal=1` (for example
+  `scrapy crawl ecfr -a allow_large_removal=1`, or the `allow_large_removal`
+  input of the manual `scrape` workflow).
 
 One thing is still USCIS-specific and may need generalizing for a new source:
 the PDF filename heuristics in `NamedFilesPipeline.file_path()`

@@ -15,6 +15,10 @@ on:
         type: choice
         default: uscis
         options: [uscis, ecfr, federal-register]
+      allow_large_removal:
+        description: Let this crawl remove more than a tenth of the known pages (only after checking they are really gone)
+        type: boolean
+        default: false
 
 jobs:
   crawl:
@@ -40,4 +44,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION_NAME: auto
-        run: uv run --no-sync scrapy crawl "${{ inputs.source }}"
+        run: uv run --no-sync scrapy crawl "${{ inputs.source }}" -a allow_large_removal=${{ inputs.allow_large_removal }}

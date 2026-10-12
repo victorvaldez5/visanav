@@ -525,7 +525,7 @@ _SITE = [f"https://www.uscis.gov/page-{n}" for n in range(30)]
 _GONE = _SITE[0]
 
 
-def _uscis_crawl(tmp_path, urls, blocked=False):
+def _uscis_crawl(tmp_path, urls, blocked=False, **spider_args):
     """One crawl of the given pages by the USCIS spider, through the hash
     pipeline, as far as the manifest it leaves behind.
 
@@ -533,7 +533,7 @@ def _uscis_crawl(tmp_path, urls, blocked=False):
     """
     from ..spiders.uscis_spider import UscisSpider
 
-    spider = UscisSpider()
+    spider = UscisSpider(**spider_args)
     spider.min_items_seen = 20
     spider.crawler = DummyCrawler({})
     pipeline = _content_hash_pipeline(tmp_path)
@@ -616,6 +616,13 @@ def test_too_many_missing_pages_are_not_removed(tmp_path):
     assert _uscis_crawl(tmp_path, _SITE[5:]) == []
     manifest = _manifest(tmp_path)
     assert all(manifest[url]["missed"] == 1 for url in _SITE[:5])
+
+    # Every later crawl refuses in the same way, until someone who checked that
+    # the pages are gone lets one crawl through. A crawl after that is clean.
+    assert _uscis_crawl(tmp_path, _SITE[5:]) == []
+    assert _uscis_crawl(tmp_path, _SITE[5:], allow_large_removal="1") == _SITE[:5]
+    assert set(_manifest(tmp_path)) == set(_SITE[5:])
+    assert _uscis_crawl(tmp_path, _SITE[5:]) == []
 
 
 def test_manifest_from_before_miss_counts_still_loads(tmp_path):
