@@ -248,3 +248,17 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
   are both 1024-dim, so swapping them is env + re-ingest, no migration; other dims need a migration.
 - **voyageai has no Python 3.14 wheel** yet — pinned with a `python = "<3.14"` marker in
   `pyproject.toml`; the deploy/CI runtime is 3.13, so this is a non-issue there.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues on `victorvaldez5/visanav` (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created lazily. See `docs/agents/domain.md`.
