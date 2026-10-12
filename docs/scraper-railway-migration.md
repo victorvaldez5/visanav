@@ -188,7 +188,13 @@ own PR.
 
 ### Adding more scrape sources
 
-The current layout is one Scrapy project per source (`scrapers/uscis_scraper/`).
+**Decided (multi-source scrape pipeline):** a second spider goes in the same
+project. `ecfr` and `federal-register` now sit beside `uscis`, each with its own
+cron service in `.railway/railway.ts` (same image, a `startCommand` per spider),
+its own manifest (`raw/manifests/<spider>.json`) and its own feed prefix. See
+`scrapers/README.md`. The options as they were weighed:
+
+The layout was one Scrapy project per source (`scrapers/uscis_scraper/`).
 Before adding a second source, decide between:
 
 - a second spider in the same project (shared pipelines and manifest logic, one image,

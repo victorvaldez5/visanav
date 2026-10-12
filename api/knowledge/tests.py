@@ -78,7 +78,8 @@ def test_semantic_search_ranks_scopes_and_gates_by_confidence(fake_voyage, setti
     mid = [0.5, 0.5] + [0.0] * (dims - 2)      # cosine sim ~0.707 -> confident
     far = [0.0, 1.0] + [0.0] * (dims - 2)      # cosine sim 0.0  -> gated out
     _chunk("us-near", "us", near, topic="near", title="Near",
-           source_url="https://uscis.gov/a", last_verified=date(2026, 2, 10))
+           source_url="https://uscis.gov/a", last_verified=date(2026, 2, 10),
+           authority="Department of Homeland Security", instrument="regulation")
     _chunk("us-mid", "us", mid, topic="mid")
     _chunk("us-far", "us", far, topic="far")
     _chunk("ca-near", "ca", near, topic="other-country")  # must be excluded by scope
@@ -99,6 +100,11 @@ def test_semantic_search_ranks_scopes_and_gates_by_confidence(fake_voyage, setti
     assert top["source_url"] == "https://uscis.gov/a"
     assert top["last_verified"] == "2026-02-10"  # ISO date surfaced for the UI
     assert top["score"] == pytest.approx(1.0, abs=1e-4)  # identical vectors
+    # Who issued it and what kind of document it is reach the model, so it can
+    # weigh a regulation against guidance; a curated chunk has no instrument.
+    assert top["authority"] == "Department of Homeland Security"
+    assert top["instrument"] == "regulation"
+    assert result["matches"][1]["instrument"] is None
 
     # Confident sources are collected on Deps for the streaming view to emit,
     # with citation metadata only (no chunk text).
@@ -219,25 +225,298 @@ def test_scrape_records_merge_incremental_feeds(tmp_path):
     assert all(r["text"].startswith("I-485, Adjust Status: ") for r in records if r["source_url"] == url)
 
 
-@pytest.mark.django_db
-def test_ingest_scrape_replaces_only_its_own_corpus(fake_voyage, settings, tmp_path):
-    from django.core.management import call_command
+def test_scrape_records_say_what_kind_of_document_each_chunk_is(tmp_path):
+    from knowledge.scrape_utils import records_from_feeds
 
-    settings.VOYAGE_API_KEY = "test"
-    KnowledgeChunk.objects.create(
-        chunk_id="curated-1", doc_id="curated", country="us", text="curated",
-        embedding=[0.0] * 1024,
-    )
-    KnowledgeChunk.objects.create(
-        chunk_id="stale-scrape", doc_id="uscis/old", country="us", corpus="uscis",
-        text="stale", embedding=[0.0] * 1024,
-    )
     _write_feed(
         tmp_path / "2026-09-21T00-00-00+00-00.jsonl",
-        [("https://www.uscis.gov/i-485", _FORM_HTML.format(body=_BODY))],
+        [("https://www.uscis.gov/i-485", _FORM_HTML.format(body=_BODY)),
+         ("https://www.uscis.gov/policy-manual/volume-12-part-l-chapter-2",
+          _PM_HTML.format(body=_BODY)),
+         ("https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1537&num=0",
+          _USC_HTML.format(body=_BODY))],
     )
-    call_command("ingest_scrape", str(tmp_path), "--upsert")
+    records = records_from_feeds(sorted(tmp_path.glob("*.jsonl")))
+    assert {(r["topic"], r["instrument"]) for r in records} == {
+        ("forms", "form"), ("policy-manual", "agency-guidance"), ("statute", "statute"),
+    }
+    # Every chunk id is rooted at its corpus, so sources can never collide.
+    assert all(r["chunk_id"].startswith("uscis/") for r in records)
+
+
+# -- multi-source ingest (the ingest_scrape command over a feeds root) ------------
+
+_CFR_URL = "https://www.ecfr.gov/current/title-8/section-274a.12"
+_CFR_XML = """<DIV8 N="§ 274a.12" TYPE="SECTION">
+<HEAD>§ 274a.12   Classes of aliens authorized to accept employment.</HEAD>
+<P>(a) <I>Aliens authorized employment incident to status.</I> {body}</P>
+<CITA TYPE="N">[52 FR 16221, May 1, 1987, do not index]</CITA>
+<EDNOTE><HED>Editorial Note:</HED><PSPACE>For citations, do not index.</PSPACE></EDNOTE></DIV8>"""
+_CFR_META = {"citation": "8 CFR 274a.12", "kind": "section", "title": 8, "chapter": "I",
+             "part": "274a", "heading": "Classes of aliens authorized to accept employment."}
+
+_FR_URL = "https://www.federalregister.gov/documents/2026/09/29/2026-19000/extension-of-tps"
+_FR_HTML = """<div class="preamble"><div class="document-headings"><p>Masthead, do not index.</p></div>
+<div id="summary"><h1>SUMMARY:</h1><p>{body}</p></div>
+<div id="addresses"><h1>ADDRESSES:</h1><p>Mail comments here, do not index.</p></div></div>
+<div class="supplemental-info"><p>Supplementary detail. {body}</p></div>
+<div class="signature"><p>Signed, do not index.</p></div>"""
+
+
+def _fr_meta(days_ago, **extra):
+    from datetime import timedelta
+
+    return {
+        "document_number": "2026-19000",
+        "title": "Extension of the Designation of Honduras for Temporary Protected Status",
+        "type": "Notice",
+        "publication_date": (date.today() - timedelta(days=days_ago)).isoformat(),
+        "effective_on": None,
+        "agencies": ["Homeland Security Department", "U.S. Citizenship and Immigration Services"],
+        "cfr_references": [],
+        **extra,
+    }
+
+
+def _write_lines(path, lines):
+    import json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(json.dumps(line) for line in lines) + "\n", encoding="utf-8")
+
+
+def _page(url, content, meta=None, content_type="text/html"):
+    line = {"url": url, "content_type": content_type, "content": content}
+    if meta is not None:
+        line["meta"] = meta
+    return line
+
+
+_FEED = "2026-09-21T00-00-00+00-00.jsonl"
+_LATER_FEED = "2026-09-28T00-00-00+00-00.jsonl"
+
+
+def _feeds_root(tmp_path, sources=("uscis", "ecfr", "federal-register")):
+    """A feeds root as pulled from R2: one directory of feeds per source."""
+    root = tmp_path / "items"
+    if "uscis" in sources:
+        # No `meta`: the shape USCIS feeds have always had.
+        _write_lines(root / "uscis" / _FEED,
+                     [_page("https://www.uscis.gov/i-485", _FORM_HTML.format(body=_BODY))])
+    if "ecfr" in sources:
+        _write_lines(root / "ecfr" / _FEED,
+                     [_page(_CFR_URL, _CFR_XML.format(body=_BODY), _CFR_META, "application/xml")])
+    if "federal-register" in sources:
+        _write_lines(root / "federal-register" / _FEED,
+                     [_page(_FR_URL, _FR_HTML.format(body=_BODY), _fr_meta(days_ago=10))])
+    return root
+
+
+def _ingest_scrape(root, *args):
+    from django.core.management import call_command
+
+    call_command("ingest_scrape", str(root), "--upsert", *args)
+
+
+def _seed(chunk_id, corpus):
+    return KnowledgeChunk.objects.create(
+        chunk_id=chunk_id, doc_id=chunk_id, country="us", corpus=corpus, text=chunk_id,
+        embedding=[0.0] * 1024,
+    )
+
+
+@pytest.fixture
+def voyage_key(fake_voyage, settings):
+    settings.VOYAGE_API_KEY = "test"
+    return fake_voyage
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_one_run_ingests_every_source(voyage_key, tmp_path):
+    _seed("curated-1", "curated")
+    _seed("stale-scrape", "uscis")
+    _ingest_scrape(_feeds_root(tmp_path))
 
     assert KnowledgeChunk.objects.filter(chunk_id="curated-1").exists()
     assert not KnowledgeChunk.objects.filter(chunk_id="stale-scrape").exists()
     assert KnowledgeChunk.objects.filter(corpus="uscis", doc_id="uscis/i-485").exists()
+
+    cfr = KnowledgeChunk.objects.filter(corpus="ecfr").first()
+    assert cfr.title == "8 CFR 274a.12: Classes of aliens authorized to accept employment."
+    assert cfr.text.startswith(cfr.title + ": (a) Aliens authorized employment incident")
+    assert "do not index" not in cfr.text
+    assert (cfr.instrument, cfr.topic) == ("regulation", "regulation")
+    assert cfr.authority == "Department of Homeland Security"
+    assert cfr.source_url == _CFR_URL and cfr.source_type == "official"
+    assert cfr.last_verified == date(2026, 9, 21)  # the crawl date
+
+    notice = KnowledgeChunk.objects.filter(corpus="federal-register").first()
+    published = _fr_meta(days_ago=10)["publication_date"]
+    assert notice.title == (
+        f"Federal Register Notice (published {published}): "
+        "Extension of the Designation of Honduras for Temporary Protected Status"
+    )
+    assert "Supplementary detail" in notice.text and "do not index" not in notice.text
+    assert (notice.instrument, notice.topic) == ("notice", "federal-register")
+    assert notice.authority == "U.S. Citizenship and Immigration Services"
+    assert notice.source_url == _FR_URL
+    # A notice is as fresh as its publication, not as the crawl that fetched it.
+    assert notice.last_verified.isoformat() == published
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_narrowed_to_one_source_leaves_the_rest(voyage_key, tmp_path):
+    for corpus in ("curated", "uscis", "ecfr", "federal-register"):
+        _seed(f"old-{corpus}", corpus)
+    _ingest_scrape(_feeds_root(tmp_path), "--source", "ecfr")
+
+    kept = set(KnowledgeChunk.objects.filter(chunk_id__startswith="old-")
+               .values_list("chunk_id", flat=True))
+    assert kept == {"old-curated", "old-uscis", "old-federal-register"}
+    assert KnowledgeChunk.objects.filter(corpus="ecfr").count() >= 1
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_skips_a_source_with_no_feeds(voyage_key, tmp_path):
+    _seed("old-ecfr", "ecfr")
+    # Nothing was pulled for ecfr (no directory at all): its rows must survive.
+    _ingest_scrape(_feeds_root(tmp_path, sources=("uscis", "federal-register")))
+
+    assert KnowledgeChunk.objects.filter(chunk_id="old-ecfr").exists()
+    assert KnowledgeChunk.objects.filter(corpus="uscis", doc_id="uscis/i-485").exists()
+    assert KnowledgeChunk.objects.filter(corpus="federal-register").exists()
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_one_bad_source_fails_the_run_but_not_the_others(voyage_key, tmp_path):
+    from django.core.management.base import CommandError
+
+    _seed("old-ecfr", "ecfr")
+    root = _feeds_root(tmp_path)
+    (root / "ecfr" / _LATER_FEED).write_text("{not json\n", encoding="utf-8")
+
+    with pytest.raises(CommandError, match="ecfr"):
+        _ingest_scrape(root)
+
+    # The broken source keeps what it had; the healthy ones were still replaced.
+    assert set(KnowledgeChunk.objects.filter(corpus="ecfr")
+               .values_list("chunk_id", flat=True)) == {"old-ecfr"}
+    assert KnowledgeChunk.objects.filter(corpus="uscis", doc_id="uscis/i-485").exists()
+    assert KnowledgeChunk.objects.filter(corpus="federal-register").exists()
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_never_replaces_a_corpus_with_nothing(voyage_key, tmp_path):
+    from django.core.management.base import CommandError
+
+    _seed("old-ecfr", "ecfr")
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    # Feeds exist but nothing can be extracted from them (a broken crawl).
+    _write_lines(root / "ecfr" / _FEED, [_page(_CFR_URL, "<DIV8/>", _CFR_META)])
+
+    with pytest.raises(CommandError, match="ecfr"):
+        _ingest_scrape(root)
+    assert KnowledgeChunk.objects.filter(chunk_id="old-ecfr").exists()
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_rejects_an_unknown_source(voyage_key, tmp_path):
+    from django.core.management.base import CommandError
+
+    _seed("old-ecfr", "ecfr")
+    with pytest.raises(CommandError, match="ecrf.*Valid sources: uscis, ecfr, federal-register"):
+        _ingest_scrape(_feeds_root(tmp_path), "--source", "ecrf")
+    assert KnowledgeChunk.objects.count() == 1  # nothing was ingested
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_rejects_a_single_source_directory(voyage_key, tmp_path):
+    from django.core.management.base import CommandError
+
+    # The old calling convention (the uscis feed directory itself) would
+    # otherwise look like a root in which every source has no feeds.
+    root = _feeds_root(tmp_path)
+    with pytest.raises(CommandError, match="feeds root"):
+        _ingest_scrape(root / "uscis")
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_dry_run_writes_nothing(voyage_key, tmp_path, capsys):
+    from django.core.management import call_command
+
+    _seed("old-ecfr", "ecfr")
+    call_command("ingest_scrape", str(_feeds_root(tmp_path)))
+
+    assert list(KnowledgeChunk.objects.values_list("chunk_id", flat=True)) == ["old-ecfr"]
+    assert voyage_key.calls == []  # nothing was embedded, so nothing was spent
+    out = capsys.readouterr().out
+    for source in ("uscis", "ecfr", "federal-register"):
+        assert f"{source}: 1 chunk(s) from 1 page(s)" in out
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_removed_section_leaves_the_corpus(voyage_key, tmp_path):
+    other_url = "https://www.ecfr.gov/current/title-8/section-274a.13"
+    other_meta = {**_CFR_META, "citation": "8 CFR 274a.13", "heading": "Application."}
+    root = _feeds_root(tmp_path, sources=("ecfr",))
+    _write_lines(root / "ecfr" / _FEED, [
+        _page(_CFR_URL, _CFR_XML.format(body=_BODY), _CFR_META, "application/xml"),
+        _page(other_url, _CFR_XML.format(body=_BODY), other_meta, "application/xml"),
+    ])
+    # The next crawl found 274a.12 gone and says so with a tombstone.
+    _write_lines(root / "ecfr" / _LATER_FEED, [{"url": _CFR_URL, "removed": True}])
+    _ingest_scrape(root)
+    assert set(KnowledgeChunk.objects.filter(corpus="ecfr")
+               .values_list("source_url", flat=True)) == {other_url}
+
+    # A still-later crawl that sees the section again restores it.
+    _write_lines(root / "ecfr" / "2026-10-05T00-00-00+00-00.jsonl", [
+        _page(_CFR_URL, _CFR_XML.format(body=_BODY), _CFR_META, "application/xml"),
+    ])
+    _ingest_scrape(root)
+    assert set(KnowledgeChunk.objects.filter(corpus="ecfr")
+               .values_list("source_url", flat=True)) == {_CFR_URL, other_url}
+
+
+@pytest.mark.django_db
+def test_ingest_scrape_federal_register_ages_out_and_labels_rules(voyage_key, settings, tmp_path):
+    settings.FEDERAL_REGISTER_RETENTION_DAYS = 365
+    old_url = _FR_URL.replace("2026-19000", "2025-00001")
+    rule_url = _FR_URL.replace("2026-19000", "2026-20000")
+    effective = _fr_meta(days_ago=0)["publication_date"]
+    root = _feeds_root(tmp_path, sources=())
+    _write_lines(root / "federal-register" / _FEED, [
+        # Published before the retention window: an expired notice must not linger.
+        _page(old_url, _FR_HTML.format(body=_BODY),
+              _fr_meta(days_ago=400, document_number="2025-00001")),
+        _page(rule_url, _FR_HTML.format(body=_BODY),
+              _fr_meta(days_ago=5, document_number="2026-20000", type="Proposed Rule",
+                       title="Optional Practical Training Fees")),
+        _page(_FR_URL, _FR_HTML.format(body=_BODY),
+              _fr_meta(days_ago=10, type="Rule", effective_on=effective,
+                       agencies=["Justice Department", "Executive Office for Immigration Review"])),
+    ])
+    _ingest_scrape(root)
+
+    rows = {r.source_url: r for r in KnowledgeChunk.objects.filter(corpus="federal-register")}
+    assert old_url not in rows
+    assert rows[rule_url].instrument == "proposed-rule"
+    assert rows[rule_url].title.startswith("Federal Register Proposed Rule (published ")
+    final = rows[_FR_URL]
+    assert final.instrument == "final-rule"
+    assert f", effective {effective})" in final.title
+    assert final.authority == "Executive Office for Immigration Review"
+
+
+def test_scrape_ecfr_authority_follows_the_chapter():
+    from knowledge.scrape_utils import extract_ecfr
+
+    xml = _CFR_XML.format(body=_BODY)
+    eoir = extract_ecfr(_CFR_URL, xml, {**_CFR_META, "citation": "8 CFR 1003.1", "chapter": "V"})
+    state = extract_ecfr(_CFR_URL, xml, {**_CFR_META, "citation": "22 CFR 41.0", "title": 22})
+    labor = extract_ecfr(_CFR_URL, xml, {**_CFR_META, "citation": "20 CFR 655.1",
+                                         "title": 20, "chapter": "V"})
+    assert eoir["authority"] == "Executive Office for Immigration Review (DOJ)"
+    assert state["authority"] == "Department of State"
+    assert labor["authority"] == "Department of Labor"
+    assert eoir["doc_id"] == "ecfr/8-cfr-1003.1"

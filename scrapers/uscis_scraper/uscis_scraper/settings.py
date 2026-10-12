@@ -24,6 +24,8 @@ BOT_NAME = "uscis_scraper"
 
 SPIDER_MODULES = ["uscis_scraper.spiders"]
 NEWSPIDER_MODULE = "uscis_scraper.spiders"
+# Overrides `scrapy crawl` so an untrustworthy crawl exits non-zero (health.py).
+COMMANDS_MODULE = "uscis_scraper.commands"
 
 # Local Test Settings
 LOCAL_TEST = os.getenv("LOCAL_TEST", "True").lower() in ("1", "true", "yes")
@@ -55,25 +57,29 @@ if not LOCAL_TEST:
     FEED_FORMAT = "jsonlines"
     FEED_EXPORT_ENCODING = "utf-8"
     FILES_STORE = f"s3://{R2_BUCKET}/raw/"
-    ROBOTSTXT_OBEY = True
-    DOWNLOAD_DELAY = 5
-    CONCURRENT_REQUESTS = 8
-    AUTOTHROTTLE_ENABLED = True
-    # The initial download delay
-    AUTOTHROTTLE_START_DELAY = 2
-    # The maximum download delay to be set in case of high latencies
-    AUTOTHROTTLE_MAX_DELAY = 30
-
-    AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
-
-    # Retry middleware settings
-    RETRY_ENABLED = True
-    RETRY_TIMES = 3
 else:
     FEED_URI = f"{LOCAL_FILES}/items/%(name)s/%(time)s.jsonl"
     FEED_FORMAT = "jsonlines"
     FEED_EXPORT_ENCODING = "utf-8"
     FILES_STORE = os.getenv("LOCAL_FILES", "output")
+
+# Politeness applies to every crawl: a LOCAL_TEST run only changes where the
+# output goes, it still hits the real government sites (from your own IP). For a
+# quick local experiment, shorten the delay with `-s DOWNLOAD_DELAY=1`.
+ROBOTSTXT_OBEY = True
+DOWNLOAD_DELAY = 5
+CONCURRENT_REQUESTS = 8
+AUTOTHROTTLE_ENABLED = True
+# The initial download delay
+AUTOTHROTTLE_START_DELAY = 2
+# The maximum download delay to be set in case of high latencies
+AUTOTHROTTLE_MAX_DELAY = 30
+
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+
+# Retry middleware settings
+RETRY_ENABLED = True
+RETRY_TIMES = 3
 logger.warning(
     f"**Scrapy Settings** → LOCAL_TEST={LOCAL_TEST}, FILES_STORE={FILES_STORE}"
 )
@@ -91,8 +97,9 @@ LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
 LOG_STDOUT = True
 
 # Default headers (helps avoid being blocked)
+# (User-Agent comes from USER_AGENT, which a spider may override in its
+# custom_settings; a default header here would win over that.)
 DEFAULT_REQUEST_HEADERS = {
-    "User-Agent": USER_AGENT,
     "Accept-Language": "en",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }

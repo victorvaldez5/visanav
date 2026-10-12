@@ -270,6 +270,13 @@ KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
 # the retrieval scores logged by semantic_search (see core/llm.py) if the corpus
 # or embedding model changes.
 RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE") or "0.40")
+
+# Federal Register documents older than this (by publication date) are left out
+# of the scraped corpus at ingest: a notice goes stale without ever changing.
+FEDERAL_REGISTER_RETENTION_DAYS = int(
+    os.environ.get("FEDERAL_REGISTER_RETENTION_DAYS") or "730"
+)
+
 # Where the ingest command reads curated Markdown from. Defaults to the repo's
 # data/countries (reachable from a full checkout; ingestion is not run in the
 # slim prod web image).

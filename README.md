@@ -102,18 +102,30 @@ to bring up the scraper run
 
 ## Scraper & raw data
 
-The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Act
-(via uscode.house.gov), and the USCIS Policy Manual (~940 documents, ~200 MB total).
+One Scrapy project holds a spider per source:
+
+- `uscis` crawls USCIS forms, the Immigration and Nationality Act (via
+  uscode.house.gov), and the USCIS Policy Manual (~940 documents, ~200 MB total).
+- `ecfr` reads GPO's daily eCFR bulk XML and emits one item per section of the
+  immigration regulations: 8 CFR in full, 22 CFR Parts 40 to 42 and 62, and 20 CFR
+  Parts 655 and 656 (~1,400 sections).
+- `federal-register` uses the Federal Register API to collect recent immigration
+  rules, proposed rules, notices and presidential documents (a two-year window).
 
 - **Storage sink** is controlled by `LOCAL_TEST` in `config/.env`:
   - `LOCAL_TEST=true` (default) writes raw HTML/PDF/JSONL under `output/` for local runs.
   - `LOCAL_TEST=false` uploads to **Cloudflare R2** (S3-compatible) under `raw/`
     (`raw/html/`, `raw/pdf/`, `raw/items/`), using `R2_BUCKET` + the `AWS_*` credentials.
-- **Incremental**: a content-hash manifest (`raw/manifest.json`) lets re-runs skip
-  pages whose content is unchanged, so only changed documents are re-written and
-  forwarded downstream.
-- **Scheduling**: a **Railway cron service** (`visanav-scraper`) runs the crawl
-  weekly, Mondays 06:00 UTC, writing to R2. It builds the `production` stage of
+- **Incremental**: a content-hash manifest per source (`raw/manifests/<spider>.json`)
+  lets re-runs skip pages whose content is unchanged, so only changed documents are
+  re-written and forwarded downstream. A page is only recorded once its feed is
+  safely stored, and a crawl that cannot be trusted (blocked, feed not stored, far
+  fewer pages than usual) exits non-zero so its Railway run shows as failed. The `ecfr` spider also reports sections that
+  have been removed, so repealed rules leave the knowledge base on the next ingest.
+- **Scheduling**: one **Railway cron service** per spider runs weekly on Mondays,
+  writing to R2: `visanav-scraper` (USCIS, 06:00 UTC), `visanav-scraper-ecfr` (09:00)
+  and `visanav-scraper-federal-register` (09:30). The two newer ones use the same
+  image with a per-service start command and need the same R2 variables. Each builds the `production` stage of
   `scrapers/uscis_scraper/Dockerfile` from the repo root (leave the service's Root
   Directory empty: the Dockerfile copies the uv workspace manifests from the root).
   The service definition (Dockerfile path, cron, no-retry policy) lives in
@@ -122,7 +134,8 @@ The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Ac
   `AWS_REGION_NAME=auto` as service variables in the dashboard (the image sets
   `LOCAL_TEST=false`). Plan and rationale:
   [`docs/scraper-railway-migration.md`](docs/scraper-railway-migration.md).
-  `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback.
+  `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback
+  (it takes the source to crawl as an input).
 - **Tests**: the `scraper` job in `.github/workflows/ci.yml` runs the scraper's pytest suite on
   every PR touching `scrapers/`.
 
