@@ -55,7 +55,7 @@ export default defineRailway(() => {
     deploy: { sleepApplication: true, restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 3 },
     domains: [{ domain: "api.visanav.org", port: 8000 }],
     networking: { privateNetworkEndpoint: "api-frosty-rain-5363" },
-    env: { ALLOWED_HOSTS: preserve(), ANTHROPIC_API_KEY: preserve(), CONVERSATION_ENCRYPTION_KEYS: preserve(), CSRF_TRUSTED_ORIGINS: preserve(), DJANGO_SECRET_KEY: preserve(), DJANGO_SETTINGS_MODULE: preserve(), FRONTEND_URL: preserve(), KNOWLEDGE_DATA_DIR: preserve(), LLM_PROVIDER: preserve(), PORT: preserve(), POSTGRES_DB: preserve(), POSTGRES_HOST: preserve(), POSTGRES_PASSWORD: preserve(), POSTGRES_PORT: preserve(), POSTGRES_SSLMODE: preserve(), POSTGRES_USER: preserve(), SECURE_SSL_REDIRECT: preserve(), SEED_DIRECTORY: preserve(), SKIP_MIGRATE_ON_START: preserve(), TURNSTILE_SECRET_KEY: preserve(), VOYAGE_API_KEY: preserve() },
+    env: { ALLOWED_HOSTS: preserve(), DEFAULT_FROM_EMAIL: preserve(), ANTHROPIC_API_KEY: preserve(), CONVERSATION_ENCRYPTION_KEYS: preserve(), CSRF_TRUSTED_ORIGINS: preserve(), MAILTRAP_API_KEY: preserve(), DJANGO_SECRET_KEY: preserve(), DJANGO_SETTINGS_MODULE: preserve(), FRONTEND_URL: preserve(), KNOWLEDGE_DATA_DIR: preserve(), LLM_PROVIDER: preserve(), PORT: preserve(), POSTGRES_DB: preserve(), POSTGRES_HOST: preserve(), POSTGRES_PASSWORD: preserve(), POSTGRES_PORT: preserve(), POSTGRES_SSLMODE: preserve(), POSTGRES_USER: preserve(), SECURE_SSL_REDIRECT: preserve(), SEED_DIRECTORY: preserve(), SKIP_MIGRATE_ON_START: preserve(), TURNSTILE_SECRET_KEY: preserve(), VOYAGE_API_KEY: preserve() },
   });
 
   return project("jubilant-success", {
