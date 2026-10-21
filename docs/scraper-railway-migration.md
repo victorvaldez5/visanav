@@ -170,6 +170,13 @@ opt in, and existing files stop working on 2026-12-01. What that means here:
 
 ### Chaining ingestion after the crawl
 
+**Decided (scheduled ingestion):** done as an hourly `visanav-ingest` cron service
+running `manage.py refresh_corpus` from its own image (`api/ingest.Dockerfile`: the
+API code plus boto3, so the web image stays without it). Rather than a fixed offset
+after the crawl, it ingests a source when that source's newest feed in R2 has not
+been ingested yet, which holds for any number of sources and any crawl duration. It
+also ingests curated `data/` when a deploy changed it. The original notes follow.
+
 Today the crawl output reaches pgvector only by hand (`just corpus-pull` then
 `just corpus-ingest`). `manage.py ingest_scrape` needs Django, Postgres and Voyage,
 none of which are in the scraper image (by design: the API image never ships Scrapy,
@@ -188,7 +195,13 @@ own PR.
 
 ### Adding more scrape sources
 
-The current layout is one Scrapy project per source (`scrapers/uscis_scraper/`).
+**Decided (multi-source scrape pipeline):** a second spider goes in the same
+project. `ecfr` and `federal-register` now sit beside `uscis`, each with its own
+cron service in `.railway/railway.ts` (same image, a `startCommand` per spider),
+its own manifest (`raw/manifests/<spider>.json`) and its own feed prefix. See
+`scrapers/README.md`. The options as they were weighed:
+
+The layout was one Scrapy project per source (`scrapers/uscis_scraper/`).
 Before adding a second source, decide between:
 
 - a second spider in the same project (shared pipelines and manifest logic, one image,

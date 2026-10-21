@@ -270,6 +270,27 @@ KNOWLEDGE_COUNTRY = os.environ.get("KNOWLEDGE_COUNTRY", "us")
 # the retrieval scores logged by semantic_search (see core/llm.py) if the corpus
 # or embedding model changes.
 RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE") or "0.40")
+
+# Federal Register documents older than this (by publication date) are left out
+# of the scraped corpus at ingest: a notice goes stale without ever changing.
+FEDERAL_REGISTER_RETENTION_DAYS = int(
+    os.environ.get("FEDERAL_REGISTER_RETENTION_DAYS") or "730"
+)
+
+# Shrink guard for every ingest: a corpus is not replaced by one with fewer than
+# this share of its current chunks (a broken crawl or extractor, not a real
+# change) unless the run is forced.
+INGEST_MIN_KEEP_RATIO = float(os.environ.get("INGEST_MIN_KEEP_RATIO") or "0.7")
+
+# Where scheduled ingestion reads the scrapers' feeds from (Cloudflare R2, the
+# bucket the crawls write to). Read-only credentials are enough. Only the
+# `--from-r2` / `refresh_corpus` paths use these; the web app never does.
+R2_BUCKET = os.environ.get("R2_BUCKET")
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_REGION_NAME = os.environ.get("AWS_REGION_NAME") or "auto"
+
 # Where the ingest command reads curated Markdown from. Defaults to the repo's
 # data/countries (reachable from a full checkout; ingestion is not run in the
 # slim prod web image).

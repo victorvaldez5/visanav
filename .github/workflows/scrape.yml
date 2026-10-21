@@ -1,14 +1,24 @@
 name: scrape
 
-# Manual USCIS crawl → Cloudflare R2. The weekly schedule now runs on Railway
-# (the `visanav-scraper` cron service, .railway/railway.ts); this workflow is
-# only a manual fallback, kept off the schedule because the repo is private and
-# a full crawl costs ~170 Actions minutes. It writes to whatever bucket the
+# Manual crawl of one source → Cloudflare R2. The weekly schedules now run on
+# Railway (the `visanav-scraper*` cron services, .railway/railway.ts); this
+# workflow is only a manual fallback, kept off the schedule because the repo is
+# private and a full USCIS crawl costs ~170 Actions minutes. It writes to whatever bucket the
 # R2_BUCKET / AWS_* repo secrets point at, which may not be the production bucket
 # Railway uses, so check them before dispatching it.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Which source to crawl
+        type: choice
+        default: uscis
+        options: [uscis, ecfr, federal-register]
+      allow_large_removal:
+        description: Let this crawl remove more than a tenth of the known pages (only after checking they are really gone)
+        type: boolean
+        default: false
 
 jobs:
   crawl:
@@ -25,7 +35,7 @@ jobs:
       - name: Install scraper dependencies
         run: uv sync --locked --package uscis-scraper --no-dev
 
-      - name: Crawl USCIS → R2
+      - name: Crawl ${{ inputs.source }} → R2
         working-directory: scrapers/uscis_scraper
         env:
           LOCAL_TEST: "false"
@@ -34,4 +44,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION_NAME: auto
-        run: uv run --no-sync scrapy crawl uscis
+        run: uv run --no-sync scrapy crawl "${{ inputs.source }}" -a allow_large_removal=${{ inputs.allow_large_removal }}

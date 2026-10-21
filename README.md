@@ -102,18 +102,32 @@ to bring up the scraper run
 
 ## Scraper & raw data
 
-The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Act
-(via uscode.house.gov), and the USCIS Policy Manual (~940 documents, ~200 MB total).
+One Scrapy project holds a spider per source:
+
+- `uscis` crawls USCIS forms, the Immigration and Nationality Act (via
+  uscode.house.gov), and the USCIS Policy Manual (~940 documents, ~200 MB total).
+- `ecfr` reads GPO's daily eCFR bulk XML and emits one item per section of the
+  immigration regulations: 8 CFR in full, 22 CFR Parts 40 to 42 and 62, and 20 CFR
+  Parts 655 and 656 (~1,400 sections).
+- `federal-register` uses the Federal Register API to collect recent immigration
+  rules, proposed rules, notices and presidential documents (a two-year window).
 
 - **Storage sink** is controlled by `LOCAL_TEST` in `config/.env`:
   - `LOCAL_TEST=true` (default) writes raw HTML/PDF/JSONL under `output/` for local runs.
   - `LOCAL_TEST=false` uploads to **Cloudflare R2** (S3-compatible) under `raw/`
     (`raw/html/`, `raw/pdf/`, `raw/items/`), using `R2_BUCKET` + the `AWS_*` credentials.
-- **Incremental**: a content-hash manifest (`raw/manifest.json`) lets re-runs skip
-  pages whose content is unchanged, so only changed documents are re-written and
-  forwarded downstream.
-- **Scheduling**: a **Railway cron service** (`visanav-scraper`) runs the crawl
-  weekly, Mondays 06:00 UTC, writing to R2. It builds the `production` stage of
+- **Incremental**: a content-hash manifest per source (`raw/manifests/<spider>.json`)
+  lets re-runs skip pages whose content is unchanged, so only changed documents are
+  re-written and forwarded downstream. A page is only recorded once its feed is
+  safely stored, and a crawl that cannot be trusted (blocked, feed not stored, far
+  fewer pages than usual) exits non-zero so its Railway run shows as failed. Crawls
+  also report pages that are gone from the source, so they leave the knowledge base
+  on the next ingest: `ecfr` reports a repealed section at once, and `uscis` reports
+  a page once two healthy crawls in a row have not seen it.
+- **Scheduling**: one **Railway cron service** per spider runs weekly on Mondays,
+  writing to R2: `visanav-scraper` (USCIS, 06:00 UTC), `visanav-scraper-ecfr` (09:00)
+  and `visanav-scraper-federal-register` (09:30). The two newer ones use the same
+  image with a per-service start command and need the same R2 variables. Each builds the `production` stage of
   `scrapers/uscis_scraper/Dockerfile` from the repo root (leave the service's Root
   Directory empty: the Dockerfile copies the uv workspace manifests from the root).
   The service definition (Dockerfile path, cron, no-retry policy) lives in
@@ -122,7 +136,8 @@ The Scrapy `uscis` spider crawls USCIS forms, the Immigration and Nationality Ac
   `AWS_REGION_NAME=auto` as service variables in the dashboard (the image sets
   `LOCAL_TEST=false`). Plan and rationale:
   [`docs/scraper-railway-migration.md`](docs/scraper-railway-migration.md).
-  `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback.
+  `.github/workflows/scrape.yml` remains as a manual `workflow_dispatch` fallback
+  (it takes the source to crawl as an input).
 - **Tests**: the `scraper` job in `.github/workflows/ci.yml` runs the scraper's pytest suite on
   every PR touching `scrapers/`.
 
@@ -220,6 +235,25 @@ serving. Set `SKIP_MIGRATE_ON_START=1` on the API service so the container
 doesn't migrate a second time on every cold start. If the variable is unset it
 is harmless (migrate is idempotent), just redundant. `api/entrypoint.sh` still
 runs `collectstatic` on every start, and still migrates on boot locally.
+
+### Scheduled ingestion (the knowledge base keeps itself current)
+
+A third kind of Railway service, `visanav-ingest`, runs `python manage.py refresh_corpus`
+every hour from its own image ([`api/ingest.Dockerfile`](api/ingest.Dockerfile): the API code
+plus an S3 client). Each run ingests only what is due:
+
+- a scrape source whose crawl has left a new feed in R2, and
+- the curated `data/` corpus, when a deploy changed it.
+
+With nothing due it exits in seconds. Only new or changed chunks are embedded, every run is
+recorded (`python manage.py corpus_status`), and a corpus that would shrink by more than 30%
+is not replaced without `--force`.
+
+Set these on the service (same values as the API service unless noted): `DJANGO_SETTINGS_MODULE`,
+`DJANGO_SECRET_KEY`, `ALLOWED_HOSTS`, `CONVERSATION_ENCRYPTION_KEYS`, the six `POSTGRES_*`
+variables, `VOYAGE_API_KEY`, and for the bucket the scrapers write to (read-only credentials are
+enough): `R2_BUCKET`, `AWS_ENDPOINT_URL` (the bare host, no bucket path), `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_REGION_NAME=auto`.
 
 Before a `develop` → `main` release, work through [`docs/RELEASING.md`](docs/RELEASING.md).
 

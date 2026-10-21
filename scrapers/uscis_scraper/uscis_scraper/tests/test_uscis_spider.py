@@ -2,7 +2,7 @@
 import pytest
 from scrapy.http import HtmlResponse, Response, Request
 from ..spiders.uscis_spider import UscisSpider
-from ..items import UscisItem
+from ..items import ScrapedItem
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def test_parse_forms_page_yields_html_item_and_pdf_requests(spider):
 
     # First result is the HTML item
     html_item = results[0]
-    assert isinstance(html_item, UscisItem)
+    assert isinstance(html_item, ScrapedItem)
     assert html_item["url"] == resp.url
     assert html_item["content_type"] == "text/html"
     assert 'article class="media"' in html_item["content"]
@@ -117,7 +117,7 @@ def test_parse_uscode_page_yields_html_item(spider):
 
     assert len(items) == 1
     item = items[0]
-    assert isinstance(item, UscisItem)
+    assert isinstance(item, ScrapedItem)
     assert item["url"] == resp.url
     assert item["content_type"] == "text/html"
     assert "Content" in item["content"]
@@ -168,7 +168,7 @@ def test_parse_policy_chapter_yields_html_item(spider):
 
     assert len(items) == 1
     item = items[0]
-    assert isinstance(item, UscisItem)
+    assert isinstance(item, ScrapedItem)
     assert item["url"] == resp.url
     assert item["content_type"] == "text/html"
     assert "Chapter body" in item["content"]
@@ -187,7 +187,7 @@ def test_parse_pdf_yields_pdf_item(spider):
 
     assert len(items) == 1
     pdf_item = items[0]
-    assert isinstance(pdf_item, UscisItem)
+    assert isinstance(pdf_item, ScrapedItem)
     assert pdf_item["url"] == url
     assert pdf_item["content_type"] == "application/pdf"
     assert pdf_item["file_urls"] == [url]

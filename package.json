@@ -1,0 +1,8 @@
+{
+  "name": "visanav-infra",
+  "private": true,
+  "description": "Tooling for .railway/railway.ts (Railway infrastructure as code). The apps live in frontend/ and marketing/.",
+  "devDependencies": {
+    "railway": "^3.16.0"
+  }
+}

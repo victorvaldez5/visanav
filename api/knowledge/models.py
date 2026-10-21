@@ -22,8 +22,9 @@ class KnowledgeChunk(models.Model):
     doc_id = models.CharField(max_length=255)
     country = models.CharField(max_length=8, db_index=True)
     # Which producer wrote the row: "curated" (data/ Markdown via `ingest`) or a
-    # scrape source such as "uscis" (via `ingest_scrape`). Each command replaces
-    # only its own corpus, so re-ingesting one never wipes the other.
+    # scrape source such as "uscis", "ecfr" or "federal-register" (via
+    # `ingest_scrape`, see knowledge.scrape_utils.SOURCES). Each corpus is
+    # replaced on its own, so re-ingesting one never wipes another.
     corpus = models.CharField(max_length=32, default="curated", db_index=True)
     text = models.TextField()
     embedding = VectorField(dimensions=settings.EMBEDDING_DIM)
@@ -31,6 +32,10 @@ class KnowledgeChunk(models.Model):
     # Frontmatter metadata (see data/scripts META_FIELDS / knowledge.schema.json).
     authority = models.CharField(max_length=255, blank=True, null=True)
     topic = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    # The kind of legal document a scraped chunk comes from (statute, regulation,
+    # agency-guidance, final-rule, proposed-rule, notice, presidential, form), so
+    # the model can weigh sources that disagree. Curated chunks leave it null.
+    instrument = models.CharField(max_length=32, blank=True, null=True, db_index=True)
     title = models.CharField(max_length=512, blank=True, null=True)
     lang = models.CharField(max_length=16, blank=True, null=True)
     source_url = models.URLField(max_length=1024, blank=True, null=True)
@@ -56,3 +61,44 @@ class KnowledgeChunk(models.Model):
 
     def __str__(self):
         return f"{self.chunk_id} ({self.country})"
+
+
+class IngestRun(models.Model):
+    """One attempt to replace one corpus (curated, or a scrape source) for a country.
+
+    The record of what is in the vector store and how fresh it is: scheduled
+    ingestion reads the latest successful run to decide whether a corpus is due
+    (its ``marker`` no longer matches what is on offer), and `corpus_status`
+    shows it. Written by every --upsert run, manual or scheduled.
+    """
+
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    # The new corpus was much smaller than the current one, so it was not
+    # written (see settings.INGEST_MIN_KEEP_RATIO). Needs a human: --force.
+    SKIPPED = "skipped"
+    STATUSES = [(SUCCEEDED, "Succeeded"), (FAILED, "Failed"), (SKIPPED, "Skipped by shrink guard")]
+
+    country = models.CharField(max_length=8)
+    corpus = models.CharField(max_length=32)
+    # What was ingested: the newest feed's file name for a scrape source, a
+    # fingerprint of the chunks for the curated corpus.
+    marker = models.CharField(max_length=255)
+    status = models.CharField(max_length=16, choices=STATUSES)
+    # Rows written, how many of them needed a new embedding (the rest reused
+    # the vector of an unchanged chunk), and rows the corpus held beforehand.
+    chunks = models.PositiveIntegerField(blank=True, null=True)
+    embedded = models.PositiveIntegerField(blank=True, null=True)
+    previous_chunks = models.PositiveIntegerField(blank=True, null=True)
+    # Vectors are only reused while the model that produced them is unchanged.
+    embedding_model = models.CharField(max_length=64, blank=True)
+    error = models.TextField(blank=True)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["country", "corpus", "-started_at"])]
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.corpus}/{self.country} {self.status} ({self.marker})"
