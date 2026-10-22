@@ -14,7 +14,7 @@ WORKDIR /app
 # 1) BUILDER: install the locked wheels (no resolution happens here)
 ###############################################################################
 FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_PYTHON_DOWNLOADS=never \
     UV_COMPILE_BYTECODE=1 \
