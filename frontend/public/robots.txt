@@ -1,0 +1,17 @@
+# VisaNav chat app (app.visanav.org). The public pages (home, /forms,
+# /resources, /representatives, /llms.txt) are open to search engines and AI
+# crawlers. Conversations, profiles and the account screens are private or
+# useless out of context and stay out of search results. The marketing site
+# (www.visanav.org) is the main indexable surface.
+User-agent: *
+Disallow: /conversations/
+Disallow: /profile/
+Disallow: /login
+Disallow: /register
+Disallow: /verify
+Disallow: /error
+Disallow: /permission-denied
+Disallow: /forbidden
+Allow: /
+
+Sitemap: https://www.visanav.org/sitemap-index.xml
