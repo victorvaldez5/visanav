@@ -77,13 +77,30 @@ const a = "text-link underline underline-offset-2 hover:opacity-80";
         schedule below.
       </li>
       <li>
-        <strong class="text-foreground">Basic technical data.</strong> To run
-        the site we use privacy-focused, cookieless
-        <a class={a} href="https://www.cloudflare.com/web-analytics/" rel="noopener">Cloudflare Web Analytics</a>,
-        which does not use tracking cookies or fingerprint you, and Cloudflare
-        Turnstile (a privacy-friendly bot check) on our organization sign-up
-        form. Our fonts are self-hosted, so loading a page does not leak data to
-        a font provider.
+        <strong class="text-foreground">Basic technical data.</strong> On
+        visanav.org's public pages (not inside the chat app) we use
+        <a class={a} href="https://umami.is/privacy" rel="noopener">Umami Cloud</a>,
+        a privacy-focused analytics service from Umami Software. It uses no
+        cookies and does not store IP addresses. It records page views and
+        clicks on "Start chat" buttons, along with the page that sent you here,
+        your browser, operating system, device type, screen size and language,
+        your approximate location (country, region and city) derived from your
+        connection, and a visitor code that changes every month. Page addresses
+        are recorded without search terms. We also use Cloudflare Turnstile (a privacy-friendly bot check)
+        on our organization sign-up form. Our fonts are self-hosted, so loading
+        a page does not leak data to a font provider.
+      </li>
+      <li>
+        <strong class="text-foreground">Optional ratings.</strong> If you tap
+        thumbs up or down on an answer, the rating is stored with that
+        conversation and deleted with it.
+      </li>
+      <li>
+        <strong class="text-foreground">Daily totals.</strong> We keep daily
+        counts, like the number of chats, the language, whether an answer used
+        sources or suggested organizations, and the number of helpful ratings.
+        They have no link to you or your conversations, and we keep them
+        indefinitely.
       </li>
       <li>
         <strong class="text-foreground">Local storage on your device.</strong>

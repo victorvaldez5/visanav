@@ -1,7 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import Eyebrow from "../../components/Eyebrow.astro";
-import { appLink } from "../../config";
+import { SITE_URL, appLink } from "../../config";
 import orgs from "../../data/organizations.json";
 import { localeFromParam, localePath, localeStaticPaths, useTranslations } from "../../i18n";
 
@@ -13,9 +13,41 @@ const t = useTranslations(locale);
 const total = orgs.length;
 const proBono = orgs.filter((o) => o.proBono).length;
 const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sort();
+
+// The listing as schema.org data, so search and answer engines can read each
+// organization's name, address and contact details without parsing the cards.
+// Only fields the directory already shows (or holds) are included.
+const directoryJsonLd = {
+  "@type": "ItemList",
+  "@id": `${new URL(localePath(locale, "/directory"), SITE_URL).href}#list`,
+  name: t("directory.h1"),
+  numberOfItems: total,
+  itemListElement: orgs.map((o, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    item: {
+      "@type": "LegalService",
+      name: o.name,
+      ...(o.website && { url: o.website }),
+      ...(o.phone && { telephone: o.phone }),
+      ...(o.email && { email: o.email }),
+      ...((o.line1 || o.city || o.state) && {
+        address: {
+          "@type": "PostalAddress",
+          ...(o.line1 && { streetAddress: o.line1 }),
+          ...(o.city && { addressLocality: o.city }),
+          ...(o.state && { addressRegion: o.state }),
+          ...(o.postalCode && { postalCode: o.postalCode }),
+          addressCountry: "US",
+        },
+      }),
+      ...(o.proBono && { isAccessibleForFree: true }),
+    },
+  })),
+};
 ---
 
-<Base title={t("directory.title")} description={t("directory.description")} canonicalPath="/directory">
+<Base title={t("directory.title")} description={t("directory.description")} canonicalPath="/directory" jsonLd={[directoryJsonLd]}>
   <section
     class="mx-auto max-w-6xl px-4 py-14 sm:px-6"
     id="directory"
@@ -128,6 +160,8 @@ const states = Array.from(new Set(orgs.map((o) => o.state).filter(Boolean))).sor
             <a
               href={appLink(locale, { q: t("directory.askPrompt", { name: o.name }) })}
               class="vn-link mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold"
+              data-umami-event="start-chat"
+              data-umami-event-location="directory"
             >
               {t("directory.askAbout")}
               <span aria-hidden="true">→</span>

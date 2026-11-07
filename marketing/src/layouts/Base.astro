@@ -10,7 +10,8 @@ import "@fontsource/noto-serif/700.css";
 import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import { SITE_URL } from "../config";
+import { APP_URL, SITE_URL, UMAMI_HOST_URL, UMAMI_SRC, UMAMI_WEBSITE_ID } from "../config";
+import { ORG_ID, WEBSITE_ID, jsonLdScript } from "../structured-data";
 import {
   DEFAULT_LOCALE,
   OG_LOCALE,
@@ -33,9 +34,15 @@ interface Props {
    * leads to the other locale's home page instead of a missing twin.
    */
   translated?: boolean;
+  /**
+   * Extra schema.org nodes for this page (e.g. the directory's ItemList). They go
+   * into the page's JSON-LD @graph next to the site-wide Organization, WebSite and
+   * WebPage nodes, and can point at those by @id (ORG_ID, WEBSITE_ID).
+   */
+  jsonLd?: Record<string, unknown>[];
 }
 
-const { title, description, canonicalPath, translated = true } = Astro.props;
+const { title, description, canonicalPath, translated = true, jsonLd = [] } = Astro.props;
 const locale = localeFromPath(Astro.url.pathname);
 const t = useTranslations(locale);
 const path = stripLocale(canonicalPath ?? Astro.url.pathname);
@@ -44,6 +51,55 @@ const canonical = url(locale);
 const ogImage = new URL("/og.png", SITE_URL).href;
 // Page in each locale, for <link rel="alternate" hreflang>. x-default is English.
 const alternates = translated ? SUPPORTED_LOCALES.map((l) => ({ hreflang: l, href: url(l) })) : [];
+
+// Structured data for search and answer engines: who publishes the site, the
+// site itself, and this page. Kept to facts the site states elsewhere.
+const structuredData = jsonLdScript({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": ORG_ID,
+      name: "VisaNav",
+      url: new URL("/", SITE_URL).href,
+      logo: new URL("/favicon.svg", SITE_URL).href,
+      description: t("home.description"),
+      areaServed: { "@type": "Country", name: "United States" },
+      knowsLanguage: [...SUPPORTED_LOCALES],
+    },
+    {
+      "@type": "WebSite",
+      "@id": WEBSITE_ID,
+      name: "VisaNav",
+      url: new URL("/", SITE_URL).href,
+      publisher: { "@id": ORG_ID },
+      inLanguage: [...SUPPORTED_LOCALES],
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${canonical}#webpage`,
+      url: canonical,
+      name: title,
+      description,
+      inLanguage: locale,
+      isPartOf: { "@id": WEBSITE_ID },
+      primaryImageOfPage: ogImage,
+    },
+    {
+      "@type": "WebApplication",
+      "@id": `${APP_URL}/#app`,
+      name: "VisaNav chat (Javi)",
+      url: APP_URL,
+      applicationCategory: "ReferenceApplication",
+      operatingSystem: "Any (web browser)",
+      isAccessibleForFree: true,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      inLanguage: [...SUPPORTED_LOCALES],
+      publisher: { "@id": ORG_ID },
+    },
+    ...jsonLd,
+  ],
+});
 ---
 
 <!doctype html>
@@ -73,6 +129,27 @@ const alternates = translated ? SUPPORTED_LOCALES.map((l) => ({ hreflang: l, hre
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VisaNav: free, private immigration help." />
+
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
+    <script type="application/ld+json" is:inline set:html={structuredData} />
+    {
+      UMAMI_SRC && UMAMI_WEBSITE_ID && (
+        <script
+          is:inline
+          defer
+          src={UMAMI_SRC}
+          data-website-id={UMAMI_WEBSITE_ID}
+          data-host-url={UMAMI_HOST_URL || undefined}
+          data-domains="www.visanav.org"
+          data-exclude-search="true"
+          data-exclude-hash="true"
+          data-do-not-track="true"
+        />
+      )
+    }
   </head>
   <body class="min-h-screen flex flex-col font-sans">
     <a

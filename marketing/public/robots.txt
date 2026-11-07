@@ -1,5 +1,25 @@
-# VisaNav marketing site: everything here is public and meant to be indexed.
+# VisaNav marketing site: everything here is public and meant to be indexed,
+# by search engines and by AI search and answer engines alike. The AI crawlers
+# are named explicitly so a blanket rule elsewhere can't be read as covering
+# them. Note: Cloudflare's "Block AI bots" / managed robots.txt settings act
+# before this file and override it; keep them off for this zone.
 User-agent: *
+Allow: /
+
+# OpenAI (ChatGPT search, training)
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: GPTBot
+# Anthropic (Claude search, user fetches, training)
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: ClaudeBot
+# Perplexity
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+# Google Gemini / AI Overviews grounding, Apple Intelligence
+User-agent: Google-Extended
+User-agent: Applebot-Extended
 Allow: /
 
 Sitemap: https://www.visanav.org/sitemap-index.xml

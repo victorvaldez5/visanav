@@ -19,7 +19,12 @@
     "submit": "Enviar",
     "send": "Enviar mensaje",
     "stop": "Detener",
-    "privacy": "Cifrado"
+    "privacy": "Cifrado",
+    "feedbackPrompt": "¿Te fue útil esta respuesta?",
+    "feedbackUp": "Útil",
+    "feedbackDown": "No fue útil",
+    "feedbackThanks": "Gracias por tu opinión.",
+    "feedbackError": "No se pudo guardar tu valoración. Inténtalo de nuevo."
   },
   "lang": {
     "label": "Idioma",

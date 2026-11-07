@@ -14,6 +14,14 @@ export const API_URL = import.meta.env.PUBLIC_API_URL ?? "https://api.visanav.or
 export const TURNSTILE_SITE_KEY =
   import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
 
+// Umami Cloud analytics (public ids). Set PUBLIC_UMAMI_WEBSITE_ID to an empty
+// string to disable. The tracker also carries data-domains, so it only reports
+// from www.visanav.org: local and preview builds never send data.
+export const UMAMI_SRC = import.meta.env.PUBLIC_UMAMI_SRC ?? "https://cloud.umami.is/script.js";
+export const UMAMI_WEBSITE_ID =
+  import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? "1b684599-d150-4e2f-a5f5-47890a1a7621";
+export const UMAMI_HOST_URL = import.meta.env.PUBLIC_UMAMI_HOST_URL ?? "";
+
 /** The query param the app reads on boot to adopt a locale (see frontend/src/i18n). */
 export const LANG_PARAM = "lang";
 

@@ -87,3 +87,6 @@ REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"] = (
 # dev SECRET_KEY and must never protect real data. Losing this key makes every
 # stored conversation unreadable, so back it up.
 CONVERSATION_ENCRYPTION_KEYS = required_env("CONVERSATION_ENCRYPTION_KEYS")
+
+# 4xx request lines (path included) add nothing operationally; keep 5xx only.
+LOGGING["loggers"]["django.request"]["level"] = "ERROR"
