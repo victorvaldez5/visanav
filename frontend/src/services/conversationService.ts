@@ -21,6 +21,19 @@ export const conversationService = {
         return res.data;
     },
 
+    // Optional thumbs rating on an assistant message; null clears it.
+    async setFeedback(
+        uuid: string,
+        messageId: number,
+        isHelpful: boolean | null,
+    ): Promise<{message: number; is_helpful: boolean | null}> {
+        const res = await apiClient.post(`/conversations/${uuid}/feedback/`, {
+            message: messageId,
+            is_helpful: isHelpful,
+        });
+        return res.data;
+    },
+
     async createConversation(
         title: string,
         user?: number,

@@ -8,13 +8,16 @@ FROM python:3.13-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH"
+# Take Debian's current CA bundle rather than whatever the base image shipped
+# with (the eMudhra intermediates were distrusted in Oct 2026).
+RUN apt-get update && apt-get install -y --only-upgrade ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 ###############################################################################
 # 1) BUILDER: install the locked wheels (no resolution happens here)
 ###############################################################################
 FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_PYTHON_DOWNLOADS=never \
     UV_COMPILE_BYTECODE=1 \

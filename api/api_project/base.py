@@ -148,6 +148,7 @@ LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {"redact_uuids": {"()": "core.logging.RedactUUIDs"}},
     "formatters": {
         "standard": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
     },
@@ -169,6 +170,10 @@ LOGGING = {
         "httpx2": {"level": "WARNING", "propagate": True},
         "httpcore2": {"level": "WARNING", "propagate": True},
         "urllib3": {"level": "WARNING", "propagate": True},
+        # These write "<Reason>: <request.path>" for every 4xx/5xx; the path can
+        # hold an anonymous conversation's UUID (a bearer key), so redact it.
+        "django.request": {"filters": ["redact_uuids"], "propagate": True},
+        "django.server": {"filters": ["redact_uuids"], "propagate": True},
     },
 }
 
@@ -225,7 +230,11 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "1000/day", "user": "10000/day", "submission": "20/day"},
+    # The API sits directly behind Railway's edge: one proxy, whose appended
+    # (rightmost) X-Forwarded-For entry is the client. Keeps anon throttles
+    # from trusting a client-supplied leftmost entry.
+    "NUM_PROXIES": 1,
+    "DEFAULT_THROTTLE_RATES": {"anon": "1000/day", "user": "10000/day", "submission": "20/day", "feedback": "60/hour"},
 }
 
 SIMPLE_JWT = {

@@ -14,7 +14,7 @@ WORKDIR /app
 # never the scraper's Scrapy/boto3) into a venv at /opt/venv. It lives outside
 # /app so the dev bind mount (./api:/app) can't shadow it.
 FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_PYTHON_DOWNLOADS=never \
     UV_COMPILE_BYTECODE=1 \

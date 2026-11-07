@@ -1,5 +1,5 @@
 # Stage 1: build: get version of node with OpenSSL
-FROM node:20-bullseye-slim AS build
+FROM node:22-bookworm-slim AS build
 
 WORKDIR /app
 

@@ -102,6 +102,10 @@ db-status: db
     @cd api && uv run python manage.py corpus_status
     @cd api && uv run python manage.py shell -v 0 -c "from network.models import Organization as O; print(f'organizations: {O.objects.count()}')"
 
+# Privacy-safe daily usage counters and feedback tallies (default: last 30 days; `just usage-stats --days 7`)
+usage-stats *args: db
+    @cd api && uv run python manage.py usage_stats {{args}}
+
 # Ingest everything that is due, as the scheduler does: curated data/ if it changed, and each scrape source's new feeds straight from R2
 corpus-refresh *args: db
     cd api && uv run python manage.py refresh_corpus {{args}}

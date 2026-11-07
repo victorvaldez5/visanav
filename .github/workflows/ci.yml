@@ -239,11 +239,24 @@ jobs:
 
   # The one check to require and to release on. Skipped area jobs pass; a failed
   # or cancelled one (including a runner that never picked the job up) does not.
+  # A pull request into main fails here. A push does not, so `just release` can
+  # still update main. See scripts/check_pr_base.sh.
   ci:
     if: always()
     needs: [changes, api, frontend, scraper, data, i18n]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Test pull-request base guard
+        run: bash scripts/test_check_pr_base.sh
+
+      - name: Reject pull requests into main
+        run: bash scripts/check_pr_base.sh
+
       - name: Verify every area job passed or was skipped
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}

@@ -19,7 +19,12 @@
     "submit": "Submit",
     "send": "Send message",
     "stop": "Stop",
-    "privacy": "Encrypted"
+    "privacy": "Encrypted",
+    "feedbackPrompt": "Was this answer helpful?",
+    "feedbackUp": "Helpful",
+    "feedbackDown": "Not helpful",
+    "feedbackThanks": "Thanks for the feedback.",
+    "feedbackError": "Could not save your rating. Please try again."
   },
   "lang": {
     "label": "Language",

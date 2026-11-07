@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Conversation, Message, Feedback
+from .models import Conversation, Feedback, FeedbackDaily, Message, UsageDaily
 
 
 @admin.register(Conversation)
@@ -33,3 +33,29 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Feedback)
+
+
+class ReadOnlyAdmin(admin.ModelAdmin):
+    """Aggregate counters are written only by the app, never by hand."""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(UsageDaily)
+class UsageDailyAdmin(ReadOnlyAdmin):
+    list_display = ("date", "locale", "turns", "new_conversations", "turns_searched",
+                    "turns_with_sources", "turns_with_resources", "failed_turns")
+    ordering = ("-date", "locale")
+
+
+@admin.register(FeedbackDaily)
+class FeedbackDailyAdmin(ReadOnlyAdmin):
+    list_display = ("date", "helpful", "not_helpful")
+    ordering = ("-date",)

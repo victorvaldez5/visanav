@@ -119,8 +119,15 @@ export function useConversation(
                         // Official citations for this answer; rendered under it.
                         messageHistory.value[assistantIndex].sources = sources;
                     },
-                    onDone: () => {
+                    onDone: (data) => {
                         succeeded = true;
+                        // Persisted id of the answer, so it can be rated even if
+                        // the refetch below fails.
+                        if (typeof data?.message === "number") {
+                            const m = messageHistory.value[assistantIndex];
+                            m.id = data.message;
+                            m.kind = "response";
+                        }
                     },
                     onError: (detail) => {
                         const part = messageHistory.value[assistantIndex].parts[0];

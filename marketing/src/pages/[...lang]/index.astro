@@ -57,7 +57,7 @@ const bandBody = t("home.band.body", {
         </p>
 
         <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <a href={appLink(locale)} class="vn-btn vn-btn-primary h-12 px-6 text-base">{t("home.ctaChat")}</a>
+          <a href={appLink(locale)} class="vn-btn vn-btn-primary h-12 px-6 text-base" data-umami-event="start-chat" data-umami-event-location="hero">{t("home.ctaChat")}</a>
           <a href={localePath(locale, "/directory")} class="vn-btn vn-btn-raised h-12 px-6 text-base">{t("home.ctaFind")}</a>
         </div>
 

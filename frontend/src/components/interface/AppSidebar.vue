@@ -188,14 +188,14 @@ const menuItems = computed(() => [
         <a
           href="https://www.visanav.org/terms"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           class="hover:underline"
         >{{ t("nav.terms") }}</a>
         <span aria-hidden="true">·</span>
         <a
           href="https://www.visanav.org/privacy"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           class="hover:underline"
         >{{ t("nav.privacy") }}</a>
       </nav>

@@ -1,3 +1,5 @@
+Base branch: `develop`. CI rejects a pull request into `main`.
+
 ## What does this change?
 
 <!-- A short description, and why. Title format: type(scope): summary -->

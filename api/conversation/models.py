@@ -99,3 +99,47 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback for Message {self.message.id}: {self.is_helpful}"
+
+
+class UsageDaily(models.Model):
+    """Privacy-safe usage counters, one row per (UTC date, UI locale).
+
+    PRIVACY: this table has no link to any Conversation, Message or User, no
+    updated_at, and no dimension finer than (date, locale). Rows are kept
+    indefinitely, so they must never become re-identifiable. Adding any new
+    dimension (country, region, topic, hour, ...) requires a privacy review.
+    """
+
+    date = models.DateField()
+    locale = models.CharField(max_length=16)
+    turns = models.PositiveIntegerField(default=0)
+    new_conversations = models.PositiveIntegerField(default=0)
+    turns_searched = models.PositiveIntegerField(default=0)
+    turns_with_sources = models.PositiveIntegerField(default=0)
+    turns_with_resources = models.PositiveIntegerField(default=0)
+    failed_turns = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["date", "locale"], name="usage_daily_date_locale")
+        ]
+
+    def __str__(self):
+        return f"{self.date} {self.locale}"
+
+
+class FeedbackDaily(models.Model):
+    """Privacy-safe helpful / not-helpful tallies, one row per UTC date.
+
+    The date is the rated message's own date, so a changed vote always lands on
+    the same row. PRIVACY: no FK to Conversation, Message or User, no
+    updated_at, no dimension finer than the date. Rows are kept indefinitely;
+    adding any dimension requires a privacy review.
+    """
+
+    date = models.DateField(unique=True)
+    helpful = models.PositiveIntegerField(default=0)
+    not_helpful = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return str(self.date)
