@@ -325,4 +325,8 @@ The five default triage labels: `needs-triage`, `needs-info`, `ready-for-agent`,
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created lazily. See `docs/agents/domain.md`.
+Single-context: one root `GLOSSARY.md` and `docs/adr/`, created lazily. `i18n/GLOSSARY.md` is the translation glossary, not this file. See `docs/agents/domain.md`.
+
+### Installed skills
+
+Cursor project skills for this repo live in `.agents/skills/`. The set, the upstream revision, and how to update it are in `docs/agents/matt-pocock-skills.md`. These skills read and write GitHub issues. They do not release: `develop` reaches `main` only through `just release` ([docs/RELEASING.md](docs/RELEASING.md)).
