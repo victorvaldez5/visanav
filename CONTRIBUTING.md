@@ -13,6 +13,9 @@ fits you:
 
 ## Before you open a pull request
 
+Open the pull request against `develop`. CI fails a pull request into `main`.
+`main` changes only through `just release` (see [docs/RELEASING.md](docs/RELEASING.md)).
+
 Run the checks for whatever you touched (CI runs them too, and must be green to
 merge):
 
