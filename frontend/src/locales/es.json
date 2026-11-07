@@ -26,6 +26,17 @@
     "feedbackThanks": "Gracias por tu opinión.",
     "feedbackError": "No se pudo guardar tu valoración. Inténtalo de nuevo."
   },
+  "leaveChat": {
+    "title": "¿Salir de este chat?",
+    "description": "Si vas a la página de inicio, empiezas un chat nuevo y pierdes este. Para volver a él más tarde, guarda este enlace.",
+    "linkLabel": "Enlace a este chat",
+    "copy": "Copiar enlace",
+    "copied": "Copiado",
+    "copiedNotice": "Enlace copiado al portapapeles.",
+    "copyError": "No se pudo copiar el enlace. Selecciónalo y cópialo tú.",
+    "stay": "Quedarme aquí",
+    "leave": "Ir al inicio"
+  },
   "lang": {
     "label": "Idioma",
     "en": "English",
@@ -77,7 +88,8 @@
     "logoAlt": "Logotipo de VisaNav",
     "themeLight": "Cambiar al tema claro",
     "themeDark": "Cambiar al tema oscuro",
-    "registerLogin": "Registrarse / Iniciar sesión"
+    "registerLogin": "Registrarse / Iniciar sesión",
+    "home": "Inicio de VisaNav"
   },
   "auth": {
     "verifying": "Verificando tu cuenta...",

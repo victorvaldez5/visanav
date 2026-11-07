@@ -21,8 +21,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ConversationsSidebarGroup from "@/components/interface/ConversationsSidebarGroup.vue";
 import { useAuthStore } from "@/stores/useAuthStore.ts";
 import { storeToRefs } from "pinia";
-import { computed } from "vue";
-import { useRoute } from "vue-router";
+import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useSidebar } from "@/components/ui/sidebar";
+import LeaveChatDialog from "@/components/interface/LeaveChatDialog.vue";
 import { useI18n } from "vue-i18n";
 import Icon from "@/components/ui/Icon.vue";
 import ThemeMenuItem from "@/components/interface/ThemeMenuItem.vue";
@@ -41,6 +43,30 @@ const { logout } = authStore;
 // IP to a third-party host, which a privacy-first app shouldn't do.
 const initial = computed(() => displayName.value.charAt(0).toUpperCase() || "?");
 const route = useRoute();
+const router = useRouter();
+const { setOpenMobile } = useSidebar();
+
+// The logo goes to the landing page. From an open conversation that starts a
+// new chat, so it first confirms and offers the conversation's link.
+const homeHref = computed(() => router.resolve("/").href);
+const leaveOpen = ref(false);
+const conversationUrl = computed(() => window.location.origin + route.fullPath);
+
+function onLogoClick(e: MouseEvent) {
+    // Let the browser handle opening in a new tab or window.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    if (route.name === "Conversation") {
+        leaveOpen.value = true;
+    } else {
+        goHome();
+    }
+}
+
+function goHome() {
+    setOpenMobile(false);
+    void router.push("/");
+}
 
 const menuItems = computed(() => [
     {
@@ -69,12 +95,24 @@ const menuItems = computed(() => [
 <template>
   <Sidebar>
     <SidebarHeader class="flex flex-row items-center justify-between py-6 px-4">
-      <img
-        :alt="t('nav.logoAlt')"
-        class="h-7 w-fit"
-        :src="isDark ? logoDark : logoLight"
+      <a
+        :href="homeHref"
+        :aria-label="t('nav.home')"
+        class="rounded-md outline-none focus-visible:shadow-glow-focus"
+        @click="onLogoClick"
       >
+        <img
+          :alt="t('nav.logoAlt')"
+          class="h-7 w-fit"
+          :src="isDark ? logoDark : logoLight"
+        >
+      </a>
       <LanguageMenu />
+      <LeaveChatDialog
+        v-model:open="leaveOpen"
+        :url="conversationUrl"
+        @leave="goHome"
+      />
     </SidebarHeader>
     <SidebarContent class="py-2">
       <SidebarGroup>
