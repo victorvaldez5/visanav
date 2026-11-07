@@ -79,7 +79,7 @@ const languageLinks = SUPPORTED_LOCALES.filter((l) => l !== locale).map((l) => (
           </a>
         ))
       }
-      <a href={chatHref} class="vn-btn vn-btn-primary ml-1 h-9 px-4 text-sm">
+      <a href={chatHref} class="vn-btn vn-btn-primary ml-1 h-9 px-4 text-sm" data-umami-event="start-chat" data-umami-event-location="header">
         {t("nav.startChat")}
       </a>
     </nav>
@@ -127,7 +127,7 @@ const languageLinks = SUPPORTED_LOCALES.filter((l) => l !== locale).map((l) => (
             </a>
           ))
         }
-        <a href={chatHref} class="vn-btn vn-btn-primary mt-1 h-10 px-4 text-sm">
+        <a href={chatHref} class="vn-btn vn-btn-primary mt-1 h-10 px-4 text-sm" data-umami-event="start-chat" data-umami-event-location="header">
           {t("nav.startChat")}
         </a>
       </div>

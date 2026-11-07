@@ -160,6 +160,8 @@ const directoryJsonLd = {
             <a
               href={appLink(locale, { q: t("directory.askPrompt", { name: o.name }) })}
               class="vn-link mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold"
+              data-umami-event="start-chat"
+              data-umami-event-location="directory"
             >
               {t("directory.askAbout")}
               <span aria-hidden="true">→</span>

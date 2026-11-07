@@ -32,6 +32,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from core.llm import Deps, get_agent
+from . import metrics
 from .models import Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -63,9 +64,14 @@ def _turn_usage_limits() -> UsageLimits:
 
 
 def _client_ip(request) -> str:
+    # The API sits directly behind one proxy (Railway's edge), which appends the
+    # address it saw. Only that rightmost entry is trustworthy: everything to its
+    # left is client-supplied and spoofable.
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        last = forwarded.split(",")[-1].strip()
+        if last:
+            return last
     return request.META.get("REMOTE_ADDR", "unknown")
 
 
@@ -154,6 +160,7 @@ def _persist_messages(conversation_id, new_messages, sources=None):
     if sources and last_response is not None:
         last_response.sources = sources
         last_response.save(update_fields=["sources"])
+    return last_response.id if last_response is not None else None
 
 
 @sync_to_async
@@ -200,7 +207,7 @@ async def chat_stream(request):
     SSE events emitted:
       - status: {"step": "researching" | "writing"}
       - delta:  {"text": "<token chunk>"}
-      - done:   {"conversation": "<uuid>"}
+      - done:   {"conversation": "<uuid>", "message": <id of the final response row, or null>}
       - error:  {"detail": "<message>"}
     """
     if request.method == "OPTIONS":
@@ -267,6 +274,7 @@ async def chat_stream(request):
 
     conversation_id = conversation.id
     history = await _load_history(conversation_id)
+    first_turn = len(history) == 0
     # Translated here, in the request's language: event_stream runs lazily, after
     # this view has returned and the request's language is no longer guaranteed.
     failed_message = _("The assistant failed to respond. Please try again.")
@@ -321,7 +329,9 @@ async def chat_stream(request):
                             )
 
             new_messages = json.loads(run.result.new_messages_json())
-            await _persist_messages(conversation_id, new_messages, deps.sources)
+            message_id = await _persist_messages(
+                conversation_id, new_messages, deps.sources
+            )
             await _touch_retention(conversation_id)
             # Surface the official sources that grounded the answer as clickable
             # citations. Metadata only (title/url/last_verified/score) — no text.
@@ -333,7 +343,17 @@ async def chat_stream(request):
                 int((time.monotonic() - start) * 1000),
                 len(deps.sources),
             )
-            yield _sse("done", {"conversation": str(conversation_uuid)})
+            # Counters are best-effort and content-free; never block the reply.
+            await metrics.record_turn_async(
+                locale=request.LANGUAGE_CODE,
+                first_turn=first_turn,
+                searched=deps.searched,
+                sources=bool(deps.sources),
+                resources=deps.resources_suggested > 0,
+            )
+            yield _sse(
+                "done", {"conversation": str(conversation_uuid), "message": message_id}
+            )
         except Exception as exc:  # noqa: BLE001 - surface a clean error, log the rest
             # Content-free: request id, latency, and the error type. We do NOT log
             # the conversation uuid (it is a bearer key for anonymous chats) or
@@ -345,6 +365,14 @@ async def chat_stream(request):
                 request_id,
                 int((time.monotonic() - start) * 1000),
                 type(exc).__name__,
+            )
+            await metrics.record_turn_async(
+                locale=request.LANGUAGE_CODE,
+                first_turn=first_turn,
+                searched=False,
+                sources=False,
+                resources=False,
+                failed=True,
             )
             yield _sse(
                 "error",

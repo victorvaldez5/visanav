@@ -170,6 +170,20 @@ describe("useConversation — postMessage streaming", () => {
     expect(hist[1].sources).toEqual([{ id: "s1" }]);
   });
 
+  it("stamps the assistant bubble with the persisted message id from done", async () => {
+    msgSvc.streamMessage.mockImplementation(async (_payload, h) => {
+      h.onDelta("Hi");
+      h.onDone({ conversation: "k", message: 42 });
+    });
+    convSvc.getConversation.mockRejectedValue(new Error("refresh failed"));
+
+    const c = await withKey();
+    await c.postMessage("Q");
+
+    expect(c.messageHistory.value[1].id).toBe(42);
+    expect(c.messageHistory.value[1].kind).toBe("response");
+  });
+
   it("sends only the scrubbed text and records a scrub notice when PII is removed", async () => {
     scrub.mockReturnValue({ text: "REDACTED", summary: { emails: 1 }, changed: true });
     msgSvc.streamMessage.mockImplementation(async (_payload, h) => h.onDone({}));

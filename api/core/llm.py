@@ -201,6 +201,11 @@ class Deps:
     # view can surface them to the UI as clickable citations. Mutated by
     # semantic_search; one Deps instance per chat turn (never shared).
     sources: list = field(default_factory=list)
+    # Usage-metric signals for this turn (see conversation/metrics.py): whether
+    # semantic_search ran at all, and how many directory organizations
+    # resource_lookup returned. Counts only, never ids or names.
+    searched: bool = False
+    resources_suggested: int = 0
 
 
 class SearchMatch(BaseModel):
@@ -278,6 +283,8 @@ async def semantic_search(ctx: RunContext[Deps], search_query: str):
     """
     from core.embeddings import embed_query
     from knowledge.models import KnowledgeChunk
+
+    ctx.deps.searched = True
 
     # Bound the model-generated query before it reaches Voyage.
     search_query = _clip_arg(search_query) or ""
@@ -553,6 +560,7 @@ async def resource_lookup(
                         "contact one."
                     )
 
+            ctx.deps.resources_suggested = len(matches)
             return ResourceLookupResult(
                 matches=matches, count=len(matches), note=note
             ).model_dump()

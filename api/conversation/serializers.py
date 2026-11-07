@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from .models import Conversation, Message
@@ -9,6 +10,15 @@ class MessageSerializer(serializers.ModelSerializer):
     # stringified column.
     parts = serializers.JSONField()
     sources = serializers.JSONField(required=False)
+    feedback = serializers.SerializerMethodField()
+
+    def get_feedback(self, obj):
+        # Reverse OneToOne raises when absent; null means "no vote". With
+        # prefetch_related("messages__feedback") this costs no extra query.
+        try:
+            return obj.feedback.is_helpful
+        except ObjectDoesNotExist:
+            return None
 
     class Meta:
         model = Message
@@ -21,7 +31,9 @@ class MessageSerializer(serializers.ModelSerializer):
             "kind",
             "parts",
             "sources",
+            "feedback",
         ]
+        read_only_fields = ["feedback"]
 
 
 class ConversationSerializer(serializers.ModelSerializer):

@@ -253,7 +253,9 @@ async def test_streams_frames_and_persists_the_turn(anon_conv, use_fake_agent):
     stream = await drain(resp)
     assert "event: status\ndata: {\"step\": \"writing\"}" in stream
     assert "event: delta" in stream
-    assert f'event: done\ndata: {{"conversation": "{anon_conv.uuid}"}}' in stream
+    done = json.loads(stream.split("event: done\ndata: ")[1].split("\n")[0])
+    assert done["conversation"] == str(anon_conv.uuid)
+    assert isinstance(done["message"], int)
 
     # The turn (user request + assistant response) was persisted.
     count = await sync_to_async(Message.objects.filter(conversation_id=anon_conv.id).count)()
@@ -375,3 +377,38 @@ async def test_too_long_message_error_interpolates_the_limit_in_spanish(anon_con
         )
 
     assert resp.json()["detail"] == "El mensaje es demasiado largo (máximo 10 caracteres)."
+
+
+# --- client identity (rate limiting) -----------------------------------------
+
+
+def _req(**meta):
+    from django.test import RequestFactory
+
+    return RequestFactory().post("/api/chat/", **meta)
+
+
+async def test_client_ip_uses_the_proxy_appended_rightmost_entry():
+    spoofed = _req(HTTP_X_FORWARDED_FOR="1.2.3.4, 203.0.113.9", REMOTE_ADDR="10.0.0.1")
+    honest = _req(HTTP_X_FORWARDED_FOR="203.0.113.9", REMOTE_ADDR="10.0.0.1")
+    assert streaming._client_ip(spoofed) == streaming._client_ip(honest) == "203.0.113.9"
+
+
+async def test_client_ip_falls_back_to_remote_addr():
+    assert streaming._client_ip(_req(REMOTE_ADDR="10.0.0.1")) == "10.0.0.1"
+
+
+async def test_spoofed_leftmost_xff_does_not_evade_the_chat_rate_limit(anon_conv, use_fake_agent):
+    with override_settings(CHAT_RATE_LIMIT_PER_MINUTE=1):
+        codes = []
+        for i in range(2):
+            resp = await AsyncClient().post(
+                CHAT_URL,
+                data=body(anon_conv.uuid),
+                content_type="application/json",
+                headers={"X-Forwarded-For": f"9.9.9.{i}, 203.0.113.9"},
+            )
+            codes.append(resp.status_code)
+            if resp.status_code == 200:
+                await drain(resp)
+    assert codes == [200, 429]

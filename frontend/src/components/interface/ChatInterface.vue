@@ -4,6 +4,7 @@ import {useRoute, useRouter} from "vue-router";
 import {useI18n} from "vue-i18n";
 import AIResponse from "@/components/ui/chat/AIResponse.vue";
 import SourcesList from "@/components/ui/chat/SourcesList.vue";
+import MessageFeedback from "@/components/ui/chat/MessageFeedback.vue";
 import ConversationDisclaimer from "@/components/interface/ConversationDisclaimer.vue";
 import UserPromptInput from "@/components/interface/UserPromptInput.vue";
 import {useConversation} from "@/composables/useConversations.ts";
@@ -114,6 +115,13 @@ async function onSubmit(prompt: string) {
           <template v-if="message.parts[0].content">
             <AIResponse :source="message.parts[0].content" />
             <SourcesList :sources="message.sources" />
+            <MessageFeedback
+              v-if="message.id != null && conversationUuid && !(isStreaming && i === messageHistory.length - 1)"
+              :key="message.id"
+              :conversation-uuid="conversationUuid"
+              :message-id="message.id"
+              :initial="message.feedback ?? null"
+            />
           </template>
           <div
             v-else-if="isStreaming"
