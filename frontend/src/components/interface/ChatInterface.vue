@@ -27,7 +27,6 @@ const conversationUuid = computed<string | null>(() => {
 
 const {
   messageHistory,
-  createConversation,
   postMessage,
   stopStreaming,
   isStreaming,
@@ -64,10 +63,10 @@ if ("q" in route.query) {
 async function onSubmit(prompt: string) {
   try {
     if (!conversationUuid.value) {
-      const response = await createConversation(userId.value!);
-      // stream the reply on the current view, then navigate into the conversation
-      await postMessage(prompt);
-      await router.push({path: `/conversations/${response.uuid}`});
+      // Creates the conversation behind the optimistic render, streams the
+      // reply on the current view, then navigates into the conversation.
+      const uuid = await postMessage(prompt, {userId: userId.value!});
+      if (uuid) await router.push({path: `/conversations/${uuid}`});
     } else {
       await postMessage(prompt);
     }
