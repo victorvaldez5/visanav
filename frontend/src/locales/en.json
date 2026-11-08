@@ -26,6 +26,17 @@
     "feedbackThanks": "Thanks for the feedback.",
     "feedbackError": "Could not save your rating. Please try again."
   },
+  "leaveChat": {
+    "title": "Leave this chat?",
+    "description": "Going to the home page starts a new chat, and you will lose this one. To come back to it later, save this link.",
+    "linkLabel": "Link to this chat",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "copiedNotice": "Link copied to your clipboard.",
+    "copyError": "Couldn’t copy the link. Select it and copy it yourself.",
+    "stay": "Stay here",
+    "leave": "Go to home page"
+  },
   "lang": {
     "label": "Language",
     "en": "English",
@@ -77,7 +88,8 @@
     "logoAlt": "VisaNav logo",
     "themeLight": "Switch to light theme",
     "themeDark": "Switch to dark theme",
-    "registerLogin": "Register / Login"
+    "registerLogin": "Register / Login",
+    "home": "VisaNav home"
   },
   "auth": {
     "verifying": "Verifying your account...",

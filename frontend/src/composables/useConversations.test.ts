@@ -117,6 +117,56 @@ describe("useConversation — postMessage guards", () => {
   });
 });
 
+describe("useConversation — postMessage creating the conversation", () => {
+  it("renders the turn before the create call resolves, then streams into it", async () => {
+    let resolveCreate!: (v: unknown) => void;
+    convSvc.createConversation.mockReturnValue(new Promise((r) => (resolveCreate = r)));
+    msgSvc.streamMessage.mockImplementation(async (_payload, h) => h.onDone({}));
+    convSvc.getConversation.mockResolvedValue({ id: 1, uuid: "new", messages: [{ server: true }] });
+
+    const c = setup(null);
+    const sent = c.postMessage("Q", { userId: 7 });
+    await flush();
+
+    // The chat view's condition is already true while the create is pending.
+    expect(c.isStreaming.value).toBe(true);
+    expect(c.messageHistory.value[0].parts[0].content).toBe("Q");
+    expect(msgSvc.streamMessage).not.toHaveBeenCalled();
+
+    resolveCreate({ id: 1, uuid: "new", title: "", messages: [] });
+    await expect(sent).resolves.toBe("new");
+    expect(convSvc.createConversation).toHaveBeenCalledWith("New Conversation", 7);
+    expect(msgSvc.streamMessage.mock.calls[0][0]).toEqual({ user_message: "Q", conversation: "new" });
+  });
+
+  it("removes the optimistic turn and rethrows when the create fails", async () => {
+    convSvc.createConversation.mockRejectedValue(new Error("offline"));
+
+    const c = setup(null);
+    await expect(c.postMessage("Q", { userId: 7 })).rejects.toThrow("offline");
+
+    expect(c.messageHistory.value).toEqual([]);
+    expect(c.isStreaming.value).toBe(false);
+    expect(msgSvc.streamMessage).not.toHaveBeenCalled();
+  });
+
+  it("skips the refetch when the route moves into the conversation it just created", async () => {
+    convSvc.createConversation.mockResolvedValue({ id: 1, uuid: "new", title: "", messages: [] });
+    msgSvc.streamMessage.mockImplementation(async (_payload, h) => h.onDone({}));
+    convSvc.getConversation.mockResolvedValue({ id: 1, uuid: "new", messages: [{ server: true }] });
+
+    const c = setup(null);
+    await c.postMessage("Q", { userId: 7 });
+    convSvc.getConversation.mockClear();
+
+    c.u.value = "new";
+    await flush();
+
+    expect(convSvc.getConversation).not.toHaveBeenCalled();
+    expect(c.messageHistory.value).toEqual([{ server: true }]);
+  });
+});
+
 describe("useConversation — postMessage streaming", () => {
   async function withKey() {
     convSvc.createConversation.mockResolvedValue({ id: 1, uuid: "k", title: "", messages: [] });

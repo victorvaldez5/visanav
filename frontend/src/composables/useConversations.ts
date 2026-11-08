@@ -45,6 +45,12 @@ export function useConversation(
                     conversationKey.value = null;
                     return;
                 }
+                // Navigating into a conversation this view just created and
+                // streamed: its history is already loaded (and was refreshed
+                // after the stream), so don't fetch and re-render it again.
+                if (uuid === conversationKey.value && messageHistory.value.length > 0) {
+                    return;
+                }
                 const conv = await conversationService.getConversation(uuid);
                 conversationId.value = conv.id;
                 conversationKey.value = conv.uuid;
@@ -80,28 +86,50 @@ export function useConversation(
         streamStatus.value = null;
     }
 
-    // post a message and stream the assistant's reply token-by-token
-    async function postMessage(prompt: string) {
-        if (!prompt.trim() || conversationKey.value == null) return;
+    // Post a message and stream the assistant's reply token-by-token. With no
+    // conversation yet, pass `create` and it is created here, AFTER the
+    // optimistic render, so the chat view appears the moment the user hits Send
+    // instead of after the create round-trip. Resolves to the conversation's
+    // uuid (null if nothing was sent).
+    async function postMessage(
+        prompt: string,
+        create?: {userId: number},
+    ): Promise<string | null> {
+        if (!prompt.trim()) return null;
+        if (conversationKey.value == null && !create) return null;
 
         // Scrub PII in the browser BEFORE the message leaves the client, and send
         // ONLY the scrubbed text. The raw draft is never stored or transmitted.
         const {text: scrubbed, summary, changed} = scrub(prompt);
         if (changed) scrubNotices.value.set(scrubbed, summary);
 
-        const payload: MessagePayload = {
-            user_message: scrubbed,
-            conversation: conversationKey.value,
-        };
-
         // optimistic render: user bubble (scrubbed) + growing assistant bubble
-        messageHistory.value.push({parts: [{part_kind: "user-prompt", content: scrubbed}]});
+        const userIndex =
+            messageHistory.value.push({parts: [{part_kind: "user-prompt", content: scrubbed}]}) - 1;
         const assistantIndex =
             messageHistory.value.push({parts: [{part_kind: "text", content: ""}], sources: []}) - 1;
 
         isStreaming.value = true;
         streamStatus.value = "thinking";
         streamAbort = new AbortController();
+
+        if (conversationKey.value == null) {
+            try {
+                await createConversation(create!.userId);
+            } catch (e) {
+                // Undo the optimistic render so the landing view comes back.
+                messageHistory.value.splice(userIndex, 2);
+                isStreaming.value = false;
+                streamStatus.value = null;
+                streamAbort = null;
+                throw e;
+            }
+        }
+
+        const payload: MessagePayload = {
+            user_message: scrubbed,
+            conversation: conversationKey.value!,
+        };
 
         let succeeded = false;
         try {
@@ -159,6 +187,7 @@ export function useConversation(
                 console.error("Error refreshing conversation:", e);
             }
         }
+        return conversationKey.value;
     }
 
     onUnmounted(() => stopStreaming());
