@@ -212,6 +212,36 @@ _FEDERAL_REGISTER_BOILERPLATE = (
     ".signature, .end-matter, .printed-page, .footnotes, script, style"
 )
 
+# govinfo.gov's copy of a document (what the crawl fetches since 2026-11) is the
+# printed text in one <pre>: a bracketed masthead above a rule of '=', page
+# markers, '-' rules, and the "[FR Doc. ...]" / BILLING CODE end matter below.
+_GOVINFO_RULE = re.compile(r"^\s*(=+|-+)\s*$")
+_GOVINFO_PAGE = re.compile(r"^\s*\[\[Page \d+\]\]\s*$")
+_GOVINFO_END = re.compile(r"^\s*(\[FR Doc\.|BILLING CODE)")
+# A caption such as "ADDRESSES:" or "SUPPLEMENTARY INFORMATION:" opens a section.
+_GOVINFO_CAPTION = re.compile(r"^([A-Z][A-Z ,]+):")
+# The same sections the HTML path drops: where to send comments, who to call.
+_GOVINFO_DROPPED = {"ADDRESSES", "FOR FURTHER INFORMATION CONTACT"}
+
+
+def _govinfo_text(pre: str) -> str:
+    lines = pre.splitlines()
+    rule = next((i for i, line in enumerate(lines) if line.strip().startswith("====")), None)
+    if rule is not None:  # the masthead: volume, issue, pages, GPO credit, FR Doc No
+        lines = lines[rule + 1:]
+    kept, dropping = [], False
+    for line in lines:
+        if _GOVINFO_END.match(line):
+            break
+        if _GOVINFO_RULE.match(line) or _GOVINFO_PAGE.match(line):
+            continue
+        caption = _GOVINFO_CAPTION.match(line)
+        if caption:
+            dropping = caption.group(1).strip() in _GOVINFO_DROPPED
+        if not dropping:
+            kept.append(line)
+    return clean_text("\n".join(kept))
+
 
 def _iso_date(value) -> dt.date | None:
     try:
@@ -238,9 +268,13 @@ def extract_federal_register(
         return None
 
     soup = BeautifulSoup(html, "html.parser")
-    for junk in soup.select(_FEDERAL_REGISTER_BOILERPLATE):
-        junk.decompose()
-    words = _text(soup).split()
+    pre = soup.find("pre")
+    if pre is not None:  # govinfo.gov's printed text
+        words = _govinfo_text(pre.get_text()).split()
+    else:  # federalregister.gov's HTML (feeds from before 2026-11)
+        for junk in soup.select(_FEDERAL_REGISTER_BOILERPLATE):
+            junk.decompose()
+        words = _text(soup).split()
 
     label, instrument = _FEDERAL_REGISTER_TYPES.get(meta.get("type"), ("Document", "notice"))
     # The date is part of every chunk's title so the model (and the user) can

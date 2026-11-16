@@ -94,6 +94,7 @@ just corpus-ingest ecfr  # narrow pull or ingest to named sources
 just corpus-ingest ecfr --force  # other flags pass through to the command (also: just ingest us --force)
 just corpus-refresh      # what production's scheduler runs: ingest whatever is due, feeds read from R2
 just db-status           # chunk counts per country / corpus / topic + each corpus's last ingestion
+just r2-check            # live R2 check: scraper writes/reads/deletes a probe, ingest lists each source's feeds
 ```
 Both ingest commands transactionally replace **only their own corpus** (the
 `KnowledgeChunk.corpus` column: `curated`, or one per scrape source: `uscis`, `ecfr`,
@@ -113,7 +114,8 @@ its last successful run, unless `EMBEDDING_MODEL` changed since that run. An att
 that fails before a corpus is read (the feeds cannot be listed, R2 is not configured)
 is recorded as a failed `IngestRun` too.
 
-**Production ingests itself.** The hourly `visanav-ingest` Railway cron service runs
+**Production ingests itself.** The weekly `visanav-ingest` Railway cron service (Mondays
+12:00 UTC, after the crawls) runs
 `manage.py refresh_corpus`: curated `data/` when a deploy changed it, and each scrape
 source once its crawl has left a new feed in R2 (`ingest_scrape --from-r2`, feeds read
 by `knowledge/feed_store.py`). It needs boto3, which only `api/ingest.Dockerfile`
@@ -142,7 +144,7 @@ just compile-messages   # compile the .mo files Django loads (commit both)
   `visanav-scraper-federal-register` (same image, a `startCommand` per spider).
   `.github/workflows/scrape.yml` is a `workflow_dispatch`-only fallback.
 - **Ingestion → Railway cron**: the `visanav-ingest` service (`api/ingest.Dockerfile`, repo-root
-  context) runs `manage.py refresh_corpus` hourly. It needs the API's Django and Postgres
+  context) runs `manage.py refresh_corpus` weekly (Mondays 12:00 UTC). It needs the API's Django and Postgres
   variables, `VOYAGE_API_KEY`, and read-only credentials for the production R2 bucket.
 - **Railway config**: `.railway/railway.ts` (Infrastructure as Code) declares the API and scraper services,
   never Postgres. `railway config plan` previews and `railway config apply` applies; read the plan first.
@@ -220,8 +222,9 @@ its rows via the `corpus` column:
 - **Raw scrape** (`scrapers/`): one spider per source writes raw pages/PDF/JSONL to R2 under
   `raw/`. `uscis` crawls USCIS forms, the INA, and the Policy Manual; `ecfr` splits GPO's eCFR
   bulk XML (govinfo.gov, because ecfr.gov's robots.txt disallows its full-text API) into one item
-  per CFR section; `federal-register` pulls recent immigration documents from the Federal Register
-  API. Each is **incremental** via its own content-hash manifest (`raw/manifests/<spider>.json`;
+  per CFR section; `federal-register` selects recent immigration documents with the Federal Register
+  API and fetches each one's text from govinfo.gov (federalregister.gov redirects body requests
+  from Railway's servers away from the document; only its API answers there). Each is **incremental** via its own content-hash manifest (`raw/manifests/<spider>.json`;
   USCIS falls back once to the old shared `raw/manifest.json`): `ContentHashPipeline` drops
   unchanged pages before they hit the storage sinks, and every crawl also writes a JSONL feed
   (`raw/items/<spider>/<time>.jsonl`: url + main content + optional `meta`). The hash is taken
@@ -290,7 +293,9 @@ phases, and the "Adding a locale" checklist are in `docs/i18n-architecture.md`.
 - **`scrapy crawl` is overridden** (`COMMANDS_MODULE`, `uscis_scraper/commands/crawl.py`): after
   the crawl it runs `health.crawl_problems` over the stats and exits non-zero when the crawl can't
   be trusted (it ended as anything but `finished`, feed not stored, no or mostly failed requests,
-  parse errors, fewer items than the spider's `min_items_seen`, any failed request on a spider
+  parse errors, fewer items than the spider's `min_items_seen`, under 80% of the items a spider
+  counted as requested (`items_requested`: detail pages redirected or blocked; redirects alone never
+  count as success), any failed request on a spider
   that sees its whole source such as `ecfr`, removals refused). Stock Scrapy exits 0 in all of
   those cases.
 - **Local crawls are throttled too**: `LOCAL_TEST` only changes where output goes. Robots.txt,

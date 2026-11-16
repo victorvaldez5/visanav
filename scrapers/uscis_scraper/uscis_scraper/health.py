@@ -40,9 +40,9 @@ def crawl_problems(stats, spider=None, finished=True):
         if not feed_was_stored(stats):
             problems.append("the feed could not be stored")
 
-    succeeded = _sum(stats, "downloader/response_status_count/2") + _sum(
-        stats, "downloader/response_status_count/3"
-    )
+    # A redirect is not a success in itself: a followed one lands as its own 2xx,
+    # and one that leads nowhere (blocked by robots.txt, a duplicate) never does.
+    succeeded = _sum(stats, "downloader/response_status_count/2")
     failed = (
         _sum(stats, "downloader/response_status_count/4")
         + _sum(stats, "downloader/response_status_count/5")
@@ -62,6 +62,12 @@ def crawl_problems(stats, spider=None, finished=True):
     expected = getattr(spider, "min_items_seen", 0)
     if seen < expected:
         problems.append(f"only {seen} item(s) seen, expected at least {expected}")
+
+    # A spider that counts the items it asked for (one request per item) must see
+    # most of them; otherwise its detail pages were blocked or redirected away.
+    requested = getattr(spider, "items_requested", 0)
+    if requested and seen < requested * (1 - MAX_FAILED_REQUEST_SHARE):
+        problems.append(f"only {seen} of the {requested} item(s) requested arrived")
 
     if getattr(spider, "crawl_failed", False):
         problems.append("a request failed, so removed pages were not worked out")

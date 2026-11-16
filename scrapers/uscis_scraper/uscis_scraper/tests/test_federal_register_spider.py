@@ -22,7 +22,6 @@ def _doc(number, title="Extension of the Designation of Honduras for Temporary P
         "publication_date": "2026-09-29",
         "effective_on": None,
         "html_url": f"https://www.federalregister.gov/documents/2026/09/29/{number}/slug",
-        "body_html_url": f"https://www.federalregister.gov/documents/full_text/html/2026/09/29/{number}.html",
         "agencies": [
             {"name": "Homeland Security Department", "slug": "homeland-security-department"},
             {"name": "U.S. Citizenship and Immigration Services"},
@@ -83,12 +82,15 @@ def test_parse_listing_requests_each_new_document_body_once(spider):
             title="Agency Information Collection Activities; Extension, Without Change, "
             "of a Currently Approved Collection: Application To Replace Permanent Resident Card",
         ),
-        _doc("2026-00004", body_html_url=None),  # no full text published
+        _doc("2026-00004", publication_date=None),  # no issue to find its text in
     ]
     out = list(spider.parse_listing(_listing(results, next_page_url="https://www.federalregister.gov/api/v1/documents.json?page=2")))
 
     body, next_page = out
-    assert body.url.endswith("/2026-00002.html")
+    # The text comes from govinfo.gov: federalregister.gov redirects body requests
+    # from Railway's servers away from the document.
+    assert body.url == "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-00002.htm"
+    assert spider.items_requested == 1
     assert body.callback == spider.parse_document
     assert body.cb_kwargs["doc"]["document_number"] == "2026-00002"
     assert next_page.url.endswith("page=2") and next_page.callback == spider.parse_listing
@@ -100,7 +102,8 @@ def test_parse_listing_requests_each_new_document_body_once(spider):
 def test_parse_document_carries_what_ingest_needs(spider):
     doc = _doc("2026-00002", doc_type="Rule", effective_on="2026-11-30")
     response = HtmlResponse(
-        url=doc["body_html_url"], body=b"<div id='summary'><p>Summary.</p></div>", encoding="utf-8"
+        url=spider.body_url(doc), body=b"<html><body><pre>SUMMARY: Summary.</pre></body></html>",
+        encoding="utf-8",
     )
     (item,) = spider.parse_document(response, doc=doc)
 

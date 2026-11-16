@@ -10,9 +10,30 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+
+
+def check_endpoint_url(url: str) -> None:
+    """Refuse an R2 endpoint that is anything but the account URL.
+
+    The endpoint is https://<account>.r2.cloudflarestorage.com and the bucket is
+    R2_BUCKET. With the bucket on the end of the URL as well, boto3 takes that
+    path segment for the bucket and R2_BUCKET for an object in it, and every
+    listing fails with a NoSuchKey that says nothing about the cause.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ImproperlyConfigured(
+            "AWS_ENDPOINT_URL must be a URL like https://<account>.r2.cloudflarestorage.com"
+        )
+    if parsed.path.strip("/") or parsed.query or parsed.fragment:
+        raise ImproperlyConfigured(
+            f"AWS_ENDPOINT_URL must be the account endpoint alone, without the path "
+            f"{parsed.path!r}: put the bucket name in R2_BUCKET, not in the URL"
+        )
 
 
 class LocalFeeds:
@@ -48,6 +69,7 @@ class R2Feeds:
         ]
         if missing:
             raise ImproperlyConfigured(f"Reading feeds from R2 needs {', '.join(missing)}")
+        check_endpoint_url(settings.AWS_ENDPOINT_URL)
         try:
             import boto3
         except ImportError as exc:  # the web image deliberately ships without it
