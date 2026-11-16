@@ -5,6 +5,7 @@ tests exercise real pgvector cosine ranking, so they require the `vector`
 extension (seeded via api/conftest.py + the pgvector Postgres image in CI).
 """
 import asyncio
+import io
 from datetime import date
 
 import pytest
@@ -532,6 +533,59 @@ def test_ingest_scrape_federal_register_ages_out_and_labels_rules(voyage_key, se
     assert final.authority == "Executive Office for Immigration Review"
 
 
+_GOVINFO_FR = """<html><head><title>Federal Register, Volume 91 Issue 210</title></head>
+<body><pre>
+[Federal Register Volume 91, Number 210 (Monday, November 2, 2026)]
+[Notices]
+[Pages 68965-68966]
+From the Federal Register Online via the Government Publishing Office
+[FR Doc No: 2026-22320]
+
+
+=======================================================================
+-----------------------------------------------------------------------
+
+DEPARTMENT OF HOMELAND SECURITY
+
+Extension of the Designation of Honduras for Temporary Protected Status
+
+ACTION: Notice.
+
+-----------------------------------------------------------------------
+
+SUMMARY: The designation is extended for 18 months, and re-
+registration opens on the day this notice is published.
+
+ADDRESSES: Mail comments to the Regulatory Coordination Division.
+
+FOR FURTHER INFORMATION CONTACT: Call the USCIS Contact Center.
+
+SUPPLEMENTARY INFORMATION: Eligible nationals keep their work
+
+[[Page 68966]]
+
+authorization through the extension.
+[FR Doc. 2026-22320 Filed 10-30-26; 8:45 am]
+BILLING CODE 9111-97-P
+</pre></body></html>"""
+
+
+def test_scrape_federal_register_reads_govinfo_text():
+    """Since 2026-11 the crawl fetches each document from govinfo.gov: the printed
+    text in a <pre>, whose masthead, rules, page markers, contact sections and end
+    matter must not reach the corpus."""
+    from knowledge.scrape_utils import extract_federal_register
+
+    record = extract_federal_register(_FR_URL, _GOVINFO_FR, _fr_meta(days_ago=5))
+    text = record["text"]
+    assert text.startswith("DEPARTMENT OF HOMELAND SECURITY Extension of the Designation")
+    assert "reregistration opens" in text  # clean_text joins words hyphenated across lines
+    assert "keep their work authorization through the extension." in text
+    for boilerplate in ("Volume 91", "FR Doc", "[[Page", "BILLING CODE", "===", "---",
+                        "Mail comments", "Contact Center"):
+        assert boilerplate not in text
+
+
 def test_scrape_ecfr_authority_follows_the_chapter():
     from knowledge.scrape_utils import extract_ecfr
 
@@ -1034,6 +1088,102 @@ def test_r2_feed_store_lists_and_downloads_one_source(tmp_path):
     ]
     assert paths[-1].read_bytes() == b"new\n"
     assert not (tmp_path / "uscis").exists()
+
+
+@pytest.fixture
+def r2_settings(settings):
+    settings.R2_BUCKET = "visanav-test"
+    settings.AWS_ENDPOINT_URL = "https://account.r2.cloudflarestorage.com"
+    settings.AWS_ACCESS_KEY_ID = "test-key-id"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret"
+    settings.AWS_REGION_NAME = "auto"
+    return settings
+
+
+class _Sent(Exception):
+    """Raised from botocore's before-send hook, so nothing leaves the machine."""
+
+
+def test_r2_feeds_lists_the_bucket_the_settings_name(r2_settings, tmp_path):
+    """The real boto3 client, built from settings: the listing goes to R2_BUCKET
+    under the account endpoint, with the source's prefix."""
+    pytest.importorskip("boto3")
+    from urllib.parse import parse_qs, urlsplit
+
+    from knowledge.feed_store import R2Feeds
+
+    store = R2Feeds.from_settings(tmp_path)
+    sent = []
+
+    def capture(request, **kwargs):
+        sent.append(request.url)
+        raise _Sent
+
+    store.client.meta.events.register("before-send.s3.ListObjectsV2", capture)
+    with pytest.raises(_Sent):
+        store.newest("ecfr")
+
+    url = urlsplit(sent[0])
+    assert (url.scheme, url.netloc, url.path) == (
+        "https", "account.r2.cloudflarestorage.com", "/visanav-test",
+    )
+    assert parse_qs(url.query)["prefix"] == ["raw/items/ecfr/"]
+
+
+@pytest.mark.parametrize("endpoint", [
+    "https://account.r2.cloudflarestorage.com/visanav-test",
+    "https://account.r2.cloudflarestorage.com/visanav-test/",
+    "account.r2.cloudflarestorage.com",
+])
+def test_r2_feeds_refuses_an_endpoint_that_is_not_the_account_url(r2_settings, tmp_path, endpoint):
+    from django.core.exceptions import ImproperlyConfigured
+
+    from knowledge.feed_store import R2Feeds
+
+    r2_settings.AWS_ENDPOINT_URL = endpoint
+    with pytest.raises(ImproperlyConfigured, match="AWS_ENDPOINT_URL"):
+        R2Feeds.from_settings(tmp_path)
+
+
+def test_r2_check_reports_the_newest_feed_per_source(monkeypatch, r2_settings, tmp_path):
+    from django.core.management import CommandError, call_command
+
+    from knowledge import feed_store
+
+    s3 = _StubS3({
+        "raw/items/uscis/2026-11-02T06-00-00+00-00.jsonl": b"u\n",
+        "raw/items/ecfr/2026-11-02T09-00-00+00-00.jsonl": b"e\n",
+    })
+    monkeypatch.setattr(
+        feed_store.R2Feeds, "from_settings",
+        classmethod(lambda cls, workdir: cls("visanav-test", s3, workdir)),
+    )
+
+    out = io.StringIO()
+    call_command("r2_check", stdout=out)
+    assert "uscis: 2026-11-02T06-00-00+00-00.jsonl" in out.getvalue()
+    assert "federal-register: no feeds" in out.getvalue()
+    assert "R2 is reachable" in out.getvalue()
+
+    with pytest.raises(CommandError, match="no feeds for federal-register"):
+        call_command("r2_check", "--require-feeds", stdout=io.StringIO())
+
+
+def test_r2_check_fails_when_the_bucket_cannot_be_listed(monkeypatch, r2_settings, tmp_path):
+    from django.core.management import CommandError, call_command
+
+    from knowledge import feed_store
+
+    class _Refusing(_StubS3):
+        def get_paginator(self, operation):
+            raise RuntimeError("NoSuchKey")
+
+    monkeypatch.setattr(
+        feed_store.R2Feeds, "from_settings",
+        classmethod(lambda cls, workdir: cls("visanav-test", _Refusing({}), workdir)),
+    )
+    with pytest.raises(CommandError, match="uscis: cannot list raw/items/uscis/: NoSuchKey"):
+        call_command("r2_check", stdout=io.StringIO())
 
 
 @pytest.mark.django_db

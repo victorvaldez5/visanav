@@ -11,16 +11,21 @@ class FederalRegisterSpider(scrapy.Spider):
     """Recent immigration-relevant Federal Register documents, one item per document.
 
     Uses the Federal Register public API (no key). Listing queries select the
-    documents; each new document's full text is then fetched as HTML. Published
-    documents never change, so one already in the manifest is skipped before its
-    body is requested.
+    documents; each new document's full text is then fetched from govinfo.gov,
+    the Government Publishing Office's copy of the same issue. federalregister.gov
+    redirects body requests from Railway's servers to a page that is not the
+    document (only its API answers there), while govinfo.gov serves them, as it
+    does the ecfr spider's bulk XML. Published documents never change, so one
+    already in the manifest is skipped before its body is requested.
     """
 
     name = "federal-register"
-    allowed_domains = ["federalregister.gov"]
+    allowed_domains = ["federalregister.gov", "govinfo.gov"]
     custom_settings = {"USER_AGENT": "visanav-scraper (+https://github.com/victorvaldez5)"}
 
     API_URL = "https://www.federalregister.gov/api/v1/documents.json"
+    # One document's text in its issue: plain text in a <pre>, like the printed page.
+    GOVINFO_URL = "https://www.govinfo.gov/content/pkg/FR-{date}/html/{number}.htm"
     # How far back to look, by publication date: `-a retention_days=30` overrides.
     # Ingest applies its own window, so an old notice ages out of the corpus too.
     RETENTION_DAYS = 730
@@ -41,13 +46,17 @@ class FederalRegisterSpider(scrapy.Spider):
 
     FIELDS = (
         "document_number", "title", "type", "publication_date", "effective_on",
-        "html_url", "body_html_url", "agencies", "cfr_references",
+        "html_url", "agencies", "cfr_references",
     )
 
     def __init__(self, retention_days=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.retention_days = int(retention_days or self.RETENTION_DAYS)
         self._queued = set()
+        # Document bodies asked for: the health check (health.py) fails a crawl
+        # whose bodies mostly never arrive, which is what a redirect to a blocking
+        # page looks like (Scrapy itself reports such a crawl as finished).
+        self.items_requested = 0
 
     def listing_urls(self, today=None):
         since = (today or dt.date.today()) - dt.timedelta(days=self.retention_days)
@@ -79,8 +88,8 @@ class FederalRegisterSpider(scrapy.Spider):
         for doc in data.get("results") or []:
             number = doc.get("document_number")
             url = doc.get("html_url")
-            body_url = doc.get("body_html_url")
-            if not number or not url or not body_url:
+            published = doc.get("publication_date")
+            if not number or not url or not published:
                 continue
             # The selection rules overlap, so the same document recurs across listings.
             if number in self._queued or url in known:
@@ -88,10 +97,16 @@ class FederalRegisterSpider(scrapy.Spider):
             if self.EXCLUDED_TITLES.search(doc.get("title") or ""):
                 continue
             self._queued.add(number)
-            yield scrapy.Request(body_url, callback=self.parse_document, cb_kwargs={"doc": doc})
+            self.items_requested += 1
+            yield scrapy.Request(
+                self.body_url(doc), callback=self.parse_document, cb_kwargs={"doc": doc}
+            )
 
         if data.get("next_page_url"):
             yield scrapy.Request(data["next_page_url"], callback=self.parse_listing)
+
+    def body_url(self, doc):
+        return self.GOVINFO_URL.format(date=doc["publication_date"], number=doc["document_number"])
 
     def parse_document(self, response, doc):
         yield ScrapedItem(

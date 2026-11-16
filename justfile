@@ -140,6 +140,11 @@ corpus-ingest *args: db
     # (macOS bash 3.2 rejects an empty array under `set -u`, hence the guard.)
     cd api && uv run python manage.py ingest_scrape ../{{feeds}} $mode ${sources[@]+"${sources[@]}"}
 
+# Check the R2 bucket in config/.env (the dev bucket locally): the scraper side writes, reads back and deletes a probe object; the ingest side lists each source's feeds. Add --require-feeds to fail on a source with none
+r2-check *args:
+    cd scrapers/uscis_scraper && uv run scrapy r2_check {{args}}
+    cd api && uv run python manage.py r2_check {{args}}
+
 # Run one source's crawl locally into scrapers/uscis_scraper/output/ (never touches R2): uscis, ecfr or federal-register
 crawl source="uscis":
     cd scrapers/uscis_scraper && LOCAL_TEST=true uv run scrapy crawl {{source}}

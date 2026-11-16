@@ -74,3 +74,39 @@ def test_removal_tracking_failures_are_problems():
         "too many known pages were missing, so none were removed "
         "(if they are really gone: -a allow_large_removal=1)"
     ]
+
+
+def test_redirects_that_lead_nowhere_are_a_problem():
+    """The federal-register crawl of 2026-11-16: the listing answered, but every
+    document body was redirected to one page that robots.txt then refused."""
+    stats = {
+        "finish_reason": "finished",
+        "feedexport/success_count/S3FeedStorage": 1,
+        "downloader/response_status_count/200": 11,
+        "downloader/response_status_count/302": 188,
+        "downloader/exception_count": 1,
+        "dupefilter/filtered": 187,
+        "item_scraped_count": 0,
+    }
+    spider = SimpleNamespace(items_requested=188)
+    assert crawl_problems(stats, spider) == ["only 0 of the 188 item(s) requested arrived"]
+
+
+def test_redirects_alone_are_not_success():
+    stats = {
+        "finish_reason": "finished",
+        "feedexport/success_count/S3FeedStorage": 1,
+        "downloader/response_status_count/302": 5,
+    }
+    assert "no request succeeded" in crawl_problems(stats, SimpleNamespace())
+
+
+def test_most_requested_items_arriving_is_healthy():
+    spider = SimpleNamespace(items_requested=10)
+    assert crawl_problems(_stats(item_scraped_count=8, item_dropped_count=0), spider) == []
+    assert crawl_problems(_stats(item_scraped_count=7, item_dropped_count=0), spider) == [
+        "only 7 of the 10 item(s) requested arrived"
+    ]
+    # Nothing new to ask for is a quiet week, not a failure.
+    assert crawl_problems(_stats(item_scraped_count=0, item_dropped_count=0),
+                          SimpleNamespace(items_requested=0)) == []

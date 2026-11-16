@@ -4,6 +4,7 @@ from scrapy.commands.crawl import Command as ScrapyCrawlCommand
 from scrapy.exceptions import UsageError
 
 from ..health import crawl_problems
+from ..r2 import R2ConfigError, check_settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,15 @@ class Command(ScrapyCrawlCommand):
     def run(self, args, opts):
         if len(args) != 1:
             raise UsageError("give exactly one spider to crawl")
+        # Scrapy's own S3 feed export builds its client from these settings too,
+        # so a bad endpoint is caught here, before a crawl spends hours on it.
+        if not self.settings.getbool("LOCAL_TEST"):
+            try:
+                check_settings(self.settings)
+            except R2ConfigError as exc:
+                logger.error("crawl of %s refused: %s", args[0], exc)
+                self.exitcode = 1
+                return
 
         crawler = self._create_crawler(args[0])
         self.crawler_process.crawl(crawler, **opts.spargs)

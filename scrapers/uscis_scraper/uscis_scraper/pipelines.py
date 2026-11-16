@@ -36,21 +36,10 @@ def _mark_seen(spider, url):
 
 
 def _build_s3_client(settings):
-    """Create a botocore S3 client pointed at the configured S3-compatible
-    endpoint (Cloudflare R2).
+    """The R2 client every sink writes with (see r2.build_s3_client)."""
+    from .r2 import build_s3_client
 
-    Imported lazily so local-mode crawls and unit tests never need botocore.
-    """
-    import botocore.session
-
-    session = botocore.session.get_session()
-    return session.create_client(
-        "s3",
-        endpoint_url=settings.get("AWS_ENDPOINT_URL"),
-        aws_access_key_id=settings.get("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=settings.get("AWS_SECRET_ACCESS_KEY"),
-        region_name=settings.get("AWS_REGION_NAME") or "auto",
-    )
+    return build_s3_client(settings)
 
 
 class CleanValidatePipeline:
